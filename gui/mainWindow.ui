@@ -36,7 +36,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="icons.qrc">
-    <normaloff>:/logo.ico</normaloff>:/logo.ico</iconset>
+    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <property name="statusTip">
    <string/>
@@ -135,6 +135,8 @@
         <string/>
        </property>
       </widget>
+      <zorder>layerDisplay</zorder>
+      <zorder>buttonInitialize</zorder>
      </widget>
      <widget class="QWidget" name="widgetTab2">
       <attribute name="title">

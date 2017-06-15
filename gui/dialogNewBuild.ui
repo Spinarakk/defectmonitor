@@ -18,7 +18,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="icons.qrc">
-    <normaloff>:/resource/defmon.ico</normaloff>:/resource/defmon.ico</iconset>
+    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
