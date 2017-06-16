@@ -1,6 +1,6 @@
-"""Main Window
-
-Primary module used to initiate the main GUI window and all its associated dialog/widgets
+"""
+main.py
+Primary module used to initiate the main GUI window and all its associated dialog/widgets.
 """
 
 # Import built-ins
@@ -26,6 +26,7 @@ from PyQt4.QtCore import QThread, SIGNAL, Qt
 # Import related modules
 import image_processing
 import image_capture
+import camera_calibration
 
 # Compile and import PyQt GUIs
 os.system('build_gui.bat')
@@ -139,6 +140,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
     def initial_setup(self):
         """Method to setup necessary threads and UI elements"""
+        self.file_dictionary = self.precapture.file_dictionary
         self.groupDisplayOptions.setEnabled(True)
 
         self.capture_images = image_capture.Capture(self.queue1, self.storage_folder, self.simulation)

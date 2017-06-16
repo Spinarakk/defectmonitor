@@ -1,3 +1,7 @@
+"""
+image_processing.py
+Module containing mostly OpenCV code used to process the images for initial analysis or for defect identification.
+"""
 import cv2
 import json
 
