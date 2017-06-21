@@ -10,7 +10,7 @@ from PyQt4.QtCore import QThread, SIGNAL, Qt
 
 class PreProcessing(QThread):
     """Image Pre-Processing:
-    Fixes the source images to then be further processed for defects.
+    Fixes the source images to then be further processed for defects
     Applies the following OpenCV processes in order
     Distortion Correction (D)
     Perspective Warp (P)
@@ -63,7 +63,7 @@ class PreProcessing(QThread):
         crop_boundary = self.config['CropBoundary']
 
         image = image[crop_boundary[0]:crop_boundary[1], crop_boundary[2]:crop_boundary[3]]
-        rotation_matrix = cv2.getRotationmatrix2D((image.shape[1] / 2, image.shape[0] / 2), rotation_angle, 1.0)
+        rotation_matrix = cv2.getRotationMatrix2D((image.shape[1] / 2, image.shape[0] / 2), rotation_angle, 1.0)
 
         image = cv2.warpAffine(image, rotation_matrix, (image.shape[1], image.shape[0]))
 
