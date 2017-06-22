@@ -82,8 +82,8 @@ class ImageCapture(QThread):
         else:
             raw_image = next(self.camera1.grab_images)
 
-        self.emit(SIGNAL("initial_display(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
-        self.emit(SIGNAL("update_layer(QString)"), '%s_%s' % (self.start_layer, self.start_phase))
+        self.emit(SIGNAL("initial_processing(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
+        self.emit(SIGNAL("update_layer(QString, QString)"), str(self.start_layer), str(self.start_phase))
 
         while True:
             if simulation:

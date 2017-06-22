@@ -1,3 +1,10 @@
+"""
+camera_calibration.py
+Module to calibrate the connected camera
+Cameras supported: Basler Ace acA3800-10gm GigE
+If no camera found, or simulation flag raised, default calibration settings will be used
+"""
+
 # app_setup
 ##Import modules
 import os

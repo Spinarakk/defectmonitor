@@ -5,8 +5,7 @@ Primary module used to initiate the main GUI window and all its associated dialo
 
 # Import built-ins
 import os
-import re
-import time
+
 import sys
 import json
 import math
@@ -18,7 +17,8 @@ from Queue import Queue
 # Import external modules
 import cv2
 import numpy as np
-import serial
+
+
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt
@@ -39,10 +39,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     Emcompasses the main window when you open the application
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
 
         # Setup Main Window UI
-        super(self.__class__, self).__init__()
+        super(self.__class__, self).__init__(parent)
         self.setupUi(self)
 
         # Set whether this is a simulation or using real camera
@@ -56,7 +56,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.actionExit.triggered.connect(self.closeEvent)
 
         # Menubar -> Setup
-        self.actionBuildPlatform.triggered.connect(self.build_platform)
+        self.actionConfigurationSettings.triggered.connect(self.configuration_settings)
         self.actionCLS.triggered.connect(self.select_CLS)
         self.actionCLI.triggered.connect(self.select_CLI)
         self.actionAdjustCrop.triggered.connect(self.crop_adjustment)
@@ -160,7 +160,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def export_image(self):
         pass
 
-    def build_platform(self):
+    def configuration_settings(self):
         pass
 
     def select_CLS(self):
@@ -213,16 +213,15 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Saves a copy of the converted slice array in self
-        self.file_dictionary = self.slice_conversion.file_dictionary
+        self.slice_file_dictionary = self.slice_conversion.slice_file_dictionary
 
         # Instantiate a ImageCapture class
         self.capture_images = image_capture.ImageCapture(self.queue1, self.storage_folder, self.simulation)
 
         # Listen for emitted signals from the linked function, and send them to the corresponding methods
         self.connect(self.capture_images, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.capture_images, SIGNAL("initial_display(PyQt_PyObject, PyQt_PyObject)"), self.initial_processing)
-
-        #self.connect(self.capture_images, SIGNAL("update_layer(QString)"), self.update_layer)
+        self.connect(self.capture_images, SIGNAL("initial_processing(PyQt_PyObject, PyQt_PyObject)"), self.initial_processing)
+        self.connect(self.capture_images, SIGNAL("update_layer(QString, QString)"), self.update_layer)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.radioRaw.toggled.connect(self.update_display)
@@ -247,18 +246,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         if not self.simulation:
             self.buttonStart.setEnabled(True)
 
-    def initial_display(self, image_scan, image_coat):
-
-        self.image_scan = image_scan
-        self.image_coat = image_coat
-
-        self.height, self.width, self.channel = self.image_scan.shape
-
-        self.initial_processing(self.image_scan, 'scan')
-        self.initial_processing(self.image_coat, 'coat')
-
-
-
     def initial_processing(self, image_scan, image_coat):
         """Method for the initial image processing of the raw scan and coat images for analysis
         Applies the following OpenCV processes in order
@@ -274,23 +261,23 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_progress(0)
 
-        self.update_progress(12)
+        self.update_progress(12.5)
         self.update_status('Fixing Distortion & Perspective...')
-        self.image_scan_D = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).distortion_fix(self.image_scan)
-        self.image_scan_DP = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).perspective_fix(self.image_scan_D)
+        self.image_scan_D = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).distortion_fix(self.image_scan)
+        self.image_scan_DP = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).perspective_fix(self.image_scan_D)
 
         cv2.imwrite('images/sample_scan_DP.png', self.image_scan_DP)
 
         self.update_progress(25)
         self.update_status('Cropping image...')
-        self.image_scan_DPC = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).crop(self.image_scan_DP)
+        self.image_scan_DPC = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).crop(self.image_scan_DP)
         self.scale_shape = self.image_scan_DPC.shape
 
         cv2.imwrite('images/sample_scan_DPC.png', self.image_scan_DPC)
 
         self.update_progress(37)
         self.update_status('Applying CLAHE algorithm...')
-        self.image_scan_DPCE = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).CLAHE(self.image_scan_DPC)
+        self.image_scan_DPCE = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).CLAHE(self.image_scan_DPC)
 
         cv2.imwrite('images/sample_scan_DPCE.png', self.image_scan_DPCE)
 
@@ -298,21 +285,21 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_progress(62)
         self.update_status('Fixing Distortion & Perspective...')
-        self.image_coat_D = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).distortion_fix(self.image_coat)
-        self.image_coat_DP = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).perspective_fix(self.image_coat_D)
+        self.image_coat_D = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).distortion_fix(self.image_coat)
+        self.image_coat_DP = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).perspective_fix(self.image_coat_D)
 
         cv2.imwrite('images/scample_coat_DP.png', self.image_coat_DP)
 
         self.update_progress(75)
         self.update_status('Cropping image...')
-        self.image_coat_DPC = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).crop(self.image_coat_DP)
+        self.image_coat_DPC = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).crop(self.image_coat_DP)
         self.scale_shape = self.image_coat_DPC.shape
 
         cv2.imwrite('images/scample_coat_DPC.png', self.image_coat_DPC)
 
         self.update_progress(87)
         self.update_status('Applying CLAHE algorithm...')
-        self.image_coat_DPCE = image_processing.PreProcessing(None, None, self.capture_images.new_parameters).CLAHE(self.image_coat_DPC)
+        self.image_coat_DPCE = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).CLAHE(self.image_coat_DPC)
 
         cv2.imwrite('images/scample_coat_DPCE.png', self.image_coat_DPCE)
 
@@ -377,11 +364,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
             self.qImg_scan = QtGui.QImage(self.display_image_scan.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
             self.qPxm_scan = QtGui.QPixmap.fromImage(self.qImg_scan)
-            self.qPxm_scan = self.qPxm_scan.scaled(989, 612, aspectRatioMode=Qt.KeepAspectRatio)
+            self.qPxm_scan = self.qPxm_scan.scaled(1052, 592, aspectRatioMode=Qt.KeepAspectRatio)
 
             self.qImg_coat = QtGui.QImage(self.display_image_coat.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
             self.qPxm_coat = QtGui.QPixmap.fromImage(self.qImg_coat)
-            self.qPxm_coat = self.qPxm_coat.scaled(989, 612, aspectRatioMode=Qt.KeepAspectRatio)
+            self.qPxm_coat = self.qPxm_coat.scaled(1052, 592, aspectRatioMode=Qt.KeepAspectRatio)
 
             self.labelDisplaySE.setPixmap(self.qPxm_scan)
             self.labelDisplayCE.setPixmap(self.qPxm_coat)
@@ -396,19 +383,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             else:
                 self.labelDisplaySE.setText("Reloading Display...")
                 self.labelDisplayCE.setText("Reloading Display...")
-
-    def convert2pixmap(self, image):
-        print image.shape
-
-        bytesPerLine = 3 * self.width
-        print image.shape
-        self.qImg = QtGui.QImage(image.data, self.width, self.height, bytesPerLine, QtGui.QImage.Format_RGB888)
-        print image.shape
-        self.qPxm = QtGui.QPixmap.fromImage(self.qImg)
-        print image.shape
-        self.qPxm = self.qPxm.scaled(984, 600, aspectRatioMode=Qt.KeepAspectRatio)
-        print image.shape
-        return self.qPxm
 
     def toggle_overlay(self):
         """Draws the part contour of the current layer and displays it on top of the current displayed image"""
@@ -431,7 +405,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_display()
 
-    def update_layer(self, layer_phase):
+    def update_layer(self, layer, phase):
         """Updates the layer number"""
 
         min_x = None
@@ -440,20 +414,18 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         part_contours = None
         hierachy = None
 
-        # Determine the current layer and phase and split them
-        self.layer_phase = str(layer_phase).split('_')
-        self.current_layer = self.layer_phase[0]
-
+        self.current_layer = int(layer)
+        self.current_phase = str(phase)
+        
         # Displays the current layer on the UI
         self.labelLayerNumber.setText(str(self.current_layer).zfill(5))
-        layer_number = int(layer_phase[0])
         
-        self.config['StartLayer'] = layer_number
-        self.config['StartPhase'] = self.layer_phase[1]
+        self.config['StartLayer'] = self.current_layer
+        self.config['StartPhase'] = self.current_phase
         
-        for itemidx, item in enumerate(self.file_dictionary):
-            item_contours = self.file_dictionary[item][layer_number]['Contours']
-            poly_idx = self.file_dictionary[item][layer_number]['Polyline-Indices']
+        for itemidx, item in enumerate(self.slice_file_dictionary):
+            item_contours = self.slice_file_dictionary[item][self.current_layer]['Contours']
+            poly_idx = self.slice_file_dictionary[item][self.current_layer]['Polyline-Indices']
             # if negative values exist (part is set up in quadrant other than top-right and buildplate centre is (0,0))
             # translate part to positive
 
@@ -472,7 +444,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                     if pot_min_y < min_y:
                         min_y = pot_min_y
 
-            self.adj_dict = self.file_dictionary
+            self.adj_dict = self.slice_file_dictionary
 
             # image resizing factor - relates image pixels and part mm
             # (assumes image is cropped exactly at top and bottom edge of platform)
@@ -488,19 +460,19 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             # find the hierarchy of each contour, subtract area if it is an internal contour (i.e. a hole)
             for p in xrange(len(poly_idx)):
                 # gets contours in scaled coordinates (scale_factor * part mm)
-                self.adj_dict[item][layer_number]['Contours'][poly_idx[p][0]:poly_idx[p][2]:2] = [
+                self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0]:poly_idx[p][2]:2] = [
                     np.float32(self.scale_factor * (int(x) / 10000. + self.platform_dimensions[0] / 2) + self.boundary_offset[0])
                     for x
                     in
-                    self.adj_dict[item][layer_number]['Contours'][poly_idx[p][0]:poly_idx[p][2]:2]]
-                self.adj_dict[item][layer_number]['Contours'][(poly_idx[p][0] + 1):poly_idx[p][2]:2] = [
+                    self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0]:poly_idx[p][2]:2]]
+                self.adj_dict[item][self.current_layer]['Contours'][(poly_idx[p][0] + 1):poly_idx[p][2]:2] = [
                     np.float32(self.scale_factor * (-int(y) / 10000. + self.platform_dimensions[1] / 2) + self.boundary_offset[1])
                     for
                     y in
-                    self.adj_dict[item][layer_number]['Contours'][poly_idx[p][0] + 1:poly_idx[p][2]:2]]
+                    self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0] + 1:poly_idx[p][2]:2]]
 
                 this_contour = np.array(
-                    self.adj_dict[item][layer_number]['Contours'][poly_idx[p][0]:poly_idx[p][2]]).reshape(1, (
+                    self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0]:poly_idx[p][2]]).reshape(1, (
                     poly_idx[p][1]) / 2, 2)
                 this_contour = this_contour.astype(np.int32)
                 poly_image = blank_image.copy()
@@ -619,13 +591,18 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
 
 class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
-    """Dialog Window:
+    """
+    Opens a Dialog Window:
     When File > New Build... is clicked.
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
 
-        QtGui.QDialog.__init__(self)
+        #
+        super(NewBuild, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+
+        #QtGui.QDialog.__init__(self)
         # super(NewBuild, self).__init__(parent)
 
         self.setupUi(self)

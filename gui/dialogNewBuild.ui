@@ -3,15 +3,27 @@
  <class>dialogNewBuild</class>
  <widget class="QDialog" name="dialogNewBuild">
   <property name="windowModality">
-   <enum>Qt::ApplicationModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>391</width>
     <height>194</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>391</width>
+    <height>194</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>391</width>
+    <height>194</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>New Build</string>
@@ -20,22 +32,9 @@
    <iconset resource="icons.qrc">
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
-  <widget class="QDialogButtonBox" name="buttonBox">
-   <property name="geometry">
-    <rect>
-     <x>300</x>
-     <y>120</y>
-     <width>81</width>
-     <height>61</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Vertical</enum>
-   </property>
-   <property name="standardButtons">
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-   </property>
-  </widget>
+  <property name="modal">
+   <bool>false</bool>
+  </property>
   <widget class="QLineEdit" name="lineBuildName">
    <property name="geometry">
     <rect>
@@ -58,31 +57,11 @@
     <number>30</number>
    </property>
   </widget>
-  <widget class="QLabel" name="labelBuildName">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>101</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>9</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Build Name</string>
-   </property>
-  </widget>
   <widget class="QComboBox" name="comboPlatform">
    <property name="geometry">
     <rect>
      <x>130</x>
-     <y>40</y>
+     <y>37</y>
      <width>251</width>
      <height>22</height>
     </rect>
@@ -126,19 +105,6 @@
     <string>Build Platform</string>
    </property>
   </widget>
-  <widget class="Line" name="line">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>60</y>
-     <width>381</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-  </widget>
   <widget class="QToolButton" name="toolChangeDirectory">
    <property name="geometry">
     <rect>
@@ -158,7 +124,20 @@
     <string>Change Directory</string>
    </property>
   </widget>
-  <widget class="QGroupBox" name="NoticeBox">
+  <widget class="Line" name="line">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>60</y>
+     <width>371</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="groupNotificationSettings">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -168,7 +147,7 @@
     </rect>
    </property>
    <property name="title">
-    <string>Notification settings</string>
+    <string>Notification Settings</string>
    </property>
    <widget class="QPushButton" name="buttonUseLast">
     <property name="geometry">
@@ -293,6 +272,42 @@
     </property>
    </widget>
   </widget>
+  <widget class="QLabel" name="labelBuildName">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>13</y>
+     <width>101</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Build Name</string>
+   </property>
+  </widget>
+  <widget class="QDialogButtonBox" name="buttonBox">
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>120</y>
+     <width>91</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Vertical</enum>
+   </property>
+   <property name="standardButtons">
+    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   </property>
+  </widget>
  </widget>
  <resources>
   <include location="icons.qrc"/>
@@ -305,12 +320,12 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>335</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
+     <x>195</x>
+     <y>96</y>
     </hint>
    </hints>
   </connection>
@@ -321,12 +336,12 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>335</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
+     <x>195</x>
+     <y>96</y>
     </hint>
    </hints>
   </connection>

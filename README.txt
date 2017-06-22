@@ -1,6 +1,8 @@
 Defect Monitor
 MCAM CLS Printer Software
 
+Run main_window.py.
+
 List of Functionality
 - Take a picture of the coat and the layer (2 images)
 	- Set up camera parameters

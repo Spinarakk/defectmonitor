@@ -1,7 +1,3 @@
-"""
-slice_converter.py
-Module to capture images from the camera.
-"""
 import os
 import re
 
@@ -10,31 +6,36 @@ from collections import OrderedDict
 from PyQt4.QtCore import QThread, SIGNAL
 
 class SliceConverter(QThread):
-    """Part Slice Converter:
-    Converts the .cls files into ASCII format that the rest of the program can interpret.
+    """
+    Module to convert any slice files from the weird format they're in into ASCII characters
+    Output can then be used to draw contours
+    Currently only converts .cls files
+    Future implementation will look to either shifting or adding .cli slice convevrsion
     """
 
     def __init__(self, slice_raw_folder, slice_parsed_folder):
         QThread.__init__(self)
 
-        # Sets up slice folders and dictionaries to store the raw and parsed data
-        self.input_folder = slice_raw_folder
-        self.output_folder = slice_parsed_folder
-        self.input_list = os.listdir(self.input_folder)
-        self.output_list = os.listdir(self.output_folder)
-        self.file_dictionary = dict()
+        # Sets up lists to store the raw and parsed data
+        self.slice_raw_folder = slice_raw_folder
+        self.slice_parsed_folder = slice_parsed_folder
+        self.slice_raw_list = os.listdir(self.slice_raw_folder)
+        self.slice_parsed_list = os.listdir(self.slice_parsed_folder)
+
+        # Create a dictionary to store the list of slice files (found in the slice raw folder) to be converted
+        self.slice_file_dictionary = dict()
 
     def run(self):
-        self._parse_slice(self.input_list, self.output_list)
+        self._parse_slice(self.slice_raw_list, self.slice_parsed_list)
 
     def _parse_slice(self, input_list, output_list):
         for idx, item in enumerate(input_list):
             self.emit(SIGNAL("update_status(QString)"), 'Processing slice files...')
-            self.file_dictionary[item] = {'Format': item[-3:]}
+            self.slice_file_dictionary[item] = {'Format': item[-3:]}
 
             # Checks if a parsed slice is already available in the output directory, if not, parse the slice file
             if not item[:-3] + 'txt' in output_list:
-                if self.file_dictionary[item]['Format'] == 'cls':
+                if self.slice_file_dictionary[item]['Format'] == 'cls':
 
                     with open(self.input_folder + r'\%s' % item, 'rb') as input:
                         bin_cls = input.read()
@@ -180,7 +181,7 @@ class SliceConverter(QThread):
 
                         output[element] = out[::-1]
 
-                    output_write = open(self.output_folder + r'\\' + item[:-3] + 'txt', 'w+')
+                    output_write = open(self.slice_parsed_folder + r'\\' + item[:-3] + 'txt', 'w+')
                     for element in output:
                         if 'Border 1.' in element or 'Border' not in element:
                             output_write.write(element)
@@ -191,15 +192,15 @@ class SliceConverter(QThread):
                             output_write.write('\n')
 
                     output_write.close()
-                    self.file_dictionary[item]['Parsed'] = output
+                    self.slice_file_dictionary[item]['Parsed'] = output
 
             else:
-                parsed_file = open(self.output_folder + r'\\' + item[:-3] + 'txt', 'r')
+                parsed_file = open(self.slice_parsed_folder + r'\\' + item[:-3] + 'txt', 'r')
                 parsed_dict = dict()
                 for line in parsed_file:
                     raw_dat = re.split(':|,', line.strip())
                     parsed_dict[raw_dat[0]] = raw_dat[1:]
-                self.file_dictionary[item]['Parsed'] = parsed_dict
+                self.slice_file_dictionary[item]['Parsed'] = parsed_dict
 
             slice_number = 1
 
@@ -209,25 +210,25 @@ class SliceConverter(QThread):
                     slice_number += 1
 
                 except KeyError:
-                    self.file_dictionary[item]['Max.Layer'] = slice_number - 1
+                    self.slice_file_dictionary[item]['Max.Layer'] = slice_number - 1
                     break
         return
 
     def _deconstruct_cls(self, item, slice_number):
-        self.file_dictionary[item][slice_number] = {
-            'Contours': self.file_dictionary[item]['Parsed']['Layer %s. Border 1.' % slice_number], 'Polyline-Indices': []}
-        poly_no = int(re.sub('\[+(\d+)\]+', r'\1', self.file_dictionary[item][slice_number]['Contours'][0]))
+        self.slice_file_dictionary[item][slice_number] = {
+            'Contours': self.slice_file_dictionary[item]['Parsed']['Layer %s. Border 1.' % slice_number], 'Polyline-Indices': []}
+        poly_no = int(re.sub('\[+(\d+)\]+', r'\1', self.slice_file_dictionary[item][slice_number]['Contours'][0]))
         poly_idx = OrderedDict()
         i_end = None
         for poly_gon in xrange(poly_no):
             if poly_gon == 0:
-                i_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.file_dictionary[item][slice_number]['Contours'][1]))
+                i_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.slice_file_dictionary[item][slice_number]['Contours'][1]))
                 i_start = 2
                 i_end = i_start + i_length
             else:
                 i_start = i_end + 1
-                i_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.file_dictionary[item][slice_number]['Contours'][i_end]))
+                i_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.slice_file_dictionary[item][slice_number]['Contours'][i_end]))
                 i_end = i_start + i_length
             poly_idx[poly_gon] = (i_start, i_length, i_end)
-        self.file_dictionary[item][slice_number]['Polyline-Indices'] = poly_idx
+        self.slice_file_dictionary[item][slice_number]['Polyline-Indices'] = poly_idx
         return
