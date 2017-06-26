@@ -1,11 +1,17 @@
 """
-main.py
+main_window.py
 Primary module used to initiate the main GUI window and all its associated dialog/widgets
+Only functions that relate to directly manipulating any element of the UI are allowed in this module
+All other functions related to image processing etc. are called using QThreads and split into separate modules
+List of separate modules:
+image_capture.py
+image_processing.py
+camera_calibration.py
+slice_converter.py
 """
 
 # Import built-ins
 import os
-
 import sys
 import json
 import math
@@ -17,16 +23,14 @@ from Queue import Queue
 # Import external modules
 import cv2
 import numpy as np
-
-
-
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt
 
 # Import related modules
-import image_processing
-import image_capture
 import slice_converter
+import image_capture
+import camera_calibration
+import image_processing
 
 # Compile and import PyQt GUIs
 os.system('build_gui.bat')
@@ -65,20 +69,39 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.actionNotificationSetup.triggered.connect(self.notification_setup)
 
         # Menubar -> Run
-        self.actionInitializeBuild.triggered.connect(self.convert_slice)
-        self.actionStartBuild.triggered.connect(self.start_setup)
-        self.actionPauseBuild.triggered.connect(self.pause_build)
-        self.actionStopBuild.triggered.connect(self.stop_build)
+        self.actionInitializeBuild.triggered.connect(self.initialize_1)
+        self.actionStartBuild.triggered.connect(self.start)
+        self.actionPauseBuild.triggered.connect(self.pause)
+        self.actionStopBuild.triggered.connect(self.stop)
 
         # Buttons
-        self.buttonInitialize.clicked.connect(self.convert_slice)
-        self.buttonStart.clicked.connect(self.start_setup)
-        self.buttonPause.clicked.connect(self.pause_build)
-        self.buttonStop.clicked.connect(self.stop_build)
+        self.buttonInitialize.clicked.connect(self.initialize_1)
+        self.buttonStart.clicked.connect(self.start)
+        self.buttonPause.clicked.connect(self.pause)
+        self.buttonStop.clicked.connect(self.stop)
         self.buttonPhase.clicked.connect(self.toggle_phase)
+        self.buttonDefectProcessing.clicked.connect(self.defect_processing)
 
         # Toggles
         self.checkSimulation.toggled.connect(self.toggle_simulation)
+
+        # Display Options Group Box
+        self.radioRaw.toggled.connect(self.update_display)
+        self.radioCorrection.toggled.connect(self.update_display)
+        self.radioCrop.toggled.connect(self.update_display)
+        self.radioCLAHE.toggled.connect(self.update_display)
+        self.checkToggleOverlay.toggled.connect(self.toggle_overlay)
+
+        # Position Adjustment Group Box
+        self.buttonBoundary.toggled.connect(self.toggle_boundary)
+        self.buttonCrop.toggled.connect(self.toggle_crop)
+        self.buttonShiftUp.clicked.connect(self.shift_up)
+        self.buttonShiftDown.clicked.connect(self.shift_down)
+        self.buttonShiftLeft.clicked.connect(self.shift_left)
+        self.buttonShiftRight.clicked.connect(self.shift_right)
+        self.buttonRotateACW.clicked.connect(self.rotate_acw)
+        self.buttonRotateCW.clicked.connect(self.rotate_cw)
+        self.buttonSet.clicked.connect(self.set_layer)
 
         # Load configuration settings from respective .json file
         with open('config.json') as config:
@@ -90,34 +113,36 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.boundary_offset = self.config['BoundaryOffset']
 
         # Initialize multithreading queues
+        #TODO Probably not needed?
         self.queue1 = Queue()
         self.queue2 = Queue()
 
         # Generate a timestamp for folder labelling purposes
         current_time = datetime.now()
-        self.folder_name = """%s-%s-%s [%s''%s'%s]""" % (
+        self.storage_folder_name = """%s-%s-%s [%s''%s'%s]""" % (
             current_time.year, str(current_time.month).zfill(2), str(current_time.day).zfill(2),
-            str(current_time.hour).zfill(2), str(current_time.minute).zfill(2), str(current_time.second).zfill(2)
-        )
+            str(current_time.hour).zfill(2), str(current_time.minute).zfill(2), str(current_time.second).zfill(2))
 
         # Create new directories to store camera images and processing outputs
         # Error checking in case the folder already exist (shouldn't due to the seconds output)
         try:
-            os.mkdir('%s' % (self.folder_name))
+            os.mkdir('%s' % (self.storage_folder_name))
         except WindowsError:
-            self.folder_name = self.folder_name + "_2"
-            os.mkdir('%s' % (self.folder_name))
+            self.storage_folder_name = self.storage_folder_name + "_2"
+            os.mkdir('%s' % (self.storage_folder_name))
 
-        os.mkdir('%s/scan' % (self.folder_name))
-        os.mkdir('%s/coat' % (self.folder_name))
-        self.storage_folder = {'scan': '%s/scan' % (self.folder_name),
-                               'coat': '%s/coat' % (self.folder_name)}
+        os.mkdir('%s/scan' % (self.storage_folder_name))
+        os.mkdir('%s/coat' % (self.storage_folder_name))
+        self.storage_folder = {'scan': '%s/scan' % (self.storage_folder_name),
+                               'coat': '%s/coat' % (self.storage_folder_name)}
 
         # Create a temporary folder to store processed images
         try:
-            os.mkdir('images')
+            self.image_folder_name = 'images'
+            os.mkdir('%s' % self.image_folder_name)
         except WindowsError:
-            os.mkdir('images' + str(current_time.second).zfill(2))
+            self.image_folder_name = 'images' + str(current_time.second).zfill(2)
+            os.mkdir('%s' % self.image_folder_name)
 
         # Setup input and output slice directories
         self.slice_raw_folder = 'slice_raw'
@@ -145,6 +170,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             with open('config.json') as config:
                 self.config = json.load(config)
 
+            # Store config settings as respective variables and update appropriate UI elements
             self.build_name = self.config['BuildName']
             self.platform_dimensions = self.config['PlatformDimension']
             self.buttonInitialize.setEnabled(True)
@@ -182,71 +208,74 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         pass
 
 
-    def convert_slice(self):
-        """Process that happens when the button "Initialize" is clicked
-        Converts the .cls or .cli file into ASCII format that can be read by OpenCV
-        setup_parts
+    def initialize_1(self):
+        """Method that happens when the button "Initialize" is clicked
+        Does the following modules by calling QThreads so that the main window can still be manipulated
+        - Converts the .cls or .cli slice files into ASCII format that can be displayed as contours
+        - Calibrate and thus acquire the attached camera's intrinsic values
+        - Set up the camera for image capture and then capture those images (unless simulation is checked)
+        - Apply OpenCV processes to correct the image for camera related issues
         """
 
-        # Enables or disables UI elements to prevent concurrent processes, almost clears progress bar and the display
+        # Enables or disables UI elements to prevent concurrent processes
         self.buttonInitialize.setEnabled(False)
         self.groupDisplayOptions.setEnabled(False)
         self.update_progress(0)
         self.update_display()
 
-        # Instantiate a SliceConverter class
-        self.slice_conversion = slice_converter.SliceConverter(self.slice_raw_folder, self.slice_parsed_folder)
+        # Instantiate a SliceConverter instance
+        self.slice_converter_instance = slice_converter.SliceConverter(self.slice_raw_folder, self.slice_parsed_folder)
 
         # Listen for emitted signals from the linked function, and send them to the corresponding methods
-        self.connect(self.slice_conversion, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.slice_conversion, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.slice_converter_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.slice_converter_instance, SIGNAL("update_progress(QString)"), self.update_progress)
 
-        # This specific signal moves on to the next task
-        self.connect(self.slice_conversion, SIGNAL("finished()"), self.initial_setup)
+        # Signal that moves on to the next task
+        self.connect(self.slice_converter_instance, SIGNAL("finished()"), self.initialize_2)
 
-        # Run the SliceConverter QThread
-        self.slice_conversion.start()
+        # Run the SliceConverter instance
+        self.slice_converter_instance.start()
 
-    def initial_setup(self):
-        """Setup necessary QThreads and UI elements, subsequently calling them
-        setup_cascade
+    def initialize_2(self):
+        """Method for setting up the camera parameters and intrinsic values
+        Calibration is currently being done through a pre-taken image in the root folder
+        """
+        # Saves a copy of the converted slice array in self
+        self.slice_file_dictionary = self.slice_converter_instance.slice_file_dictionary
+
+        self.update_status('CALIBRATING')
+
+        # Instantiate a CameraCalibration instance
+        self.camera_calibration_instance = camera_calibration.CameraCalibration()
+        self.connect(self.camera_calibration_instance, SIGNAL("finished()"), self.initialize_3)
+        self.camera_calibration_instance.start()
+
+        #self.camera_calibration_instance.local_calibration()
+
+        self.update_status('Done with calibration')
+
+
+
+    def initialize_3(self):
+        """Method for setting up the camera itself and thusly acquiring the images
+        Able to change a variety of camera settings within the module itself, to be turned into UI element
+        If simulation is checked, images are loaded from the samples folder
         """
 
-        # Saves a copy of the converted slice array in self
-        self.slice_file_dictionary = self.slice_conversion.slice_file_dictionary
-
-        # Instantiate a ImageCapture class
-        self.capture_images = image_capture.ImageCapture(self.queue1, self.storage_folder, self.simulation)
+        # Instantiate an ImageCapture instance
+        self.image_capture_instance = image_capture.ImageCapture(self.queue1, self.storage_folder, self.simulation)
 
         # Listen for emitted signals from the linked function, and send them to the corresponding methods
-        self.connect(self.capture_images, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.capture_images, SIGNAL("initial_processing(PyQt_PyObject, PyQt_PyObject)"), self.initial_processing)
-        self.connect(self.capture_images, SIGNAL("update_layer(QString, QString)"), self.update_layer)
+        self.connect(self.image_capture_instance, SIGNAL("update_status(QString)"), self.update_status)
+        #self.connect(self.image_capture_instance, SIGNAL("qthread_error(QString)"), )
+        # Signal that moves on to the next task
+        self.connect(self.image_capture_instance, SIGNAL("initialize_4(PyQt_PyObject, PyQt_PyObject)"), self.initialize_4)
+        #self.connect(self.capture_images, SIGNAL("update_layer(QString, QString)"), self.update_layer)
 
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.radioRaw.toggled.connect(self.update_display)
-        self.radioCorrection.toggled.connect(self.update_display)
-        self.radioCrop.toggled.connect(self.update_display)
-        self.radioCLAHE.toggled.connect(self.update_display)
-        self.checkToggleOverlay.toggled.connect(self.toggle_overlay)
-        self.buttonBoundary.toggled.connect(self.toggle_boundary)
-        self.buttonCrop.toggled.connect(self.toggle_crop)
-        self.buttonShiftUp.clicked.connect(self.shift_up)
-        self.buttonShiftDown.clicked.connect(self.shift_down)
-        self.buttonShiftLeft.clicked.connect(self.shift_left)
-        self.buttonShiftRight.clicked.connect(self.shift_right)
-        self.buttonRotateACW.clicked.connect(self.rotate_acw)
-        self.buttonRotateCW.clicked.connect(self.rotate_cw)
-        self.buttonSet.clicked.connect(self.set_layer)
+        # Run the ImageCapture instance
+        self.image_capture_instance.start()
 
-        # Run the Capture thread
-
-        self.capture_images.start()
-
-        if not self.simulation:
-            self.buttonStart.setEnabled(True)
-
-    def initial_processing(self, image_scan, image_coat):
+    def initialize_4(self, image_scan, image_coat):
         """Method for the initial image processing of the raw scan and coat images for analysis
         Applies the following OpenCV processes in order
         Distortion Correction (D)
@@ -254,135 +283,47 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         Crop (C)
         CLAHE (E)
         Respective capital letters suffixed to the image array indicate which processes have been applied
-        display_image
         """
+
         self.image_scan = image_scan
         self.image_coat = image_coat
+        self.camera_parameters = self.camera_calibration_instance.calibration_parameters
 
-        self.update_progress(0)
+        # Instantiate an ImageCorrection instance
+        self.image_correction_instance = image_processing.ImageCorrection(self.camera_parameters,
+                                                                          self.image_folder_name, self.image_scan,
+                                                                          self.image_coat)
 
-        self.update_progress(12.5)
-        self.update_status('Fixing Distortion & Perspective...')
-        self.image_scan_D = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).distortion_fix(self.image_scan)
-        self.image_scan_DP = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).perspective_fix(self.image_scan_D)
+        # Listen for emitted signals from the linked function, and send them to the corresponding methods
+        self.connect(self.image_correction_instance, SIGNAL("assign_image(PyQt_PyObject, QString, QString)"),
+                     self.assign_image)
+        self.connect(self.image_correction_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.image_correction_instance, SIGNAL("update_progress(QString)"), self.update_progress)
 
-        cv2.imwrite('images/sample_scan_DP.png', self.image_scan_DP)
+        # Signal that moves on to the next task
+        self.connect(self.image_correction_instance, SIGNAL("finished()"), self.initialize_done)
 
-        self.update_progress(25)
-        self.update_status('Cropping image...')
-        self.image_scan_DPC = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).crop(self.image_scan_DP)
-        self.scale_shape = self.image_scan_DPC.shape
+        # Run the ImageCorrection instance
+        self.image_correction_instance.start()
 
-        cv2.imwrite('images/sample_scan_DPC.png', self.image_scan_DPC)
-
-        self.update_progress(37)
-        self.update_status('Applying CLAHE algorithm...')
-        self.image_scan_DPCE = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).CLAHE(self.image_scan_DPC)
-
-        cv2.imwrite('images/sample_scan_DPCE.png', self.image_scan_DPCE)
-
-        self.update_progress(50)
-
-        self.update_progress(62)
-        self.update_status('Fixing Distortion & Perspective...')
-        self.image_coat_D = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).distortion_fix(self.image_coat)
-        self.image_coat_DP = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).perspective_fix(self.image_coat_D)
-
-        cv2.imwrite('images/scample_coat_DP.png', self.image_coat_DP)
-
-        self.update_progress(75)
-        self.update_status('Cropping image...')
-        self.image_coat_DPC = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).crop(self.image_coat_DP)
-        self.scale_shape = self.image_coat_DPC.shape
-
-        cv2.imwrite('images/scample_coat_DPC.png', self.image_coat_DPC)
-
-        self.update_progress(87)
-        self.update_status('Applying CLAHE algorithm...')
-        self.image_coat_DPCE = image_processing.ImageCorrection(None, None, self.capture_images.new_parameters).CLAHE(self.image_coat_DPC)
-
-        cv2.imwrite('images/scample_coat_DPCE.png', self.image_coat_DPCE)
-
-        self.update_progress(100)
+    def initialize_done(self):
+        """Method for when the entire initialize_build function is done
+        Mainly used to update relavant UI elements
+        """
 
         # Activate relevant UI elements
         self.checkToggleOverlay.setEnabled(True)
         self.buttonInitialize.setEnabled(True)
         self.groupDisplayOptions.setEnabled(True)
-
+        self.update_progress(100)
         self.initial_flag = False
 
         # Update the main display widget
         self.update_display()
-        self.update_status('Displaying processed image.')
+        self.update_status('Displaying processed images.')
 
-
-    def update_display(self):
-        """Update the MainWindow display to show images as per toggles
-        Displays the scan image and the coat image in their respective tabs
-        Asso enables or disables certain UI elements depending on what is toggled
-        change_disp
-        """
-        if self.groupDisplayOptions.isEnabled():
-            if self.radioRaw.isChecked():
-                self.display_image_scan = self.image_scan
-                self.display_image_coat = self.image_coat
-                self.groupPositionAdjustment.setEnabled(False)
-                self.checkToggleOverlay.setEnabled(False)
-                self.checkToggleOverlay.setChecked(False)
-
-            elif self.radioCorrection.isChecked():
-                self.display_image_scan = self.image_scan_DP
-                self.display_image_coat = self.image_coat_DP
-                self.groupPositionAdjustment.setEnabled(False)
-                self.checkToggleOverlay.setEnabled(False)
-                self.checkToggleOverlay.setChecked(False)
-
-            elif self.radioCrop.isChecked():
-                self.display_image_scan = self.image_scan_DPC
-                self.display_image_coat = self.image_coat_DPC
-                self.groupPositionAdjustment.setEnabled(True)
-                self.checkToggleOverlay.setEnabled(True)
-
-            elif self.radioCLAHE.isChecked():
-                self.display_image_scan = self.image_scan_DPCE
-                self.display_image_coat = self.image_coat_DPCE
-                self.groupPositionAdjustment.setEnabled(True)
-                self.checkToggleOverlay.setEnabled(True)
-
-            if self.checkToggleOverlay.isChecked():
-                try:
-                    self.display_image_scan = cv2.add(self.display_image_scan, self.overlay_image)
-                    self.display_image_coat = cv2.add(self.display_image_coat, self.overlay_image)
-                except:
-                    self.toggle_overlay()
-                    self.display_image_scan = cv2.add(self.display_image_scan, self.overlay_image)
-                    self.display_image_coat = cv2.add(self.display_image_coat, self.overlay_image)
-
-            height, width, channel = self.display_image_scan.shape
-            bytesPerLine = 3 * width
-
-            self.qImg_scan = QtGui.QImage(self.display_image_scan.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
-            self.qPxm_scan = QtGui.QPixmap.fromImage(self.qImg_scan)
-            self.qPxm_scan = self.qPxm_scan.scaled(1052, 592, aspectRatioMode=Qt.KeepAspectRatio)
-
-            self.qImg_coat = QtGui.QImage(self.display_image_coat.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
-            self.qPxm_coat = QtGui.QPixmap.fromImage(self.qImg_coat)
-            self.qPxm_coat = self.qPxm_coat.scaled(1052, 592, aspectRatioMode=Qt.KeepAspectRatio)
-
-            self.labelDisplaySE.setPixmap(self.qPxm_scan)
-            self.labelDisplayCE.setPixmap(self.qPxm_coat)
-
-        else:
-            self.checkToggleOverlay.setEnabled(False)
-
-            # Changes the display window to reflect current process
-            if self.initial_flag:
-                self.labelDisplaySE.setText("Loading Display...")
-                self.labelDisplayCE.setText("Loading Display...")
-            else:
-                self.labelDisplaySE.setText("Reloading Display...")
-                self.labelDisplayCE.setText("Reloading Display...")
+        if not self.simulation:
+            self.buttonStart.setEnabled(True)
 
     def toggle_overlay(self):
         """Draws the part contour of the current layer and displays it on top of the current displayed image"""
@@ -396,8 +337,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             for item in self.item_dictionary:
                 cv2.drawContours(self.overlay_image, self.item_dictionary[item]['PartData']['Contours'],
                                 -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
-
-
             self.update_status('Displaying slice outlines.')
 
         else:
@@ -489,8 +428,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         with open('config.json','w+') as config:
             json.dump(self.config,config)
 
-    def start_setup(self):
-        """Process that happens when you press the "Start" button
+    def start(self):
+        """Method that happens when you press the "Start" button
 
         """
         #TODO Stuff that happens when you press the Start button
@@ -498,10 +437,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Disable certain UI elements
         pass
 
-    def pause_build(self):
+    def pause(self):
         pass
 
-    def stop_build(self):
+    def stop(self):
         pass
 
     def toggle_simulation(self):
@@ -529,6 +468,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.buttonPhase.setText('COAT')
             current_phase = 'coat'
         return current_phase
+
+    def defect_processing(self):
+        pass
+
+    # Position Adjustment Box
 
     def toggle_boundary(self):
         """Switches the Position Adjustment arrows to instead control the crop boundary size"""
@@ -560,6 +504,101 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         pass
 
 
+    # Miscellaneous Methods
+
+    def assign_image(self, image, phase, tag):
+        """Saves the processed image to a different variable depending on the received name tags"""
+
+        if phase == 'scan':
+            if tag == 'DP':
+                self.image_scan_DP = image
+            elif tag == 'DPC':
+                self.image_scan_DPC = image
+            elif tag == 'DPCE':
+                self.image_scan_DPCE = image
+
+        elif phase == 'coat':
+            if tag == 'DP':
+                self.image_coat_DP = image
+            elif tag == 'DPC':
+                self.image_coat_DPC = image
+            elif tag == 'DPCE':
+                self.image_coat_DPCE = image
+
+    # Miscellaneous UI Elements
+
+    def update_display(self):
+        """Update the MainWindow display to show images as per toggles
+        Displays the scan image and the coat image in their respective tabs
+        Asso enables or disables certain UI elements depending on what is toggled
+        change_disp
+        """
+        if self.groupDisplayOptions.isEnabled():
+            if self.radioRaw.isChecked():
+                self.display_image_scan = self.image_scan
+                self.display_image_coat = self.image_coat
+                self.groupPositionAdjustment.setEnabled(False)
+                self.checkToggleOverlay.setEnabled(False)
+                self.checkToggleOverlay.setChecked(False)
+                self.buttonDefectProcessing.setEnabled(False)
+
+            elif self.radioCorrection.isChecked():
+                self.display_image_scan = self.image_scan_DP
+                self.display_image_coat = self.image_coat_DP
+                self.groupPositionAdjustment.setEnabled(False)
+                self.checkToggleOverlay.setEnabled(False)
+                self.checkToggleOverlay.setChecked(False)
+                self.buttonDefectProcessing.setEnabled(False)
+
+            elif self.radioCrop.isChecked():
+                self.display_image_scan = self.image_scan_DPC
+                self.display_image_coat = self.image_coat_DPC
+                self.groupPositionAdjustment.setEnabled(True)
+                self.checkToggleOverlay.setEnabled(True)
+                self.buttonDefectProcessing.setEnabled(False)
+
+            elif self.radioCLAHE.isChecked():
+                self.display_image_scan = self.image_scan_DPCE
+                self.display_image_coat = self.image_coat_DPCE
+                self.groupPositionAdjustment.setEnabled(True)
+                self.checkToggleOverlay.setEnabled(True)
+                self.buttonDefectProcessing.setEnabled(True)
+
+            if self.checkToggleOverlay.isChecked():
+                try:
+                    self.display_image_scan = cv2.add(self.display_image_scan, self.overlay_image)
+                    self.display_image_coat = cv2.add(self.display_image_coat, self.overlay_image)
+                except:
+                    self.toggle_overlay()
+                    self.display_image_scan = cv2.add(self.display_image_scan, self.overlay_image)
+                    self.display_image_coat = cv2.add(self.display_image_coat, self.overlay_image)
+
+            height, width, channel = self.display_image_scan.shape
+            bytesPerLine = 3 * width
+
+            # Convert the scan and coat images into pixmap format so that they can be displayed using QLabels
+            self.qImg_scan = QtGui.QImage(self.display_image_scan.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+            self.qPxm_scan = QtGui.QPixmap.fromImage(self.qImg_scan)
+            self.qPxm_scan = self.qPxm_scan.scaled(987, 605, aspectRatioMode=Qt.KeepAspectRatio)
+            self.labelDisplaySE.setPixmap(self.qPxm_scan)
+
+            self.qImg_coat = QtGui.QImage(self.display_image_coat.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+            self.qPxm_coat = QtGui.QPixmap.fromImage(self.qImg_coat)
+            self.qPxm_coat = self.qPxm_coat.scaled(987, 605, aspectRatioMode=Qt.KeepAspectRatio)
+            self.labelDisplayCE.setPixmap(self.qPxm_coat)
+
+        else:
+            self.checkToggleOverlay.setEnabled(False)
+
+            # Changes the display window to reflect current process
+            if self.initial_flag:
+                self.labelDisplaySE.setText("Loading Display...")
+                self.labelDisplayCE.setText("Loading Display...")
+            else:
+                self.labelDisplaySE.setText("Reloading Display...")
+                self.labelDisplayCE.setText("Reloading Display...")
+
+
     def update_status(self, string):
         """Updates the status bar at the bottom of the Main Window with the sent string argument"""
         self.statusBar.showMessage(string)
@@ -569,6 +608,18 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Updates the progress bar at the bottom of the Main Window with the sent percentage argument"""
         self.progressBar.setValue(int(percentage))
         return
+
+    def qthread_error(self, error_message):
+        """If any of the qThread classes encounters an in-built error, this method terminates all qThread instances"""
+
+        self.slice_converter_instance.terminate()
+        self.camera_calibration_instance.terminate()
+        self.image_capture_instance.terminate()
+        self.image_correction_instance.terminate()
+
+        # Display the error in the status bar
+        self.update_status(error_message)
+
 
     def closeEvent(self, event):
         """When either the Exit button or the top-right X is pressed, these processes happen:
@@ -582,12 +633,14 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Deleting the created folders (for simulation purposes)
         if self.simulation:
             try:
-                shutil.rmtree('%s' % (self.folder_name))
+                shutil.rmtree('%s' % (self.storage_folder_name))
                 shutil.rmtree('images')
+                try:
+                    shutil.rmtree('%s' % (self.image_folder_name))
+                except AttributeError:
+                    pass
             except WindowsError:
                 pass
-
-
 
 
 class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):

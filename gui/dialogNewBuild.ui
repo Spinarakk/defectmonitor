@@ -3,7 +3,7 @@
  <class>dialogNewBuild</class>
  <widget class="QDialog" name="dialogNewBuild">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -33,7 +33,7 @@
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <property name="modal">
-   <bool>false</bool>
+   <bool>true</bool>
   </property>
   <widget class="QLineEdit" name="lineBuildName">
    <property name="geometry">

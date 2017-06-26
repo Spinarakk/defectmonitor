@@ -25,14 +25,14 @@ except AttributeError:
 class Ui_dialogNewBuild(object):
     def setupUi(self, dialogNewBuild):
         dialogNewBuild.setObjectName(_fromUtf8("dialogNewBuild"))
-        dialogNewBuild.setWindowModality(QtCore.Qt.NonModal)
+        dialogNewBuild.setWindowModality(QtCore.Qt.WindowModal)
         dialogNewBuild.resize(391, 194)
         dialogNewBuild.setMinimumSize(QtCore.QSize(391, 194))
         dialogNewBuild.setMaximumSize(QtCore.QSize(391, 194))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogNewBuild.setWindowIcon(icon)
-        dialogNewBuild.setModal(False)
+        dialogNewBuild.setModal(True)
         self.lineBuildName = QtGui.QLineEdit(dialogNewBuild)
         self.lineBuildName.setGeometry(QtCore.QRect(130, 10, 131, 20))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)

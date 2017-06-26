@@ -10,10 +10,12 @@ class SliceConverter(QThread):
     Module to convert any slice files from the weird format they're in into ASCII characters
     Output can then be used to draw contours
     Currently only converts .cls files
-    Future implementation will look to either shifting or adding .cli slice convevrsion
+    Future implementation will look to either shifting or adding .cli slice conversion
     """
 
     def __init__(self, slice_raw_folder, slice_parsed_folder):
+
+        # Defines the class as a thread
         QThread.__init__(self)
 
         # Sets up lists to store the raw and parsed data
@@ -26,7 +28,9 @@ class SliceConverter(QThread):
         self.slice_file_dictionary = dict()
 
     def run(self):
+        self.emit(SIGNAL("update_progress(QString)"), '0')
         self._parse_slice(self.slice_raw_list, self.slice_parsed_list)
+        self.emit(SIGNAL("update_progress(QString)"), '100')
 
     def _parse_slice(self, input_list, output_list):
         for idx, item in enumerate(input_list):

@@ -10,81 +10,99 @@ If no camera found, or simulation flag raised, default calibration settings will
 import os
 import cv2
 import numpy as np
-
+from PyQt4.QtCore import QThread, SIGNAL
 base_files = os.listdir('.')
 
 
-class Calibrate:
+class CameraCalibration(QThread):
     def __init__(self):
+
+        # Defines the class as a thread
+        QThread.__init__(self)
+
         self.valid = False
-        self.calibrate_params = []
-        self.old_params = []
+        self.calibration_parameters = []
+        self.old_parameters = []
 
     def run(self):
-        old_params = self._check_existing()
-        if old_params[-1] == 0:
-            self.old_params = False
-            # calibrate_params = self._start_calibration()
+        current_parameters = self._check_existing()
+
+        # This if statement essentially checks the last element in the current_parameters array for a 0
+        # It is in essense a boolean flag
+        """if current_parameters[-1] == 0:
+            self.old_parameters = False
+            calibration_parameters = self._start_calibration()
         else:
-            self.calibrate_params = old_params[:-1]
-            self.old_params = True
+            """
+        #self.calibration_parameters = current_parameters
+        #self.old_parameters = True
 
-        return
+    def local_calibration(self):
+        """Perform the calibration using an image file found in the root folder"""
 
-    def calibrate_from_file(self):
         calibration_image = 'calibrate10x8.png'
         if calibration_image in base_files:
             image = cv2.imread(calibration_image, 0)
-            self.calibrate_params = self.start_calibration(image)
+            self.calibration_parameters = self.start_calibration(image)
         else:
             return False
             # while not self.valid:
-            #     calibrate_params = self._start_calibration()
-            #     self.valid = self._validate_calibration(calibrate_params)
+            #     calibration_parameters = self._start_calibration()
+            #     self.valid = self._validate_calibration(calibration_parameters)
             #     if self.valid:
-            #         self._save_calibration(calibrate_params)
-            # self.calibrate_params = calibrate_params
+            #         self._save_calibration(calibration_parameters)
+            # self.calibration_parameters = calibration_parameters
 
     def _check_existing(self):
-        for f in base_files:
-            if f == 'calib_params.dat':
-                f_id = open(f, 'r')  # open stored homography file
-                h = np.fromstring(f_id.read(), dtype=float, sep=',')  # read and convert to array
-                f_id.close()
-                perspective = h[0:9].reshape(3, 3)  # Convert to array
-                intrinsic_c = h[9:18].reshape(3,3)
-                intrinsic_d = h[18:23]
-                output_res = h[23:]
-                # TODO get chessboard corners and calculate reprojection error with stored params
-                return (perspective, intrinsic_c, intrinsic_d,output_res, 1)
-            else:
-                pass
-                # return [0]
+
+        try:
+            with open('camera_parameters.dat', 'r') as stored_parameters:
+                self.stored_parameters = np.fromstring(stored_parameters.read(), dtype=float, sep=',')
+            perspective = self.stored_parameters[0:9].reshape(3, 3)  # Convert to array
+            intrinsic_c = self.stored_parameters[9:18].reshape(3, 3)
+            intrinsic_d = self.stored_parameters[18:23]
+            output_resolution = self.stored_parameters[23:]
+            self.calibration_parameters = [perspective, intrinsic_c, intrinsic_d, output_resolution]
+        except:
+            return False
 
     def start_calibration(self, image):
+        """Perform the OpenCV calibration process"""
         calibrate_params = []
+
+
         ratio = 2
-        x_c = 9  # chessboard dimensions
-        y_c = 7
+        board_width = 9  # chessboard dimensions
+        board_height = 7
+
         c_mult = image.shape[1] / 10 / ratio
         original_image = image.copy()
         res = (original_image.shape[1], original_image.shape[0])
         new_res = (image.shape[1] / ratio, image.shape[0] / ratio)
-        image = cv2.resize(image, new_res, interpolation=cv2.INTER_AREA)
+
+
+        #image = cv2.resize(image, new_res, interpolation=cv2.INTER_AREA)
+        #cv2.imwrite('TEST1.png',image)
+
         image = cv2.fastNlMeansDenoising(image, None, 10, 7, 21)
+        cv2.imwrite('TEST2.png',image)
+
         # Populate projection points matrix with values
-        prj_pts = np.zeros((x_c * y_c, 3), np.float32)
-        prj_pts[:, :2] = c_mult * np.mgrid[1:(x_c + 1), 1:(y_c + 1)].T.reshape(x_c * y_c, 2)
-        world_pts = prj_pts.reshape(1, x_c * y_c, 3).astype(np.float32)
-        # prj_pts = prj_pts.reshape(1, x_c * y_c, 3).astype(np.float32)
+        prj_pts = np.zeros((board_width * board_height, 3), np.float32)
+        prj_pts[:, :2] = c_mult * np.mgrid[1:(board_width + 1), 1:(board_height + 1)].T.reshape(board_width * board_height, 2)
+
+        world_pts = prj_pts.reshape(1, board_width * board_height, 3).astype(np.float32)
+        # prj_pts = prj_pts.reshape(1, board_width * board_height, 3).astype(np.float32)
 
         # Set subpixel refinement criteria
         spr_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
         # Detect corners of chessboard calibration image
-        _, det_corners = cv2.findChessboardCorners(image, (x_c, y_c))  # , flags=cv2.CALIB_CB_ADAPTIVE_THRESH)
+        _, det_corners = cv2.findChessboardCorners(image, (board_width, board_height))  # , flags=cv2.CALIB_CB_ADAPTIVE_THRESH)
+
+
         cv2.cornerSubPix(image, det_corners, (10, 10), (-1, -1), spr_criteria)
-        det_corners = ratio * det_corners.reshape(1, x_c * y_c, 2)
+        det_corners = ratio * det_corners.reshape(1, board_width * board_height, 2)
         ret, intr_c, intr_d, r_vec, t_vec = cv2.calibrateCamera(world_pts, det_corners, res, None, None,
                                                                 flags=cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_FIX_K4 | cv2.CALIB_FIX_K5 | cv2.CALIB_FIX_K3)
         # image_pts = cv2.projectPoints(prj_pts, r_vec, t_vec, intr_c, intr_d)
@@ -99,16 +117,16 @@ class Calibrate:
 
         new_corners = cv2.undistortPoints(det_corners, intr_c, intr_d, P=intr_c)
         flat_image = cv2.undistort(original_image, intr_c, intr_d)
-        tl, tr, bl, br = [new_corners[0, :][0], new_corners[0, :][x_c - 1], new_corners[0, :][-(x_c)],
+        tl, tr, bl, br = [new_corners[0, :][0], new_corners[0, :][board_width - 1], new_corners[0, :][-(board_width)],
                           new_corners[0, :][-1]]
         # prj_pts[:, 0] += int(tl[0])  # translate projection points by distance to top left point
         # prj_pts[:, 1] += int(tl[1])
 
-        prj_pts = prj_pts.reshape(1, x_c * y_c, 3).astype(np.float32)
+        prj_pts = prj_pts.reshape(1, board_width * board_height, 3).astype(np.float32)
 
         flat_image = cv2.cvtColor(flat_image, cv2.COLOR_GRAY2BGR)
         cv2.drawChessboardCorners(flat_image, (9, 7), new_corners, 1)  # sum_sqdiff = 0
-        # for i in xrange(x_c * y_c):
+        # for i in xrange(board_width * board_height):
         #     dist = self.calc_sqdiff(image_pts[0][i][0], image_pts[0][i][1], prj_pts[0][i][0], prj_pts[0][i][1])
         #     sum_sqdiff += dist
 
@@ -150,21 +168,21 @@ class Calibrate:
         return valid
 
     def _save_calibration(self, calibrate_params):
-        f_id = open('calib_params.dat', 'w')
+        f_id = open('calibration_parameters.dat', 'w')
         for array in calibrate_params:
             array = array.reshape(array.shape[0] * array.shape[1], 1)
             for element in array:
-                f_id.write('%s,' % element[0])
+                f_id.write('%s,\n' % element[0])
         f_id.close()
 
         return 1
 
 
 def main():
-    c = Calibrate()
+    c = CameraCalibration()
     # c.start_calibration()
     # c.run()
-    c.calibrate_from_file()
+    c.local_calibration()
 
 
 if __name__ == '__main__':

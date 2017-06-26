@@ -14,20 +14,24 @@ import camera_calibration
 from PyQt4.QtCore import QThread, SIGNAL
 
 class ImageCapture(QThread):
-    """Image Capture:
-    """
-    def __init__(self, queue1, storage_folder, simulation=False):
-        QThread.__init__(self)
-        self.queue1 = queue1
-        self.storage_folder = storage_folder
-        self.simulation = simulation
 
+    def __init__(self, queue1, storage_folder, simulation=False):
+
+        # Defines the class as a thread
+        QThread.__init__(self)
+
+        # Loads configuration settings from respective .json file
         with open('config.json') as config:
             self.config = json.load(config)
 
+        # Save respective values to be used in this method
+        self.queue1 = queue1
+        self.storage_folder = storage_folder
+        self.simulation = simulation
         self.start_layer = self.config['StartLayer']
         self.start_phase = self.config['StartPhase']
 
+        # Determine the current layer number of the current scan or coat image being captured
         push_offset = 1
         self.push_counter = 2 * self.start_layer
 
@@ -47,11 +51,10 @@ class ImageCapture(QThread):
         """
 
     def run(self):
-        self.emit(SIGNAL("update_status(QString)"), 'Calibrating Camera...')
+
         # self.emit(SIGNAL("update_status(QString)"), 'Pylon %s' % pypylon.pylon_version.version)
 
         if self.simulation:
-            self._camera_calibration()
             self.emit(SIGNAL("update_status(QString)"), 'Acquiring Images...')
             self.acquire_image(self.simulation)
         else:
@@ -60,29 +63,28 @@ class ImageCapture(QThread):
                 self._camera_property_setup()
                 self.acquire_image()
 
-
-
     def _camera_calibration(self):
-        camera_calibrate = camera_calibration.Calibrate()
-        camera_calibrate.calibrate_from_file()
+        """Calibrate the cameras
+        Currently uses predefined settings to determine the camera intrinsic values and parameters
+        """
+        calibration = camera_calibration.CameraCalibration()
+        calibration.local_calibration()
 
-        self.new_parameters = camera_calibrate.calibrate_params
-
-        if bool(self.new_parameters):
-            self.calibration_valid = True
-        else:
-            self.stop = True
-            #self.join()
-            return False
+        self.camera_parameters = calibration.calibration_parameters
 
     def acquire_image(self, simulation=False):
+        """Acquire images from the camera(s)
+        If simulation flag is true, images are read from the samples folder
+        """
+
         if simulation:
             self.raw_image_scan = cv2.imread('samples/sample_scan.png')
             self.raw_image_coat = cv2.imread('samples/sample_coat.png')
         else:
             raw_image = next(self.camera1.grab_images)
 
-        self.emit(SIGNAL("initial_processing(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
+        # Emit the read images back to main_window.py for processing
+        self.emit(SIGNAL("initialize_4(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
         self.emit(SIGNAL("update_layer(QString, QString)"), str(self.start_layer), str(self.start_phase))
 
         while True:
@@ -135,7 +137,7 @@ class ImageCapture(QThread):
             self.emit(SIGNAL("update_status(QString)"), 'Acquired %s.' % self.camera1.device_info)
     
     def _serial_interface(self):
-        ports = ['com%s' % i for i in xrange(1, 10)]
+        ports = ['com%s' % number for number in xrange(1, 10)]
         for port in ports:
             try:
                 ser = serial.Serial(port, 9600)
@@ -154,17 +156,17 @@ class ImageCapture(QThread):
     def _camera_property_setup(self):
         if bool(self.available_cameras):
             self.camera1.properties['PixelFormat'] = 'Mono12'  # 12 bit (4096 level) monochrome
-            # self.cam2.properties['PixelFormat'] = 'Mono8'
+            # self.camera2.properties['PixelFormat'] = 'Mono8'
             self.camera1.properties['AcquisitionMode'] = 'SingleFrame'
-            # self.cam2.properties['AcquisitionMode'] = 'SingleFrame'
+            # self.camera2.properties['AcquisitionMode'] = 'SingleFrame'
             self.camera1.properties['TriggerSelector'] = 'AcquisitionStart'  # Select AcquisitionStart Trigger
-            # self.cam2.properties['TriggerSelector'] = 'AcquisitionStart'
+            # self.camera2.properties['TriggerSelector'] = 'AcquisitionStart'
             self.camera1.properties['TriggerMode'] = 'Off'  # software acquisition
-            # self.cam2.properties['TriggerMode']= 'Off'
+            # self.camera2.properties['TriggerMode']= 'Off'
             self.camera1.properties['AcquisitionFrameRateEnable'] = 'False'
-            # self.cam2.properties['AcquisitionFrameRateEnable'] = 'False'
+            # self.camera2.properties['AcquisitionFrameRateEnable'] = 'False'
             self.camera1.properties['TriggerSelector'] = 'FrameStart'  # Select FrameStart Trigger
-            # self.cam2.properties['TriggerSelector']= 'FrameStart'
+            # self.camera2.properties['TriggerSelector']= 'FrameStart'
             # trig_present = self._serial_interface()
             # if not trig_present:
             #     self.stop = True
@@ -173,23 +175,23 @@ class ImageCapture(QThread):
 
             # if hwfstrig:
             #     self.camera1.properties['TriggerMode'] = 'On'  # For hardware frame start triggering
-            # self.cam2.properties['TriggerMode']= 'On'
+            # self.camera2.properties['TriggerMode']= 'On'
             self.camera1.properties['TriggerSource'] = 'Line1'
-            # self.cam2.properties['TriggerSource'] = 'Line1'
+            # self.camera2.properties['TriggerSource'] = 'Line1'
             self.camera1.properties['TriggerActivation'] = 'RisingEdge'
-            # self.cam2.properties['TriggerActivation'] = 'RisingEdge'
+            # self.camera2.properties['TriggerActivation'] = 'RisingEdge'
             self.camera1.properties['ExposureMode'] = 'Timed'
-            # self.cam2.properties['ExposureMode'] = 'Timed'
+            # self.camera2.properties['ExposureMode'] = 'Timed'
             self.camera1.properties['ExposureTimeAbs'] = 23000.0
-            # self.cam2.properties['ExposureTimeAbs']=35000.0
+            # self.camera2.properties['ExposureTimeAbs']=35000.0
             self.camera1.properties['AcquisitionFrameCount'] = 1  # Number of frames to grab
-            # self.cam2.properties['AcquisitionFrameCount'] = 1
+            # self.camera2.properties['AcquisitionFrameCount'] = 1
             self.camera1.properties['GevSCPSPacketSize'] = 500
-            # self.cam2.properties['GevSCPSPacketSize'] = 500
+            # self.camera2.properties['GevSCPSPacketSize'] = 500
             self.camera1.properties['GevSCPD'] = 6900  # Inter-packet delay
-            # self.cam2.properties['GevSCPD'] = 6900
+            # self.camera2.properties['GevSCPD'] = 6900
             self.camera1.properties['GevSCFTD'] = 1000  # Frame transfer delay
-            # self.cam2.properties['GevSCFTD'] = 1000
+            # self.camera2.properties['GevSCFTD'] = 1000
             self._camera_calibration()
         else:
             self.stop = True

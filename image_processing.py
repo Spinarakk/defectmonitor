@@ -8,6 +8,7 @@ import json
 from Queue import Queue
 from PyQt4.QtCore import QThread, SIGNAL, Qt
 
+
 class ImageCorrection(QThread):
     """
     Prepares the source/captured images by fixing various optical related problems
@@ -20,7 +21,7 @@ class ImageCorrection(QThread):
     Respective capital letters suffixed to the image array name indicate which processes have been applied
     """
 
-    def __init__(self, queue1, queue2, calibration_parameters):
+    def __init__(self, camera_parameters, image_folder_name, image_scan, image_coat):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -29,17 +30,60 @@ class ImageCorrection(QThread):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        self.queue1 = queue1
-        self.queue2 = queue2
-
         # Save respective values to be used in OpenCV functions
-        self.perspective = calibration_parameters[0]
-        self.intrinsic_c = calibration_parameters[1]
-        self.intrinsic_d = calibration_parameters[2]
-        self.output_resolution = calibration_parameters[3]
+        self.perspective = camera_parameters[0]
+        self.intrinsic_c = camera_parameters[1]
+        self.intrinsic_d = camera_parameters[2]
+        self.output_resolution = camera_parameters[3]
+
+        self.image_folder_name = image_folder_name
+        self.image_scan = image_scan
+        self.image_coat = image_coat
 
     def run(self):
-        pass
+
+        # Processing the scan and coat images
+        self.emit(SIGNAL("update_status(QString)"), 'Fixing Distortion & Perspective...')
+        self.emit(SIGNAL("update_progress(QString)"), '0')
+        self.image_scan_D = self.distortion_fix(self.image_scan)
+        self.emit(SIGNAL("update_progress(QString)"), '10')
+        self.image_scan_DP = self.perspective_fix(self.image_scan_D)
+        self.emit(SIGNAL("update_progress(QString)"), '20')
+        self.image_coat_D = self.distortion_fix(self.image_coat)
+        self.emit(SIGNAL("update_progress(QString)"), '30')
+        self.image_coat_DP = self.perspective_fix(self.image_coat_D)
+        self.emit(SIGNAL("update_status(QString)"), 'Cropping images...')
+        self.emit(SIGNAL("update_progress(QString)"), '40')
+        self.image_scan_DPC = self.crop(self.image_scan_DP)
+        self.emit(SIGNAL("update_progress(QString)"), '50')
+        self.image_coat_DPC = self.crop(self.image_coat_DP)
+        self.emit(SIGNAL("update_status(QString)"), 'Applying CLAHE algorithm...')
+        self.emit(SIGNAL("update_progress(QString)"), '60')
+        self.image_scan_DPCE = self.CLAHE(self.image_scan_DPC)
+        self.emit(SIGNAL("update_progress(QString)"), '70')
+        self.image_coat_DPCE = self.CLAHE(self.image_coat_DPC)
+        self.emit(SIGNAL("update_progress(QString)"), '80')
+
+        # Saves the processed images to the created folder with the appropriate name tags
+        self.emit(SIGNAL("update_status(QString)"), 'Saving images to folder...')
+        cv2.imwrite('%s/sample_scan_DP.png' % (self.image_folder_name), self.image_scan_DP)
+        cv2.imwrite('%s/sample_scan_DPC.png' % (self.image_folder_name), self.image_scan_DPC)
+        cv2.imwrite('%s/sample_scan_DPCE.png' % (self.image_folder_name), self.image_scan_DPCE)
+        self.emit(SIGNAL("update_progress(QString)"), '90')
+        cv2.imwrite('%s/sample_coat_DP.png' % (self.image_folder_name), self.image_coat_DP)
+        cv2.imwrite('%s/sample_coat_DPC.png' % (self.image_folder_name), self.image_coat_DPC)
+        cv2.imwrite('%s/sample_coat_DPCE.png' % (self.image_folder_name), self.image_coat_DPCE)
+        self.emit(SIGNAL("update_progress(QString)"), '100')
+
+        # Emit the processed images back to main_window.py to display
+        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_scan_DP, 'scan', 'DP')
+        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_scan_DPC, 'scan', 'DPC')
+        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_scan_DPCE, 'scan', 'DPCE')
+
+        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_coat_DP, 'coat', 'DP')
+        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_coat_DPC, 'coat', 'DPC')
+        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_coat_DPCE, 'coat', 'DPCE')
+
 
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
