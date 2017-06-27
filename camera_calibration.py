@@ -11,65 +11,37 @@ import os
 import cv2
 import numpy as np
 from PyQt4.QtCore import QThread, SIGNAL
-base_files = os.listdir('.')
+from time import sleep
 
 
-class CameraCalibration(QThread):
-    def __init__(self):
+class Calibration(QThread):
+    def __init__(self, calibration_image):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
+
+        self.calibration_image = calibration_image
+
         self.valid = False
-        self.calibration_parameters = []
-        self.old_parameters = []
+
 
     def run(self):
-        current_parameters = self._check_existing()
-
-        # This if statement essentially checks the last element in the current_parameters array for a 0
-        # It is in essense a boolean flag
-        """if current_parameters[-1] == 0:
-            self.old_parameters = False
-            calibration_parameters = self._start_calibration()
-        else:
-            """
-        #self.calibration_parameters = current_parameters
-        #self.old_parameters = True
-
-    def local_calibration(self):
-        """Perform the calibration using an image file found in the root folder"""
-
-        calibration_image = 'calibrate10x8.png'
-        if calibration_image in base_files:
-            image = cv2.imread(calibration_image, 0)
-            self.calibration_parameters = self.start_calibration(image)
-        else:
-            return False
-            # while not self.valid:
-            #     calibration_parameters = self._start_calibration()
-            #     self.valid = self._validate_calibration(calibration_parameters)
-            #     if self.valid:
-            #         self._save_calibration(calibration_parameters)
-            # self.calibration_parameters = calibration_parameters
-
-    def _check_existing(self):
-
         try:
-            with open('camera_parameters.dat', 'r') as stored_parameters:
-                self.stored_parameters = np.fromstring(stored_parameters.read(), dtype=float, sep=',')
-            perspective = self.stored_parameters[0:9].reshape(3, 3)  # Convert to array
-            intrinsic_c = self.stored_parameters[9:18].reshape(3, 3)
-            intrinsic_d = self.stored_parameters[18:23]
-            output_resolution = self.stored_parameters[23:]
-            self.calibration_parameters = [perspective, intrinsic_c, intrinsic_d, output_resolution]
+            self.emit(SIGNAL("update_status(QString)"), 'Calibrating from image...')
+            self.emit(SIGNAL("update_progress(QString)"), '10')
+            retval = self.start_calibration(self.calibration_image)
+            if retval:
+                self.emit(SIGNAL("update_status(QString)"), 'Calibration successful.')
+                self.emit(SIGNAL("update_progress(QString)"), '100')
+                os.system("notepad.exe camera_parameters.txt")
+            else:
+                self.emit(SIGNAL("update_status(QString)"), 'Calibration failed.')
         except:
-            return False
+            self.emit(SIGNAL("update_status(QString"), 'Calibration image not found.')
 
     def start_calibration(self, image):
         """Perform the OpenCV calibration process"""
-        calibrate_params = []
-
 
         ratio = 2
         board_width = 9  # chessboard dimensions
@@ -81,12 +53,10 @@ class CameraCalibration(QThread):
         new_res = (image.shape[1] / ratio, image.shape[0] / ratio)
 
 
-        #image = cv2.resize(image, new_res, interpolation=cv2.INTER_AREA)
-        #cv2.imwrite('TEST1.png',image)
-
+        image = cv2.resize(image, new_res, interpolation=cv2.INTER_AREA)
+        self.emit(SIGNAL("update_progress(QString)"), '20')
         image = cv2.fastNlMeansDenoising(image, None, 10, 7, 21)
-        cv2.imwrite('TEST2.png',image)
-
+        self.emit(SIGNAL("update_progress(QString)"), '30')
         # Populate projection points matrix with values
         prj_pts = np.zeros((board_width * board_height, 3), np.float32)
         prj_pts[:, :2] = c_mult * np.mgrid[1:(board_width + 1), 1:(board_height + 1)].T.reshape(board_width * board_height, 2)
@@ -99,7 +69,7 @@ class CameraCalibration(QThread):
 
         # Detect corners of chessboard calibration image
         _, det_corners = cv2.findChessboardCorners(image, (board_width, board_height))  # , flags=cv2.CALIB_CB_ADAPTIVE_THRESH)
-
+        self.emit(SIGNAL("update_progress(QString)"), '40')
 
         cv2.cornerSubPix(image, det_corners, (10, 10), (-1, -1), spr_criteria)
         det_corners = ratio * det_corners.reshape(1, board_width * board_height, 2)
@@ -121,13 +91,13 @@ class CameraCalibration(QThread):
                           new_corners[0, :][-1]]
         # prj_pts[:, 0] += int(tl[0])  # translate projection points by distance to top left point
         # prj_pts[:, 1] += int(tl[1])
-
+        self.emit(SIGNAL("update_progress(QString)"), '50')
         prj_pts = prj_pts.reshape(1, board_width * board_height, 3).astype(np.float32)
 
         flat_image = cv2.cvtColor(flat_image, cv2.COLOR_GRAY2BGR)
         cv2.drawChessboardCorners(flat_image, (9, 7), new_corners, 1)  # sum_sqdiff = 0
         # for i in xrange(board_width * board_height):
-        #     dist = self.calc_sqdiff(image_pts[0][i][0], image_pts[0][i][1], prj_pts[0][i][0], prj_pts[0][i][1])
+        #     dist = self.pythag(image_pts[0][i][0], image_pts[0][i][1], prj_pts[0][i][0], prj_pts[0][i][1])
         #     sum_sqdiff += dist
 
         h, _ = cv2.findHomography(new_corners, prj_pts)
@@ -135,7 +105,7 @@ class CameraCalibration(QThread):
         # h[1, 2] *= ratio
         # h[2, 0] /= ratio
         # h[2, 1] /= ratio
-
+        self.emit(SIGNAL("update_progress(QString)"), '60')
         tfm_pts = cv2.perspectiveTransform(np.array([[(0,0)],[(0,res[1])],[(res[0],res[1])],[(res[0],res[1])]],dtype=float), h)
         offset = np.array([[1, 0, -tfm_pts[:,0][:,0].min()], [0, 1, -tfm_pts[:,0][:,1].min()], [0, 0, 1]])  # establish translation offset matrix
         h = np.dot(offset, h)  # Modify homography with translation matrix
@@ -144,19 +114,21 @@ class CameraCalibration(QThread):
         outres = np.array([(out_w, out_h)])
 
         calibrate_params = [h, intr_c, intr_d, outres]
-
+        self.emit(SIGNAL("update_progress(QString)"), '70')
         warp_image = cv2.warpPerspective(flat_image, h, tuple(outres[0]))
 
-
-
-        cv2.imwrite('warped.png', warp_image)
-        cv2.imwrite('flat.png', flat_image)
+        #cv2.imwrite('warped.png', warp_image)
+        self.emit(SIGNAL("update_progress(QString)"), '80')
+        sleep(0.5)
+        #cv2.imwrite('flat.png', flat_image)
+        self.emit(SIGNAL("update_progress(QString)"), '90')
+        sleep(0.5)
         self._save_calibration(calibrate_params)
 
-        return calibrate_params
+        return 1
 
     @staticmethod
-    def calc_sqdiff(x1, y1, x2, y2):
+    def pythag(x1, y1, x2, y2):
         return (x2 - x1) ** 2 + (y2 - y1) ** 2
 
     @staticmethod
@@ -168,18 +140,18 @@ class CameraCalibration(QThread):
         return valid
 
     def _save_calibration(self, calibrate_params):
-        f_id = open('calibration_parameters.dat', 'w')
+        f_id = open('camera_parameters.txt', 'w')
         for array in calibrate_params:
             array = array.reshape(array.shape[0] * array.shape[1], 1)
             for element in array:
-                f_id.write('%s,\n' % element[0])
+                f_id.write('%s,' % element[0])
         f_id.close()
 
         return 1
 
 
 def main():
-    c = CameraCalibration()
+    c = Calibration()
     # c.start_calibration()
     # c.run()
     c.local_calibration()

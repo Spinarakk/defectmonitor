@@ -70,10 +70,6 @@ class SliceConverter(QThread):
                     layer_count = 0
                     border_count = 0
 
-                    # Progress bar numbers
-
-
-
                     # Main parsing of cls to human-readable format
                     for idx, s in enumerate(bin_split):
 

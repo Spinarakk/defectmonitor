@@ -4,9 +4,9 @@ Module containing mostly OpenCV code used to process the images for initial anal
 """
 import cv2
 import json
+import numpy as np
 
-from Queue import Queue
-from PyQt4.QtCore import QThread, SIGNAL, Qt
+from PyQt4.QtCore import QThread, SIGNAL
 
 
 class ImageCorrection(QThread):
@@ -21,7 +21,7 @@ class ImageCorrection(QThread):
     Respective capital letters suffixed to the image array name indicate which processes have been applied
     """
 
-    def __init__(self, camera_parameters, image_folder_name, image_scan, image_coat):
+    def __init__(self, image_folder_name, image_scan, image_coat):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -30,60 +30,56 @@ class ImageCorrection(QThread):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Save respective values to be used in OpenCV functions
-        self.perspective = camera_parameters[0]
-        self.intrinsic_c = camera_parameters[1]
-        self.intrinsic_d = camera_parameters[2]
-        self.output_resolution = camera_parameters[3]
+        # Loads camera parameter settings from respective .dat file
 
+        with open('camera_parameters.txt') as camera_parameters:
+            self.camera_parameters = np.fromstring(camera_parameters.read(), dtype=float, sep=',')
+
+        # Save respective values to be used in OpenCV functions
+        self.perspective = self.camera_parameters[0:9].reshape(3, 3)
+        self.intrinsic_c = self.camera_parameters[9:18].reshape(3, 3)
+        self.intrinsic_d = self.camera_parameters[18:23].reshape(1, 5)
+        self.output_resolution = self.camera_parameters[23:].reshape(1, 2).astype(np.int32)
+
+        # Define lists containing the 2 image arrays, 2 phase strings, 3 processing tag strings and 3 status messages
         self.image_folder_name = image_folder_name
-        self.image_scan = image_scan
-        self.image_coat = image_coat
+        self.images = (image_scan, image_coat)
+        self.phases = ('scan', 'coat')
+        self.tags = ('DP', 'DPC', 'DPCE')
+        self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
+                                'Applying CLAHE algorithm...')
+        self.progress_counter = 0.0
 
     def run(self):
+        """This for loop loops through the three tags and two phases to produce six processed images
+        For each image, depending on the tag, it'll be subjected to certain processes
+        After which the image will be saved to disk and emitted back to the main function
+        Progress and status updates found here as well
+        """
 
-        # Processing the scan and coat images
-        self.emit(SIGNAL("update_status(QString)"), 'Fixing Distortion & Perspective...')
-        self.emit(SIGNAL("update_progress(QString)"), '0')
-        self.image_scan_D = self.distortion_fix(self.image_scan)
-        self.emit(SIGNAL("update_progress(QString)"), '10')
-        self.image_scan_DP = self.perspective_fix(self.image_scan_D)
-        self.emit(SIGNAL("update_progress(QString)"), '20')
-        self.image_coat_D = self.distortion_fix(self.image_coat)
-        self.emit(SIGNAL("update_progress(QString)"), '30')
-        self.image_coat_DP = self.perspective_fix(self.image_coat_D)
-        self.emit(SIGNAL("update_status(QString)"), 'Cropping images...')
-        self.emit(SIGNAL("update_progress(QString)"), '40')
-        self.image_scan_DPC = self.crop(self.image_scan_DP)
-        self.emit(SIGNAL("update_progress(QString)"), '50')
-        self.image_coat_DPC = self.crop(self.image_coat_DP)
-        self.emit(SIGNAL("update_status(QString)"), 'Applying CLAHE algorithm...')
-        self.emit(SIGNAL("update_progress(QString)"), '60')
-        self.image_scan_DPCE = self.CLAHE(self.image_scan_DPC)
-        self.emit(SIGNAL("update_progress(QString)"), '70')
-        self.image_coat_DPCE = self.CLAHE(self.image_coat_DPC)
-        self.emit(SIGNAL("update_progress(QString)"), '80')
+        for tag_index, tag in enumerate(self.tags):
+            for phase_index, phase in enumerate(self.phases):
 
-        # Saves the processed images to the created folder with the appropriate name tags
-        self.emit(SIGNAL("update_status(QString)"), 'Saving images to folder...')
-        cv2.imwrite('%s/sample_scan_DP.png' % (self.image_folder_name), self.image_scan_DP)
-        cv2.imwrite('%s/sample_scan_DPC.png' % (self.image_folder_name), self.image_scan_DPC)
-        cv2.imwrite('%s/sample_scan_DPCE.png' % (self.image_folder_name), self.image_scan_DPCE)
-        self.emit(SIGNAL("update_progress(QString)"), '90')
-        cv2.imwrite('%s/sample_coat_DP.png' % (self.image_folder_name), self.image_coat_DP)
-        cv2.imwrite('%s/sample_coat_DPC.png' % (self.image_folder_name), self.image_coat_DPC)
-        cv2.imwrite('%s/sample_coat_DPCE.png' % (self.image_folder_name), self.image_coat_DPCE)
-        self.emit(SIGNAL("update_progress(QString)"), '100')
+                self.emit(SIGNAL("update_status(QString)"), self.status_messages[tag_index])
 
-        # Emit the processed images back to main_window.py to display
-        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_scan_DP, 'scan', 'DP')
-        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_scan_DPC, 'scan', 'DPC')
-        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_scan_DPCE, 'scan', 'DPCE')
+                self.image = self.distortion_fix(self.images[phase_index])
+                self.image = self.perspective_fix(self.image)
+                if tag is not 'DP':
+                    self.image = self.crop(self.image)
+                    if tag is not 'DPC':
+                        self.image = self.CLAHE(self.image)
 
-        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_coat_DP, 'coat', 'DP')
-        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_coat_DPC, 'coat', 'DPC')
-        self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image_coat_DPCE, 'coat', 'DPCE')
+                self.progress_counter += 8.333
+                self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
+                self.emit(SIGNAL("update_status(QString)"), self.status_messages[tag_index] +
+                          ' Saving sample_%s_%s.png to %s folder...' % (phase, tag, self.image_folder_name))
 
+                # Write the current processed image to disk named using appropriate tags, and send back to main function
+                cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder_name, phase, tag), self.image)
+                self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image, phase, tag)
+
+                self.progress_counter += 8.333
+                self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
 
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""

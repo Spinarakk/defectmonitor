@@ -81,6 +81,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonStop.clicked.connect(self.stop)
         self.buttonPhase.clicked.connect(self.toggle_phase)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
+        self.buttonCalibrateCamera.clicked.connect(self.camera_calibration)
 
         # Toggles
         self.checkSimulation.toggled.connect(self.toggle_simulation)
@@ -113,7 +114,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.boundary_offset = self.config['BoundaryOffset']
 
         # Initialize multithreading queues
-        #TODO Probably not needed?
+        # TODO Probably not needed?
         self.queue1 = Queue()
         self.queue2 = Queue()
 
@@ -126,15 +127,15 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Create new directories to store camera images and processing outputs
         # Error checking in case the folder already exist (shouldn't due to the seconds output)
         try:
-            os.mkdir('%s' % (self.storage_folder_name))
+            os.mkdir('%s' % self.storage_folder_name)
         except WindowsError:
             self.storage_folder_name = self.storage_folder_name + "_2"
-            os.mkdir('%s' % (self.storage_folder_name))
+            os.mkdir('%s' % self.storage_folder_name)
 
-        os.mkdir('%s/scan' % (self.storage_folder_name))
-        os.mkdir('%s/coat' % (self.storage_folder_name))
-        self.storage_folder = {'scan': '%s/scan' % (self.storage_folder_name),
-                               'coat': '%s/coat' % (self.storage_folder_name)}
+        os.mkdir('%s/scan' % self.storage_folder_name)
+        os.mkdir('%s/coat' % self.storage_folder_name)
+        self.storage_folder = {'scan': '%s/scan' % self.storage_folder_name,
+                               'coat': '%s/coat' % self.storage_folder_name}
 
         # Create a temporary folder to store processed images
         try:
@@ -151,7 +152,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Initial current layer
         self.current_layer = 1
 
-        #TODO Temporary Variables (To investigate what they do)
+        # TODO Temporary Variables (To investigate what they do)
         self.item_dictionary = dict()
         self.initial_flag = True
 
@@ -237,45 +238,31 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.slice_converter_instance.start()
 
     def initialize_2(self):
-        """Method for setting up the camera parameters and intrinsic values
-        Calibration is currently being done through a pre-taken image in the root folder
-        """
-        # Saves a copy of the converted slice array in self
-        self.slice_file_dictionary = self.slice_converter_instance.slice_file_dictionary
-
-        self.update_status('CALIBRATING')
-
-        # Instantiate a CameraCalibration instance
-        self.camera_calibration_instance = camera_calibration.CameraCalibration()
-        self.connect(self.camera_calibration_instance, SIGNAL("finished()"), self.initialize_3)
-        self.camera_calibration_instance.start()
-
-        #self.camera_calibration_instance.local_calibration()
-
-        self.update_status('Done with calibration')
-
-
-
-    def initialize_3(self):
-        """Method for setting up the camera itself and thusly acquiring the images
+        """Method for setting up the camera itself and subsequently acquiring the images
         Able to change a variety of camera settings within the module itself, to be turned into UI element
         If simulation is checked, images are loaded from the samples folder
         """
+
+        self.update_progress(0)
+
+        # Saves a copy of the converted slice array in self
+        self.slice_file_dictionary = self.slice_converter_instance.slice_file_dictionary
 
         # Instantiate an ImageCapture instance
         self.image_capture_instance = image_capture.ImageCapture(self.queue1, self.storage_folder, self.simulation)
 
         # Listen for emitted signals from the linked function, and send them to the corresponding methods
         self.connect(self.image_capture_instance, SIGNAL("update_status(QString)"), self.update_status)
-        #self.connect(self.image_capture_instance, SIGNAL("qthread_error(QString)"), )
+        self.connect(self.image_capture_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+
         # Signal that moves on to the next task
-        self.connect(self.image_capture_instance, SIGNAL("initialize_4(PyQt_PyObject, PyQt_PyObject)"), self.initialize_4)
+        self.connect(self.image_capture_instance, SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.initialize_3)
         #self.connect(self.capture_images, SIGNAL("update_layer(QString, QString)"), self.update_layer)
 
         # Run the ImageCapture instance
         self.image_capture_instance.start()
 
-    def initialize_4(self, image_scan, image_coat):
+    def initialize_3(self, image_scan, image_coat):
         """Method for the initial image processing of the raw scan and coat images for analysis
         Applies the following OpenCV processes in order
         Distortion Correction (D)
@@ -287,11 +274,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         self.image_scan = image_scan
         self.image_coat = image_coat
-        self.camera_parameters = self.camera_calibration_instance.calibration_parameters
+        self.update_progress(0)
 
         # Instantiate an ImageCorrection instance
-        self.image_correction_instance = image_processing.ImageCorrection(self.camera_parameters,
-                                                                          self.image_folder_name, self.image_scan,
+        self.image_correction_instance = image_processing.ImageCorrection(self.image_folder_name, self.image_scan,
                                                                           self.image_coat)
 
         # Listen for emitted signals from the linked function, and send them to the corresponding methods
@@ -336,7 +322,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             # Draws the contours
             for item in self.item_dictionary:
                 cv2.drawContours(self.overlay_image, self.item_dictionary[item]['PartData']['Contours'],
-                                -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
+                                 -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
             self.update_status('Displaying slice outlines.')
 
         else:
@@ -471,6 +457,30 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
     def defect_processing(self):
         pass
+
+    def camera_calibration(self):
+        """Performs the OpenCV camera calibration using a folder of images with the checkerboard"""
+
+        self.update_status('')
+
+        # Opens a folder select dialog, allowing the user to choose a folder
+        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Select Folder Containing Calibration Images')
+
+        self.calibration_image = cv2.imread('%s\calibration_image.png' % self.calibration_folder, 0)
+
+        if self.calibration_image is not None:
+
+            # Instantiate a Calibration instance
+            self.camera_calibration_instance = camera_calibration.Calibration(self.calibration_image)
+
+            # Listen for emitted signals from the linked function, and send them to the corresponding methods
+            self.connect(self.camera_calibration_instance, SIGNAL("update_status(QString)"), self.update_status)
+            self.connect(self.camera_calibration_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+
+            # Run the Calibration instance
+            self.camera_calibration_instance.start()
+        else:
+            self.update_status('Calibration image not found.')
 
     # Position Adjustment Box
 
@@ -608,18 +618,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Updates the progress bar at the bottom of the Main Window with the sent percentage argument"""
         self.progressBar.setValue(int(percentage))
         return
-
-    def qthread_error(self, error_message):
-        """If any of the qThread classes encounters an in-built error, this method terminates all qThread instances"""
-
-        self.slice_converter_instance.terminate()
-        self.camera_calibration_instance.terminate()
-        self.image_capture_instance.terminate()
-        self.image_correction_instance.terminate()
-
-        # Display the error in the status bar
-        self.update_status(error_message)
-
 
     def closeEvent(self, event):
         """When either the Exit button or the top-right X is pressed, these processes happen:

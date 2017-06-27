@@ -38,39 +38,19 @@ class ImageCapture(QThread):
         if self.start_phase == 'coat':
             self.push_counter += push_offset
 
-        """
-        self.camera1 = None
-        self.new_parameters = []
-        self.stop = False
-        self.available_cameras = []
-        self.file_list = []
-        self.calibration_output = []
-        self.calibration_valid = False
-        self.serial_trigger = []
-        self.image_raw = None
-        """
-
     def run(self):
 
         # self.emit(SIGNAL("update_status(QString)"), 'Pylon %s' % pypylon.pylon_version.version)
 
+        # At the current moment, because simulations are being run, this entire module only does the following
         if self.simulation:
             self.emit(SIGNAL("update_status(QString)"), 'Acquiring Images...')
             self.acquire_image(self.simulation)
         else:
             self.acquire_cameras()
             if bool(self.camera1):
-                self._camera_property_setup()
+                self._camera_settings()
                 self.acquire_image()
-
-    def _camera_calibration(self):
-        """Calibrate the cameras
-        Currently uses predefined settings to determine the camera intrinsic values and parameters
-        """
-        calibration = camera_calibration.CameraCalibration()
-        calibration.local_calibration()
-
-        self.camera_parameters = calibration.calibration_parameters
 
     def acquire_image(self, simulation=False):
         """Acquire images from the camera(s)
@@ -79,12 +59,17 @@ class ImageCapture(QThread):
 
         if simulation:
             self.raw_image_scan = cv2.imread('samples/sample_scan.png')
+            self.emit(SIGNAL("update_status(QString)"), 'Acquired scan image.')
+            self.emit(SIGNAL("update_progress(QString)"), '50')
+
             self.raw_image_coat = cv2.imread('samples/sample_coat.png')
+            self.emit(SIGNAL("update_status(QString)"), 'Acquired coat image.')
+            self.emit(SIGNAL("update_progress(QString)"), '100')
         else:
             raw_image = next(self.camera1.grab_images)
 
         # Emit the read images back to main_window.py for processing
-        self.emit(SIGNAL("initialize_4(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
+        self.emit(SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
         self.emit(SIGNAL("update_layer(QString, QString)"), str(self.start_layer), str(self.start_phase))
 
         while True:
@@ -153,7 +138,7 @@ class ImageCapture(QThread):
 
         return False
     
-    def _camera_property_setup(self):
+    def _camera_settings(self):
         if bool(self.available_cameras):
             self.camera1.properties['PixelFormat'] = 'Mono12'  # 12 bit (4096 level) monochrome
             # self.camera2.properties['PixelFormat'] = 'Mono8'
