@@ -489,37 +489,40 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QRadioButton" name="radioBladeChatter">
+        <widget class="QRadioButton" name="radioOpenCV1">
          <property name="text">
-          <string>Blade Chatter</string>
+          <string>Test Code 1</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QRadioButton" name="radioBladeFaults">
+        <widget class="QRadioButton" name="radioOpenCV2">
          <property name="text">
-          <string>Blade Faults</string>
+          <string>Test Code 2</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QRadioButton" name="radioBladeStreaks">
+        <widget class="QRadioButton" name="radioOpenCV3">
          <property name="text">
-          <string>Blade Streaks</string>
+          <string>Test Code 3</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QRadioButton" name="radioPartCoverage">
+        <widget class="QRadioButton" name="radioOpenCV4">
          <property name="text">
-          <string>Part Coverage</string>
+          <string>Test Code 4</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QRadioButton" name="radioPowderHoles">
+        <widget class="QRadioButton" name="radioOpenCV5">
          <property name="text">
-          <string>Powder Holes</string>
+          <string>Test Code 5</string>
          </property>
         </widget>
        </item>
@@ -892,6 +895,9 @@
     </item>
     <item row="0" column="0" rowspan="5" colspan="3">
      <widget class="QTabWidget" name="widgetDisplay">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="tabPosition">
        <enum>QTabWidget::North</enum>
       </property>
@@ -900,6 +906,9 @@
       </property>
       <property name="currentIndex">
        <number>0</number>
+      </property>
+      <property name="tabsClosable">
+       <bool>false</bool>
       </property>
       <widget class="QWidget" name="widgetTab1">
        <attribute name="title">
@@ -1054,13 +1063,16 @@
            </font>
           </property>
           <property name="text">
-           <string>File -&gt; New Build -&gt; OK -&gt; Initialize</string>
+           <string>File -&gt; New Build -&gt; OK -&gt; Initialize -&gt; On Scan or Coat Tab -&gt; Analyze for Defects</string>
           </property>
           <property name="scaledContents">
            <bool>true</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -1250,5 +1262,22 @@
  <resources>
   <include location="icons.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>widgetDisplay</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>mainWindow</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>535</x>
+     <y>363</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>604</x>
+     <y>399</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

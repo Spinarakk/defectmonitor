@@ -15,16 +15,13 @@ from time import sleep
 
 
 class Calibration(QThread):
-    def __init__(self, calibration_image):
+    def __init__(self, calibration_folder):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
-
-        self.calibration_image = calibration_image
-
-        self.valid = False
-
+        self.calibration_folder = calibration_folder
+        self.calibration_image = cv2.imread('%s/calibration_image.png' % self.calibration_folder, 0)
 
     def run(self):
         try:
@@ -34,6 +31,7 @@ class Calibration(QThread):
             if retval:
                 self.emit(SIGNAL("update_status(QString)"), 'Calibration successful.')
                 self.emit(SIGNAL("update_progress(QString)"), '100')
+                self.emit(SIGNAL("successful()"))
                 os.system("notepad.exe camera_parameters.txt")
             else:
                 self.emit(SIGNAL("update_status(QString)"), 'Calibration failed.')
@@ -123,7 +121,13 @@ class Calibration(QThread):
         #cv2.imwrite('flat.png', flat_image)
         self.emit(SIGNAL("update_progress(QString)"), '90')
         sleep(0.5)
-        self._save_calibration(calibrate_params)
+
+        # Writes the calibration settings to a text file to be read later
+        with open('camera_parameters.txt', 'w') as parameter_txt:
+            for array in calibrate_params:
+                array = array.reshape(array.shape[0] * array.shape[1], 1)
+                for element in array:
+                    parameter_txt.write('%s,' % element[0])
 
         return 1
 
@@ -138,24 +142,3 @@ class Calibration(QThread):
         else:
             valid = False
         return valid
-
-    def _save_calibration(self, calibrate_params):
-        f_id = open('camera_parameters.txt', 'w')
-        for array in calibrate_params:
-            array = array.reshape(array.shape[0] * array.shape[1], 1)
-            for element in array:
-                f_id.write('%s,' % element[0])
-        f_id.close()
-
-        return 1
-
-
-def main():
-    c = Calibration()
-    # c.start_calibration()
-    # c.run()
-    c.local_calibration()
-
-
-if __name__ == '__main__':
-    main()

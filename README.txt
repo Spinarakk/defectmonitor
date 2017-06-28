@@ -1,44 +1,72 @@
-Defect Monitor
+Defect Monitor (Tentative Name)
 MCAM CLS Printer Software
 
-Run main_window.py.
+Operation
+- Run main_window.py
 
-List of Functionality
-- Take a picture of the coat and the layer (2 images)
-	- Set up camera parameters
-	- Done already
+Software
+- Python 2.7.13 (PyCharm 2017.1.2)
+- OpenCV 3.2.0
+- PyQt 4.11.4
+- Qt 4.8.7
+- Basler Pylon 5.0.5.8999
+
+Hardware
+- Basler Ace acA3800-10gm GigE
+	- CMOS Sensor
+	- 10 FPS at 10 megapixels
+	- 3856 x 2764 resolution
+	- Grayscale
+- Laptop running Windows 10
+
+Core Functionality
+- Start/Load a build and change settings as appropriate
+- Take an image after the machine does both the scan and coat operations (2 images)
+	- Setup camera parameters
+	- Serial trigger using hall sensors in the machine
 - Correct the image for distortions, perspective, crop, move, realign the origin
-	- OpenCV
+- Convert the .cls or .cli files into a format OpenCV can use
+- Camera calibration using pre-taken checkboard images 
+- Process the scan and coat images for defects
+	- See below for defects
+- Check if defects overlap the part countours
+	- No
+		- Ignore
+		- Check if the defects may propogate into the part
+	- Yes
+		- Stop the operation
+		- Send (push) notification to user
+		- Error report
+- Generate final report after part is completed
+- Notification (instantaneous) for major defects
+- Possible real-time interaction with the machine software to correct minor errors
+	- Re-coating
+	- Re-scanning (missed areas)
+- Simple to use User Interface
 
-
-- Make sure the slice is aligned
-
-
-- Check if defects overlap the part area
-	- If not ignore?
-	- If so error report
-
-
-List of defects
-Scanned Image
-- Inclusions, blobs of spatter within the part contours
+List of Defects
+Scan
+- Inclusions
+- Blobs of spatter within the part contours
 - Scan failures, misses
-Coating Image
-- Blade streaks
+Coat
+- Blade streaks (horizontal divets)
 - Blade chatter (vertical)
 - Blade damage (dark sections near the start of the blade)
-- Part warping bulging into the next coat or not enough powder on the coat
+- Part warping bulging into the next coat
+- Not enough powder for the coat
 - Powder holes
 
-Ultimate goals
-- Defect propagation 
-- Notifications for major defects
-- Report generated based off defects found 
+Modules
+- GUI
+- Image Capture
+- Camera Calibration
+- Slice Converter
+- Image Correction
+- Image Processing for Defects
+- Slice Overlay & Comparison
+- Report Generation
+- Notification
 
-
-Camera Used
-Basler Ace
-acA3800-10gm GigE
-CMOS Sensor
-10 FPS at 10 megapixels
-3856 x 2764 resolution
+Possible Additional Features
+- 

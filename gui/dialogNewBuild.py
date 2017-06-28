@@ -25,10 +25,10 @@ except AttributeError:
 class Ui_dialogNewBuild(object):
     def setupUi(self, dialogNewBuild):
         dialogNewBuild.setObjectName(_fromUtf8("dialogNewBuild"))
-        dialogNewBuild.setWindowModality(QtCore.Qt.WindowModal)
-        dialogNewBuild.resize(391, 194)
-        dialogNewBuild.setMinimumSize(QtCore.QSize(391, 194))
-        dialogNewBuild.setMaximumSize(QtCore.QSize(391, 194))
+        dialogNewBuild.setWindowModality(QtCore.Qt.NonModal)
+        dialogNewBuild.resize(391, 186)
+        dialogNewBuild.setMinimumSize(QtCore.QSize(391, 186))
+        dialogNewBuild.setMaximumSize(QtCore.QSize(391, 186))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogNewBuild.setWindowIcon(icon)
@@ -40,7 +40,6 @@ class Ui_dialogNewBuild(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lineBuildName.sizePolicy().hasHeightForWidth())
         self.lineBuildName.setSizePolicy(sizePolicy)
-        self.lineBuildName.setText(_fromUtf8(""))
         self.lineBuildName.setMaxLength(30)
         self.lineBuildName.setObjectName(_fromUtf8("lineBuildName"))
         self.comboPlatform = QtGui.QComboBox(dialogNewBuild)
@@ -69,7 +68,7 @@ class Ui_dialogNewBuild(object):
         self.line.setFrameShadow(QtGui.QFrame.Sunken)
         self.line.setObjectName(_fromUtf8("line"))
         self.groupNotificationSettings = QtGui.QGroupBox(dialogNewBuild)
-        self.groupNotificationSettings.setGeometry(QtCore.QRect(10, 80, 271, 111))
+        self.groupNotificationSettings.setGeometry(QtCore.QRect(10, 70, 271, 111))
         self.groupNotificationSettings.setObjectName(_fromUtf8("groupNotificationSettings"))
         self.buttonUseLast = QtGui.QPushButton(self.groupNotificationSettings)
         self.buttonUseLast.setGeometry(QtCore.QRect(190, 80, 75, 23))
@@ -126,7 +125,7 @@ class Ui_dialogNewBuild(object):
         self.labelBuildName.setFont(font)
         self.labelBuildName.setObjectName(_fromUtf8("labelBuildName"))
         self.buttonBox = QtGui.QDialogButtonBox(dialogNewBuild)
-        self.buttonBox.setGeometry(QtCore.QRect(290, 120, 91, 61))
+        self.buttonBox.setGeometry(QtCore.QRect(290, 110, 91, 61))
         self.buttonBox.setOrientation(QtCore.Qt.Vertical)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
@@ -138,6 +137,7 @@ class Ui_dialogNewBuild(object):
 
     def retranslateUi(self, dialogNewBuild):
         dialogNewBuild.setWindowTitle(_translate("dialogNewBuild", "New Build", None))
+        self.lineBuildName.setText(_translate("dialogNewBuild", "Default", None))
         self.comboPlatform.setItemText(0, _translate("dialogNewBuild", "Concept X1000R (636 x 406 mm)", None))
         self.comboPlatform.setItemText(1, _translate("dialogNewBuild", "Concept X2000R (800 x 400 mm)", None))
         self.comboPlatform.setItemText(2, _translate("dialogNewBuild", "EOS M280/M290 (250 x 250 mm)", None))

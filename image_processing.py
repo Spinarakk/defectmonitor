@@ -75,7 +75,7 @@ class ImageCorrection(QThread):
                           ' Saving sample_%s_%s.png to %s folder...' % (phase, tag, self.image_folder_name))
 
                 # Write the current processed image to disk named using appropriate tags, and send back to main function
-                cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder_name, phase, tag), self.image)
+                #TODO cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder_name, phase, tag), self.image)
                 self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image, phase, tag)
 
                 self.progress_counter += 8.333
@@ -143,6 +143,65 @@ class DefectDetection(QThread):
     Processes the prepared images using OpenCV to detect a variety of different defects
     Defects to be detected and a brief explanation:
 
+    PUT ALL OPENCV CODE TO BE TESTED HERE IN ONE OF THE FIVE METHODS
+    TRY NOT TO MODIFY TOO MUCH OF THE CODE OUTSIDE OF THESE METHODS
+
     """
-    def __init__(self):
+    def __init__(self, original_image):
+
+        # Defines the class as a thread
         QThread.__init__(self)
+
+        self.original_image = original_image
+
+    def run(self):
+
+        self.emit(SIGNAL("update_progress(QString)"), '0')
+
+        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 1...')
+        self.image_1 = self.test_code_1(self.original_image)
+        self.emit(SIGNAL("update_progress(QString)"), '20')
+
+        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 2...')
+        self.image_2 = self.test_code_2(self.original_image)
+        self.emit(SIGNAL("update_progress(QString)"), '40')
+
+        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 3...')
+        self.image_3 = self.test_code_3(self.original_image)
+        self.emit(SIGNAL("update_progress(QString)"), '60')
+
+        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 4...')
+        self.image_4 = self.test_code_4(self.original_image)
+        self.emit(SIGNAL("update_progress(QString)"), '80')
+
+        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 5...')
+        self.image_5 = self.test_code_5(self.original_image)
+        self.emit(SIGNAL("update_progress(QString)"), '100')
+
+        self.emit(SIGNAL("defect_processing_done(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
+                  self.image_1, self.image_2, self.image_3, self.image_4, self.image_5)
+
+    def test_code_1(self, image):
+        processed_image = cv2.bilateralFilter(image, 9, 75, 75)
+        return processed_image
+
+    def test_code_2(self, image):
+        processed_image = cv2.erode(image, (5, 5))
+        return processed_image
+
+    def test_code_3(self, image):
+        processed_image = cv2.blur(image, (10, 10))
+        return processed_image
+
+    def test_code_4(self, image):
+        """For now, this code applies a 2D Convolution"""
+        kernel = np.ones((5,5),np.float32)/25
+        processed_image = cv2.filter2D(image,-1,kernel)
+        return processed_image
+
+    def test_code_5(self, image):
+        """For now, this code rotates the image 90 degrees"""
+        rows,columns,_ = image.shape
+        rotation_matrix = cv2.getRotationMatrix2D((columns / 2, rows / 2), 90, 1)
+        processed_image = cv2.warpAffine(image, rotation_matrix, (columns, rows))
+        return processed_image

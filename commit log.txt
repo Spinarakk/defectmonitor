@@ -1,0 +1,74 @@
+June 28
+- Updated the README.txt with more up to date information about the program goals
+- Created a new window specifically for camera calibration
+	- Scans through the folder looking for specific calibration images
+	- Currently only runs the calibration using the one specific image
+	- Will change to run on a bunch of images once I acquire those images
+- Changed the build_GUI.bat to use the current working directory
+- Added pictures to the Defect Analyzer tab
+- Copied some of Gilbert's OpenCV processing code to the image_processing method
+- Allows user to process the current displayed picture using test OpenCV code and display it on the UI
+- Wrote some random OpenCV processes to test out the functionality of the Defect Analyzer tab
+
+June 27
+- Removed the camera calibration process from the initialization process
+	- Unncessary as camera calibration onlny needs to be done once to get the camera parameters, which should be valid for all future images
+- Camera calibration process implemented as a separate button accessible from the main UI
+- Clicking on it allows the user to specify a folder of checkboard images to calibrate the camera, which produces a .dat file of 24 values
+- Rewrote the image_processing run method to be shorter and "smarter" (using loops)
+
+June 26
+- Converted the image pre-processing code into a qthread, allowing the user to play with the UI while image processing is running
+- Reverted the main window size to the original ratio
+- Renamed several variable and class names to be more descriptive and to allow the programmer to follow the flow easier
+- Recoded certain functions (Mainly the initialize function, processing now runs much faster)
+- Converted the camera calibration code into its own qthread
+- Tried rewriting camera calibration code
+- Entire program does not work as of today
+
+June 22
+- Renamed a bunch of variables and added more comments
+- Cleaned up the previous day's code, removing unncessary parts
+- Fixed scaling issue on the UI, UI now scales the main display while keeping all other elements the same size
+- Fixed the aspect ratio of the display window, now maintains a fixed aspect ratio of 16:9
+
+June 21
+- Fixed program errors, program now runs properly and displays processed images
+- Added a progress meter to the slice conversion
+- Fixed a lot of the interactable UI elements by enabling/disabling them at appropriate events
+- Fixed more variable names, removed unneeded variables
+- Added ToolTips to the Position Adjustment buttons
+- Added toggle overlay feature
+- Added coat image processing alongside the scan image processing to its respective tab in the Main Window
+
+June 20
+- Renamed main to main_window
+- Revamped UI in Qt Designer, moved buttons around, added space for newer buttons, added a simulation button and a group box for various OpenCV functions
+	- ISSUE: Can't use layouts to make the UI elements scalable (Can't maximize/change window size)
+- Added a sample .cli file to the main folder
+- Copied more lines of code over from the backup
+	- Slice Parse
+	- Calibration
+	- Main Window UI
+- Code still doesn't run at all, need to copy more functionality
+- Missing a lot of comments at the moment
+
+June 16
+- Added image_capture and image_processing python files
+- Initialization of the sample images
+- Wrote lines to fix image distortion, perspective warp, crop and CLAHE
+- Used QThreading for multithreading so the GUI and the background processes can run simultaneously
+- Added cls files and folders
+- Added pypylon package, used for Basler SDK interaction
+
+June 15
+- Initial commit
+- Setup necessary UI files and sample images
+- Use as a base for revised script
+- Added MainWindow and NewBuild constructor code
+- Linked corresponding .py files
+- Added a batch file to automatically convert the .ui files to .py files before running the rest of the script
+- Linked the New Build... menu function
+- Added .json config file to store configuration settings
+- Created folders to store captured images
+- Added exit cleanup functions that delete created folders during simulation

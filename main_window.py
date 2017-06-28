@@ -34,7 +34,7 @@ import image_processing
 
 # Compile and import PyQt GUIs
 os.system('build_gui.bat')
-from gui import mainWindow, dialogNewBuild
+from gui import mainWindow, dialogNewBuild, dialogCameraCalibration
 
 
 class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
@@ -51,6 +51,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Set whether this is a simulation or using real camera
         self.simulation = True
+
+        # Get the current working directory
+        self.working_directory = os.getcwd()
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Menubar -> File
@@ -93,6 +96,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.radioCLAHE.toggled.connect(self.update_display)
         self.checkToggleOverlay.toggled.connect(self.toggle_overlay)
 
+        # OpenCV Processsing Group Box
+        self.radioOpenCV1.toggled.connect(self.update_display)
+        self.radioOpenCV2.toggled.connect(self.update_display)
+        self.radioOpenCV3.toggled.connect(self.update_display)
+        self.radioOpenCV4.toggled.connect(self.update_display)
+        self.radioOpenCV5.toggled.connect(self.update_display)
+
         # Position Adjustment Group Box
         self.buttonBoundary.toggled.connect(self.toggle_boundary)
         self.buttonCrop.toggled.connect(self.toggle_crop)
@@ -103,6 +113,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonRotateACW.clicked.connect(self.rotate_acw)
         self.buttonRotateCW.clicked.connect(self.rotate_cw)
         self.buttonSet.clicked.connect(self.set_layer)
+
+        # Display Widget Tabs
+        self.widgetDisplay.blockSignals(True)
+        self.widgetDisplay.currentChanged.connect(self.tab_change)
 
         # Load configuration settings from respective .json file
         with open('config.json') as config:
@@ -142,8 +156,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.image_folder_name = 'images'
             os.mkdir('%s' % self.image_folder_name)
         except WindowsError:
-            self.image_folder_name = 'images' + str(current_time.second).zfill(2)
-            os.mkdir('%s' % self.image_folder_name)
+            self.image_folder_name = 'images'
 
         # Setup input and output slice directories
         self.slice_raw_folder = 'slice_raw'
@@ -221,6 +234,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Enables or disables UI elements to prevent concurrent processes
         self.buttonInitialize.setEnabled(False)
         self.groupDisplayOptions.setEnabled(False)
+        self.buttonDefectProcessing.setEnabled(False)
+        self.widgetDisplay.blockSignals(True)
         self.update_progress(0)
         self.update_display()
 
@@ -248,18 +263,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Saves a copy of the converted slice array in self
         self.slice_file_dictionary = self.slice_converter_instance.slice_file_dictionary
 
-        # Instantiate an ImageCapture instance
         self.image_capture_instance = image_capture.ImageCapture(self.queue1, self.storage_folder, self.simulation)
-
-        # Listen for emitted signals from the linked function, and send them to the corresponding methods
         self.connect(self.image_capture_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.image_capture_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-
-        # Signal that moves on to the next task
         self.connect(self.image_capture_instance, SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.initialize_3)
         #self.connect(self.capture_images, SIGNAL("update_layer(QString, QString)"), self.update_layer)
-
-        # Run the ImageCapture instance
         self.image_capture_instance.start()
 
     def initialize_3(self, image_scan, image_coat):
@@ -276,20 +284,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.image_coat = image_coat
         self.update_progress(0)
 
-        # Instantiate an ImageCorrection instance
         self.image_correction_instance = image_processing.ImageCorrection(self.image_folder_name, self.image_scan,
                                                                           self.image_coat)
-
-        # Listen for emitted signals from the linked function, and send them to the corresponding methods
         self.connect(self.image_correction_instance, SIGNAL("assign_image(PyQt_PyObject, QString, QString)"),
                      self.assign_image)
         self.connect(self.image_correction_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.image_correction_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-
-        # Signal that moves on to the next task
         self.connect(self.image_correction_instance, SIGNAL("finished()"), self.initialize_done)
-
-        # Run the ImageCorrection instance
         self.image_correction_instance.start()
 
     def initialize_done(self):
@@ -300,8 +301,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Activate relevant UI elements
         self.checkToggleOverlay.setEnabled(True)
         self.buttonInitialize.setEnabled(True)
+        self.buttonDefectProcessing.setEnabled(True)
         self.groupDisplayOptions.setEnabled(True)
+        self.widgetDisplay.blockSignals(False)
         self.update_progress(100)
+
         self.initial_flag = False
 
         # Update the main display widget
@@ -455,32 +459,54 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             current_phase = 'coat'
         return current_phase
 
+    def tab_change(self, tab_index):
+        if tab_index == 2:
+            self.buttonDefectProcessing.setEnabled(False)
+        else:
+            self.buttonDefectProcessing.setEnabled(True)
+
     def defect_processing(self):
-        pass
+        """Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
+        in image_processing.py
+        """
+
+        self.update_progress('0')
+
+        if self.widgetDisplay.currentIndex() == 0:
+            self.original_image = self.display_image_scan
+        elif self.widgetDisplay.currentIndex() == 1:
+            self.original_image = self.display_image_coat
+
+        self.defect_detection_instance = image_processing.DefectDetection(self.original_image)
+        self.connect(self.defect_detection_instance, SIGNAL("defect_processing_done(PyQt_PyObject, PyQt_PyObject, "
+                                                            "PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
+                                                            self.defect_processing_done)
+        self.connect(self.defect_detection_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.defect_detection_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.defect_detection_instance.start()
+
+    def defect_processing_done(self, image_1, image_2, image_3, image_4, image_5):
+
+        # Saves the processed images in their respective variables
+        self.defect_image_1 = image_1
+        self.defect_image_2 = image_2
+        self.defect_image_3 = image_3
+        self.defect_image_4 = image_4
+        self.defect_image_5 = image_5
+
+        # Cleanup UI
+        self.groupOpenCV.setEnabled(True)
+        self.update_display()
+        self.update_status('Displaying images...')
+        self.widgetDisplay.setCurrentIndex(2)
 
     def camera_calibration(self):
-        """Performs the OpenCV camera calibration using a folder of images with the checkerboard"""
-
+        """Opens the Camera Calibration Dialog box
+        If the OK button is clicked (success), the following processes are executed
+        """
         self.update_status('')
-
-        # Opens a folder select dialog, allowing the user to choose a folder
-        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Select Folder Containing Calibration Images')
-
-        self.calibration_image = cv2.imread('%s\calibration_image.png' % self.calibration_folder, 0)
-
-        if self.calibration_image is not None:
-
-            # Instantiate a Calibration instance
-            self.camera_calibration_instance = camera_calibration.Calibration(self.calibration_image)
-
-            # Listen for emitted signals from the linked function, and send them to the corresponding methods
-            self.connect(self.camera_calibration_instance, SIGNAL("update_status(QString)"), self.update_status)
-            self.connect(self.camera_calibration_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-
-            # Run the Calibration instance
-            self.camera_calibration_instance.start()
-        else:
-            self.update_status('Calibration image not found.')
+        camera_calibration_dialog = CameraCalibration()
+        success = camera_calibration_dialog.exec_()
 
     # Position Adjustment Box
 
@@ -540,8 +566,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def update_display(self):
         """Update the MainWindow display to show images as per toggles
         Displays the scan image and the coat image in their respective tabs
-        Asso enables or disables certain UI elements depending on what is toggled
-        change_disp
+        Also enables or disables certain UI elements depending on what is toggled
         """
         if self.groupDisplayOptions.isEnabled():
             if self.radioRaw.isChecked():
@@ -583,7 +608,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                     self.display_image_scan = cv2.add(self.display_image_scan, self.overlay_image)
                     self.display_image_coat = cv2.add(self.display_image_coat, self.overlay_image)
 
-            height, width, channel = self.display_image_scan.shape
+            height, width, _ = self.display_image_scan.shape
             bytesPerLine = 3 * width
 
             # Convert the scan and coat images into pixmap format so that they can be displayed using QLabels
@@ -608,6 +633,25 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.labelDisplaySE.setText("Reloading Display...")
                 self.labelDisplayCE.setText("Reloading Display...")
 
+        if self.groupOpenCV.isEnabled():
+            if self.radioOpenCV1.isChecked():
+                self.display_image_defect = self.defect_image_1
+            if self.radioOpenCV2.isChecked():
+                self.display_image_defect = self.defect_image_2
+            if self.radioOpenCV3.isChecked():
+                self.display_image_defect = self.defect_image_3
+            if self.radioOpenCV4.isChecked():
+                self.display_image_defect = self.defect_image_4
+            if self.radioOpenCV5.isChecked():
+                self.display_image_defect = self.defect_image_5
+
+            height, width, _ = self.display_image_defect.shape
+            bytesPerLine = 3 * width
+
+            self.qImg_defect = QtGui.QImage(self.display_image_defect.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
+            self.qPxm_defect = QtGui.QPixmap.fromImage(self.qImg_defect)
+            self.qPxm_defect = self.qPxm_defect.scaled(987, 605, aspectRatioMode=Qt.KeepAspectRatio)
+            self.labelDisplayDA.setPixmap(self.qPxm_defect)
 
     def update_status(self, string):
         """Updates the status bar at the bottom of the Main Window with the sent string argument"""
@@ -631,10 +675,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Deleting the created folders (for simulation purposes)
         if self.simulation:
             try:
-                shutil.rmtree('%s' % (self.storage_folder_name))
+                shutil.rmtree('%s' % self.storage_folder_name)
                 shutil.rmtree('images')
                 try:
-                    shutil.rmtree('%s' % (self.image_folder_name))
+                    shutil.rmtree('%s' % self.image_folder_name)
                 except AttributeError:
                     pass
             except WindowsError:
@@ -649,14 +693,11 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
     def __init__(self, parent=None):
 
-        #
+        # Setup the dialog window
         super(NewBuild, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
-
-        #QtGui.QDialog.__init__(self)
-        # super(NewBuild, self).__init__(parent)
-
         self.setupUi(self)
+
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -673,6 +714,82 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         with open('config.json', 'w+') as config:
             json.dump(self.config, config)
 
+        self.done(1)
+
+
+class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
+    """
+    Opens a Dialog Window:
+    When Calibrate Camera button is pressed.
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup the dialog window
+        super(CameraCalibration, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.buttonBrowse.clicked.connect(self.browse)
+        self.buttonStartCalibration.clicked.connect(self.calibration_start)
+
+    def browse(self):
+
+        # Empty the image lists
+        self.image_list_valid = []
+        self.calibration_folder = None
+
+        # Opens a folder select dialog, allowing the user to choose a folder
+        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Select Folder Containing Calibration Images')
+
+        if self.calibration_folder:
+            # Store a list of the files found in the folder
+            self.image_list = os.listdir(self.calibration_folder)
+            self.listImages.clear()
+
+            # Search for images containing the word calibration_image in the folder
+            for image_name in self.image_list:
+                if 'calibration_image' in str(image_name):
+                    self.image_list_valid.append(str(image_name))
+
+            if not self.image_list_valid:
+                self.update_status('No valid calibration images found.')
+                self.buttonStartCalibration.setEnabled(False)
+            else:
+                # Remove previous entries and fill with new entries
+                self.listImages.addItems(self.image_list_valid)
+                self.textFolderName.setText(self.calibration_folder)
+                self.buttonStartCalibration.setEnabled(True)
+                self.update_status('Waiting to start process.')
+
+    def calibration_start(self):
+
+        # Disable all buttons to prevent user from doing other tasks
+        self.buttonStartCalibration.setEnabled(False)
+        self.buttonBrowse.setEnabled(False)
+
+        self.camera_calibration_instance = camera_calibration.Calibration(self.calibration_folder)
+        self.connect(self.camera_calibration_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.camera_calibration_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.camera_calibration_instance, SIGNAL("successful()"), self.calibration_done)
+        self.camera_calibration_instance.start()
+
+    def calibration_done(self):
+        """Used to turn buttons back on after processes are done"""
+        self.buttonStartCalibration.setEnabled(True)
+        self.buttonBrowse.setEnabled(False)
+
+    def update_status(self, string):
+        self.labelProgress.setText(string)
+        return
+
+    def update_progress(self, percentage):
+        self.progressBar.setValue(int(percentage))
+        return
+
+    def accept(self):
+        """If you press the 'done' button, this just closes the dialog window without doing anything"""
         self.done(1)
 
 
