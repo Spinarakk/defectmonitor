@@ -26,6 +26,8 @@ class Ui_dialogCameraCalibration(object):
     def setupUi(self, dialogCameraCalibration):
         dialogCameraCalibration.setObjectName(_fromUtf8("dialogCameraCalibration"))
         dialogCameraCalibration.resize(383, 441)
+        dialogCameraCalibration.setMinimumSize(QtCore.QSize(383, 441))
+        dialogCameraCalibration.setMaximumSize(QtCore.QSize(383, 441))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogCameraCalibration.setWindowIcon(icon)
@@ -83,7 +85,7 @@ class Ui_dialogCameraCalibration(object):
         self.buttonStartCalibration.setText(_translate("dialogCameraCalibration", "Start Calibration", None))
         self.buttonDone.setText(_translate("dialogCameraCalibration", "Done", None))
         self.labelProgress.setText(_translate("dialogCameraCalibration", "Waiting to start process.", None))
-        self.labelInformation2.setText(_translate("dialogCameraCalibration", "Calibration images must contain the word \"calibration_image\" in the file name.", None))
+        self.labelInformation2.setText(_translate("dialogCameraCalibration", "Calibration images must contain the word \"calibration_image\" in the file name, and will be displayed below.", None))
         self.labelImages.setText(_translate("dialogCameraCalibration", "List of images:", None))
 
 import icons_rc

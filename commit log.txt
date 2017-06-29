@@ -1,3 +1,8 @@
+June 29
+- Added functionality to the export image menu option, allowing the user to save the currently displayed image to a location on disk
+- Created a new window specifically for slice converter
+	- Added basic functionally but haven't connected it to the function yet
+
 June 28
 - Updated the README.txt with more up to date information about the program goals
 - Created a new window specifically for camera calibration

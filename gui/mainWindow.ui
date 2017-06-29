@@ -73,28 +73,6 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="buttonCalibrateCamera">
-        <property name="minimumSize">
-         <size>
-          <width>149</width>
-          <height>28</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>149</width>
-          <height>28</height>
-         </size>
-        </property>
-        <property name="toolTip">
-         <string>Click to select a folder of images to perform camera calibration with.</string>
-        </property>
-        <property name="text">
-         <string>Calibrate Camera</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
     <item row="5" column="0">
@@ -878,16 +856,19 @@
     <item row="5" column="3">
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QPushButton" name="buttonConvertCLS">
+       <widget class="QPushButton" name="buttonSliceConverter">
         <property name="text">
-         <string>Convert CLS File</string>
+         <string>Slice Converter</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="buttonConvertCLI">
+       <widget class="QPushButton" name="buttonCameraCalibration">
+        <property name="toolTip">
+         <string>Click to select a folder of images to perform camera calibration with.</string>
+        </property>
         <property name="text">
-         <string>Convert CLI File</string>
+         <string>Camera Calibration</string>
         </property>
        </widget>
       </item>
@@ -1119,13 +1100,6 @@
     <property name="title">
      <string>Setup</string>
     </property>
-    <widget class="QMenu" name="menuPartFiles">
-     <property name="title">
-      <string>Part Files</string>
-     </property>
-     <addaction name="actionCLS"/>
-     <addaction name="actionCLI"/>
-    </widget>
     <widget class="QMenu" name="menuReportSettings">
      <property name="title">
       <string>Report Settings</string>
@@ -1134,7 +1108,8 @@
      <addaction name="actionNotificationSetup"/>
     </widget>
     <addaction name="actionConfigurationSettings"/>
-    <addaction name="menuPartFiles"/>
+    <addaction name="actionCameraCalibration"/>
+    <addaction name="actionSliceConverter"/>
     <addaction name="separator"/>
     <addaction name="menuReportSettings"/>
    </widget>
@@ -1147,6 +1122,8 @@
     <addaction name="actionPauseBuild"/>
     <addaction name="separator"/>
     <addaction name="actionStopBuild"/>
+    <addaction name="separator"/>
+    <addaction name="actionDefectProcessing"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSetup"/>
@@ -1192,8 +1169,14 @@
    </property>
   </action>
   <action name="actionExportImage">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Export Image...</string>
+   </property>
+   <property name="toolTip">
+    <string>Exports the currently displayed image to the selected folder.</string>
    </property>
   </action>
   <action name="actionError_actions">
@@ -1256,6 +1239,24 @@
    </property>
    <property name="text">
     <string>Initialize Build</string>
+   </property>
+  </action>
+  <action name="actionDefectProcessing">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Analyze for Defects</string>
+   </property>
+  </action>
+  <action name="actionCameraCalibration">
+   <property name="text">
+    <string>Camera Calibration</string>
+   </property>
+  </action>
+  <action name="actionSliceConverter">
+   <property name="text">
+    <string>Slice Converter</string>
    </property>
   </action>
  </widget>

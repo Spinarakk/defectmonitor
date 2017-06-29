@@ -34,7 +34,7 @@ import image_processing
 
 # Compile and import PyQt GUIs
 os.system('build_gui.bat')
-from gui import mainWindow, dialogNewBuild, dialogCameraCalibration
+from gui import mainWindow, dialogNewBuild, dialogCameraCalibration, dialogSliceConverter
 
 
 class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
@@ -64,10 +64,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Menubar -> Setup
         self.actionConfigurationSettings.triggered.connect(self.configuration_settings)
-        self.actionCLS.triggered.connect(self.select_CLS)
-        self.actionCLI.triggered.connect(self.select_CLI)
-        self.actionAdjustCrop.triggered.connect(self.crop_adjustment)
-        self.actionAdjustRotation.triggered.connect(self.rotation_adjustment)
+        self.actionCameraCalibration.triggered.connect(self.camera_calibration)
+        self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionDefectActions.triggered.connect(self.defect_actions)
         self.actionNotificationSetup.triggered.connect(self.notification_setup)
 
@@ -84,7 +82,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonStop.clicked.connect(self.stop)
         self.buttonPhase.clicked.connect(self.toggle_phase)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
-        self.buttonCalibrateCamera.clicked.connect(self.camera_calibration)
+        self.buttonSliceConverter.clicked.connect(self.slice_converter)
+        self.buttonCameraCalibration.clicked.connect(self.camera_calibration)
 
         # Toggles
         self.checkSimulation.toggled.connect(self.toggle_simulation)
@@ -198,22 +197,74 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         pass
 
     def export_image(self):
-        pass
+        """Saves the currently displayed image to whatever location the user specifies as a .png"""
+
+        # Opens a folder select dialog, allowing the user to choose a folder
+        self.export_filename = None
+        self.export_filename = QtGui.QFileDialog.getSaveFileName(self, 'Export Image As', '',
+                                                               'Image (*.png)', selectedFilter='*.png')
+        if self.export_filename:
+            if self.widgetDisplay.currentIndex() == 0:
+                cv2.imwrite(str(self.export_filename), self.display_image_scan)
+            elif self.widgetDisplay.currentIndex() == 1:
+                cv2.imwrite(str(self.export_filename), self.display_image_coat)
+            else:
+                cv2.imwrite(str(self.export_filename), self.display_image_defect)
+
+            self.export_confirmation = QtGui.QMessageBox()
+            self.export_confirmation.setIcon(QtGui.QMessageBox.Information)
+            self.export_confirmation.setText('Your image has been saved to %s.' % self.export_filename)
+            self.export_confirmation.setWindowTitle('Export Image')
+            self.export_confirmation.exec_()
 
     def configuration_settings(self):
+
         pass
 
-    def select_CLS(self):
-        pass
+    def slice_converter(self):
+        """Opens the Slice Converter Dialog box
+        If the OK button is clicked (success), the following processes are executed
+        """
 
-    def select_CLI(self):
-        pass
+        self.update_status('')
+        slice_converter_dialog = SliceConverter()
+        slice_converter_dialog.exec_()
 
-    def crop_adjustment(self):
-        pass
+    def defect_processing(self):
+        """Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
+        in image_processing.py
+        """
 
-    def rotation_adjustment(self):
-        pass
+        self.update_progress('0')
+
+        if self.widgetDisplay.currentIndex() == 0:
+            self.original_image = self.display_image_scan
+        elif self.widgetDisplay.currentIndex() == 1:
+            self.original_image = self.display_image_coat
+
+        self.defect_detection_instance = image_processing.DefectDetection(self.original_image)
+        self.connect(self.defect_detection_instance, SIGNAL("defect_processing_done(PyQt_PyObject, PyQt_PyObject, "
+                                                            "PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
+                                                            self.defect_processing_done)
+        self.connect(self.defect_detection_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.defect_detection_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.defect_detection_instance.start()
+
+    def defect_processing_done(self, image_1, image_2, image_3, image_4, image_5):
+
+        # Saves the processed images in their respective variables
+        self.defect_image_1 = image_1
+        self.defect_image_2 = image_2
+        self.defect_image_3 = image_3
+        self.defect_image_4 = image_4
+        self.defect_image_5 = image_5
+
+        # Cleanup UI
+        self.groupOpenCV.setEnabled(True)
+        self.update_display()
+        self.update_status('Displaying images...')
+        self.widgetDisplay.setCurrentIndex(2)
+
 
     def defect_actions(self):
         pass
@@ -236,6 +287,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.groupDisplayOptions.setEnabled(False)
         self.buttonDefectProcessing.setEnabled(False)
         self.widgetDisplay.blockSignals(True)
+        self.actionExportImage.setEnabled(False)
         self.update_progress(0)
         self.update_display()
 
@@ -304,6 +356,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonDefectProcessing.setEnabled(True)
         self.groupDisplayOptions.setEnabled(True)
         self.widgetDisplay.blockSignals(False)
+        self.actionExportImage.setEnabled(True)
         self.update_progress(100)
 
         self.initial_flag = False
@@ -465,48 +518,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.buttonDefectProcessing.setEnabled(True)
 
-    def defect_processing(self):
-        """Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
-        in image_processing.py
-        """
-
-        self.update_progress('0')
-
-        if self.widgetDisplay.currentIndex() == 0:
-            self.original_image = self.display_image_scan
-        elif self.widgetDisplay.currentIndex() == 1:
-            self.original_image = self.display_image_coat
-
-        self.defect_detection_instance = image_processing.DefectDetection(self.original_image)
-        self.connect(self.defect_detection_instance, SIGNAL("defect_processing_done(PyQt_PyObject, PyQt_PyObject, "
-                                                            "PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
-                                                            self.defect_processing_done)
-        self.connect(self.defect_detection_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.defect_detection_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.defect_detection_instance.start()
-
-    def defect_processing_done(self, image_1, image_2, image_3, image_4, image_5):
-
-        # Saves the processed images in their respective variables
-        self.defect_image_1 = image_1
-        self.defect_image_2 = image_2
-        self.defect_image_3 = image_3
-        self.defect_image_4 = image_4
-        self.defect_image_5 = image_5
-
-        # Cleanup UI
-        self.groupOpenCV.setEnabled(True)
-        self.update_display()
-        self.update_status('Displaying images...')
-        self.widgetDisplay.setCurrentIndex(2)
-
     def camera_calibration(self):
         """Opens the Camera Calibration Dialog box
         If the OK button is clicked (success), the following processes are executed
         """
         self.update_status('')
         camera_calibration_dialog = CameraCalibration()
-        success = camera_calibration_dialog.exec_()
+        camera_calibration_dialog.exec_()
 
     # Position Adjustment Box
 
@@ -568,6 +586,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         Displays the scan image and the coat image in their respective tabs
         Also enables or disables certain UI elements depending on what is toggled
         """
+
+        # This if block updates the Scan Explorer and the Coat Explorer tabs
         if self.groupDisplayOptions.isEnabled():
             if self.radioRaw.isChecked():
                 self.display_image_scan = self.image_scan
@@ -633,6 +653,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.labelDisplaySE.setText("Reloading Display...")
                 self.labelDisplayCE.setText("Reloading Display...")
 
+        # This if block updates the Defect Analyzer tab
         if self.groupOpenCV.isEnabled():
             if self.radioOpenCV1.isChecked():
                 self.display_image_defect = self.defect_image_1
@@ -720,7 +741,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
 class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
     """
     Opens a Dialog Window:
-    When Calibrate Camera button is pressed.
+    When Calibrate Camera button is pressed
     """
 
     def __init__(self, parent=None):
@@ -738,11 +759,12 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
         # Empty the image lists
         self.image_list_valid = []
-        self.calibration_folder = None
 
         # Opens a folder select dialog, allowing the user to choose a folder
-        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Select Folder Containing Calibration Images')
+        self.calibration_folder = None
+        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
 
+        # Checks if a folder is actually selected
         if self.calibration_folder:
             # Store a list of the files found in the folder
             self.image_list = os.listdir(self.calibration_folder)
@@ -792,6 +814,54 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         """If you press the 'done' button, this just closes the dialog window without doing anything"""
         self.done(1)
 
+class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
+    """
+    Opens a Dialog Window:
+    When Slice Converter button is pressed
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup the dialog window
+        super(SliceConverter, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        self.buttonBrowse.clicked.connect(self.browse)
+        self.buttonStartConversion.clicked.connect(self.conversion_start)
+
+    def browse(self):
+        self.slice_file = None
+        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+
+        if self.slice_file:
+            self.textFileName.setText(self.slice_file)
+            self.buttonStartConversion.setEnabled(True)
+            self.update_status('Waiting to start process.')
+        else:
+            self.buttonStartConversion.setEnabled(False)
+
+    def conversion_start(self):
+        # Disable all buttons to prevent user from doing other tasks
+        self.buttonStartConversion.setEnabled(False)
+        self.buttonBrowse.setEnabled(False)
+
+        self.slice_converter_instance = slice_converter.SliceConverter(self.slice_file)
+
+    def conversion_done(self):
+        pass
+
+    def update_status(self, string):
+        self.labelProgress.setText(string)
+        return
+
+    def update_progress(self, percentage):
+        self.progressBar.setValue(int(percentage))
+        return
+
+    def accept(self):
+        """If you press the 'done' button, this just closes the dialog window without doing anything"""
+        self.done(1)
 
 if __name__ == '__main__':
     def main():
@@ -799,6 +869,5 @@ if __name__ == '__main__':
         interface = MainWindow()
         interface.show()
         sys.exit(application.exec_())
-
 
     main()
