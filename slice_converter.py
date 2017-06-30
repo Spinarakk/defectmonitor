@@ -13,16 +13,17 @@ class SliceConverter(QThread):
     Future implementation will look to either shifting or adding .cli slice conversion
     """
 
-    def __init__(self, slice_raw_folder, slice_parsed_folder):
+    def __init__(self, slice_file):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
         # Sets up lists to store the raw and parsed data
-        self.slice_raw_folder = slice_raw_folder
-        self.slice_parsed_folder = slice_parsed_folder
-        self.slice_raw_list = os.listdir(self.slice_raw_folder)
-        self.slice_parsed_list = os.listdir(self.slice_parsed_folder)
+        self.slice_file = slice_file
+        # self.slice_raw_folder = slice_raw_folder
+        # self.slice_parsed_folder = slice_parsed_folder
+        # self.slice_raw_list = os.listdir(self.slice_raw_folder)
+        # self.slice_parsed_list = os.listdir(self.slice_parsed_folder)
 
         # Create a dictionary to store the list of slice files (found in the slice raw folder) to be converted
         self.slice_file_dictionary = dict()
@@ -42,10 +43,10 @@ class SliceConverter(QThread):
                 if self.slice_file_dictionary[item]['Format'] == 'cls':
 
                     with open(self.input_folder + r'\%s' % item, 'rb') as input:
-                        bin_cls = input.read()
+                        bin_slice = input.read()
 
                     bin_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
-                                         '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', bin_cls)
+                                         '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', bin_slice)
                     bin_split = filter(None, bin_split)
                     bin_split = bin_split[1:]
 
@@ -232,3 +233,38 @@ class SliceConverter(QThread):
             poly_idx[poly_gon] = (i_start, i_length, i_end)
         self.slice_file_dictionary[item][slice_number]['Polyline-Indices'] = poly_idx
         return
+
+    def _parser(self):
+        self.slice_file_dictionary[self.slice_file] = {'Format': self.slice_file[-3:]}
+
+        with open(self.slice_file, 'rb') as slice_file:
+            self.bin_slice = slice_file.read()
+
+        self.bin_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
+                             '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', self.bin_slice)
+        self.bin_split = filter(None, self.bin_split)
+        self.bin_split = self.bin_split[1:]
+
+        self.pre_sorting = OrderedDict()
+        self.slice_output = OrderedDict()
+
+        out = []
+
+        # Initialize boolean toggles
+        self.layer_flag = False
+        self.support_flag = False
+        self.border_flag = False
+        self.offset_flag = False
+        self.quadrant_flag = False
+        self.island_flag = False
+        self.skin_flag = False
+        self.core_flag = False
+
+        # Initialize counters
+        self.island_count = 0
+        self.layer_count = 0
+        self.border_count = 0
+
+        # Parsing of the slice file to human-readable format
+        pass
+

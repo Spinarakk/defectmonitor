@@ -9,7 +9,6 @@ import time
 import cv2
 import pypylon
 import serial
-import camera_calibration
 
 from PyQt4.QtCore import QThread, SIGNAL
 
@@ -51,6 +50,17 @@ class ImageCapture(QThread):
             if bool(self.camera1):
                 self._camera_settings()
                 self.acquire_image()
+
+    def acquire_cameras(self):
+        self.available_cameras = pypylon.factory.find_devices()
+
+        if not bool(self.available_cameras):
+            self.emit(SIGNAL("update_status(QString)"), 'No cameras available...')
+            return False
+        else:
+            self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
+            self.camera1.open()
+            self.emit(SIGNAL("update_status(QString)"), 'Acquired %s.' % self.camera1.device_info)
 
     def acquire_image(self, simulation=False):
         """Acquire images from the camera(s)
@@ -110,16 +120,7 @@ class ImageCapture(QThread):
         self.queue1.put_nowait((image, self.push_counter, phase))
         self.push_counter += 1
 
-    def acquire_cameras(self):
-        self.available_cameras = pypylon.factor.find_devices()
 
-        if not bool(self.available_cameras):
-            self.emit(SIGNAL("update_status(QString)"), 'No cameras available...')
-            return False
-        else:
-            self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
-            self.camera1.open()
-            self.emit(SIGNAL("update_status(QString)"), 'Acquired %s.' % self.camera1.device_info)
     
     def _serial_interface(self):
         ports = ['com%s' % number for number in xrange(1, 10)]

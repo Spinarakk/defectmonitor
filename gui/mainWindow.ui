@@ -73,6 +73,16 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QPushButton" name="buttonImageCapture">
+        <property name="toolTip">
+         <string>Click to open the tool to capture images from an attached camera.</string>
+        </property>
+        <property name="text">
+         <string>Image Capture</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item row="5" column="0">
@@ -857,6 +867,9 @@
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <widget class="QPushButton" name="buttonSliceConverter">
+        <property name="toolTip">
+         <string>Click to select a slice file to convert into ASCII encoding.</string>
+        </property>
         <property name="text">
          <string>Slice Converter</string>
         </property>
@@ -1108,6 +1121,8 @@
      <addaction name="actionNotificationSetup"/>
     </widget>
     <addaction name="actionConfigurationSettings"/>
+    <addaction name="actionCameraSettings"/>
+    <addaction name="separator"/>
     <addaction name="actionCameraCalibration"/>
     <addaction name="actionSliceConverter"/>
     <addaction name="separator"/>
@@ -1257,6 +1272,11 @@
   <action name="actionSliceConverter">
    <property name="text">
     <string>Slice Converter</string>
+   </property>
+  </action>
+  <action name="actionCameraSettings">
+   <property name="text">
+    <string>Camera Settings</string>
    </property>
   </action>
  </widget>

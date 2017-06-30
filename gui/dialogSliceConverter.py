@@ -25,7 +25,9 @@ except AttributeError:
 class Ui_dialogSliceConverter(object):
     def setupUi(self, dialogSliceConverter):
         dialogSliceConverter.setObjectName(_fromUtf8("dialogSliceConverter"))
-        dialogSliceConverter.resize(383, 199)
+        dialogSliceConverter.resize(380, 197)
+        dialogSliceConverter.setMinimumSize(QtCore.QSize(380, 197))
+        dialogSliceConverter.setMaximumSize(QtCore.QSize(380, 197))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogSliceConverter.setWindowIcon(icon)

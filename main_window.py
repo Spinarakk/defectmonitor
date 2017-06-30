@@ -8,6 +8,7 @@ image_capture.py
 image_processing.py
 camera_calibration.py
 slice_converter.py
+extra_functions.py
 """
 
 # Import built-ins
@@ -31,10 +32,12 @@ import slice_converter
 import image_capture
 import camera_calibration
 import image_processing
+import extra_functions
 
 # Compile and import PyQt GUIs
 os.system('build_gui.bat')
-from gui import mainWindow, dialogNewBuild, dialogCameraCalibration, dialogSliceConverter
+from gui import mainWindow, dialogNewBuild, dialogCameraCalibration, dialogSliceConverter, dialogImageCapture
+from gui import dialogCameraSettings
 
 
 class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
@@ -64,6 +67,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Menubar -> Setup
         self.actionConfigurationSettings.triggered.connect(self.configuration_settings)
+        self.actionCameraSettings.triggered.connect(self.camera_settings)
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionDefectActions.triggered.connect(self.defect_actions)
@@ -82,6 +86,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonStop.clicked.connect(self.stop)
         self.buttonPhase.clicked.connect(self.toggle_phase)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
+        self.buttonImageCapture.clicked.connect(self.image_capture)
         self.buttonSliceConverter.clicked.connect(self.slice_converter)
         self.buttonCameraCalibration.clicked.connect(self.camera_calibration)
 
@@ -221,14 +226,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         pass
 
-    def slice_converter(self):
-        """Opens the Slice Converter Dialog box
-        If the OK button is clicked (success), the following processes are executed
-        """
-
-        self.update_status('')
-        slice_converter_dialog = SliceConverter()
-        slice_converter_dialog.exec_()
+    def camera_settings(self):
+        """Opens the Camera Settings Dialog box"""
+        ImageCapture().camera_settings()
 
     def defect_processing(self):
         """Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
@@ -265,6 +265,31 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.update_status('Displaying images...')
         self.widgetDisplay.setCurrentIndex(2)
 
+    def image_capture(self):
+        """Opens the Image Capture Dialog box
+        If the Done button is clicked, this box is closed and focus returns to the MainWindow
+        """
+
+        self.update_status('')
+        image_capture_dialog = ImageCapture()
+        image_capture_dialog.exec_()
+
+    def slice_converter(self):
+        """Opens the Slice Converter Dialog box
+        If the Done button is clicked, this box is closed and focus returns to the MainWindow
+        """
+
+        self.update_status('')
+        slice_converter_dialog = SliceConverter()
+        slice_converter_dialog.exec_()
+
+    def camera_calibration(self):
+        """Opens the Camera Calibration Dialog box
+        If the Done button is clicked, this box is closed and focus returns to the MainWindow
+        """
+        self.update_status('')
+        camera_calibration_dialog = CameraCalibration()
+        camera_calibration_dialog.exec_()
 
     def defect_actions(self):
         pass
@@ -518,14 +543,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.buttonDefectProcessing.setEnabled(True)
 
-    def camera_calibration(self):
-        """Opens the Camera Calibration Dialog box
-        If the OK button is clicked (success), the following processes are executed
-        """
-        self.update_status('')
-        camera_calibration_dialog = CameraCalibration()
-        camera_calibration_dialog.exec_()
-
     # Position Adjustment Box
 
     def toggle_boundary(self):
@@ -738,6 +755,169 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.done(1)
 
 
+class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
+    """
+    Opens a Dialog Window:
+    When Image Capture button is pressed
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup the dialog window
+        super(ImageCapture, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.buttonBrowse.clicked.connect(self.browse)
+        self.buttonCameraSettings.clicked.connect(self.camera_settings)
+        self.buttonCheckCamera.clicked.connect(self.check_camera)
+        self.buttonCapture.clicked.connect(self.capture)
+        self.buttonRun.clicked.connect(self.run)
+        self.buttonStop.clicked.connect(self.stop)
+
+        # These are flags to check if both the browse and check camera settings are successful
+        self.browse_flag = False
+        self.check_flag = False
+        self.save_folder = None
+
+    def browse(self):
+
+        # Opens a folder select dialog, allowing the user to choose a folder
+        self.save_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
+
+        # Checks if a folder is actually selected
+        if self.save_folder:
+            # Display the folder name
+            self.textSaveLocation.setText(self.save_folder)
+            self.browse_flag = True
+            if self.browse_flag & self.check_flag:
+                self.buttonCapture.setEnabled(True)
+                self.buttonRun.setEnabled(True)
+
+    def camera_settings(self):
+        """Opens the Camera Settings dialog box
+        If the OK button is clicked (success), it does the same thing as apply but also closes the box
+        If the Apply button is clicked, it saves the settings to a text file
+        """
+
+        camera_settings_dialog = CameraSettings()
+        camera_settings_dialog.exec_()
+
+    def check_camera(self):
+        """For testing purposes, this button just pretends that a camera was found no problem
+        TO BE CHANGED LATER
+        """
+        self.check_flag = True
+        self.labelCameraStatus.setText('OK')
+        if self.browse_flag & self.check_flag:
+            self.buttonCapture.setEnabled(True)
+            self.buttonRun.setEnabled(True)
+
+    def capture(self):
+        pass
+
+    def run(self):
+        
+        # Disable buttons to prevent overlapping actions
+        self.buttonBrowse.setEnabled(False)
+        self.buttonCameraSettings.setEnabled(False)
+        self.buttonCapture.setEnabled(False)
+        self.buttonRun.setEnabled(False)
+        self.buttonCheckCamera.setEnabled(False)
+        self.buttonDone.setEnabled(False)
+        self.buttonStop.setEnabled(True)
+
+        self.stopwatch_instance = extra_functions.Stopwatch()
+        self.connect(self.stopwatch_instance, SIGNAL("update_stopwatch(QString)"), self.update_stopwatch)
+        self.stopwatch_instance.start()
+
+    def update_stopwatch(self, time):
+        self.labelTime.setText(time)
+
+    def stop(self):
+        # Stop the stopwatch Qthread
+        self.stopwatch_instance.terminate()
+
+        # Re-enable buttons
+        self.buttonBrowse.setEnabled(True)
+        self.buttonCameraSettings.setEnabled(True)
+        self.buttonCapture.setEnabled(True)
+        self.buttonRun.setEnabled(True)
+        self.buttonCheckCamera.setEnabled(True)
+        self.buttonDone.setEnabled(True)
+        self.buttonStop.setEnabled(False)
+
+class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
+    """
+    Opens a Dialog Window:
+    When Camera Settings button is pressed within the Image Capture dialog window
+    Or when Camera Settings action is pressed within the Setup menu bar
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup the dialog window
+        super(CameraSettings, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+
+class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
+    """
+    Opens a Dialog Window:
+    When Slice Converter button is pressed
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup the dialog window
+        super(SliceConverter, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        self.buttonBrowse.clicked.connect(self.browse)
+        self.buttonStartConversion.clicked.connect(self.conversion_start)
+
+    def browse(self):
+        self.slice_file = None
+        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+
+        if self.slice_file:
+            self.textFileName.setText(self.slice_file)
+            self.buttonStartConversion.setEnabled(True)
+            self.update_status('Waiting to start process.')
+        else:
+            self.buttonStartConversion.setEnabled(False)
+
+    def conversion_start(self):
+        # Disable all buttons to prevent user from doing other tasks
+        self.buttonStartConversion.setEnabled(False)
+        self.buttonBrowse.setEnabled(False)
+
+        self.slice_converter_instance = slice_converter.SliceConverter(self.slice_file)
+        self.connect(self.slice_converter_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.slice_converter_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.slice_converter_instance, SIGNAL("successful()"), self.conversion_done)
+        self.slice_converter_instance.start()
+
+    def conversion_done(self):
+        self.buttonStartConversion.setEnabled(True)
+        self.buttonBrowse.setEnabled(True)
+
+    def update_status(self, string):
+        self.labelProgress.setText(string)
+        return
+
+    def update_progress(self, percentage):
+        self.progressBar.setValue(int(percentage))
+        return
+
+    def accept(self):
+        """If you press the 'done' button, this just closes the dialog window without doing anything"""
+        self.done(1)
+
+
 class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
     """
     Opens a Dialog Window:
@@ -800,7 +980,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
     def calibration_done(self):
         """Used to turn buttons back on after processes are done"""
         self.buttonStartCalibration.setEnabled(True)
-        self.buttonBrowse.setEnabled(False)
+        self.buttonBrowse.setEnabled(True)
 
     def update_status(self, string):
         self.labelProgress.setText(string)
@@ -814,54 +994,6 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         """If you press the 'done' button, this just closes the dialog window without doing anything"""
         self.done(1)
 
-class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
-    """
-    Opens a Dialog Window:
-    When Slice Converter button is pressed
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup the dialog window
-        super(SliceConverter, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonStartConversion.clicked.connect(self.conversion_start)
-
-    def browse(self):
-        self.slice_file = None
-        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
-
-        if self.slice_file:
-            self.textFileName.setText(self.slice_file)
-            self.buttonStartConversion.setEnabled(True)
-            self.update_status('Waiting to start process.')
-        else:
-            self.buttonStartConversion.setEnabled(False)
-
-    def conversion_start(self):
-        # Disable all buttons to prevent user from doing other tasks
-        self.buttonStartConversion.setEnabled(False)
-        self.buttonBrowse.setEnabled(False)
-
-        self.slice_converter_instance = slice_converter.SliceConverter(self.slice_file)
-
-    def conversion_done(self):
-        pass
-
-    def update_status(self, string):
-        self.labelProgress.setText(string)
-        return
-
-    def update_progress(self, percentage):
-        self.progressBar.setValue(int(percentage))
-        return
-
-    def accept(self):
-        """If you press the 'done' button, this just closes the dialog window without doing anything"""
-        self.done(1)
 
 if __name__ == '__main__':
     def main():

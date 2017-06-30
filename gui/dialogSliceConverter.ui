@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>383</width>
-    <height>199</height>
+    <width>380</width>
+    <height>197</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>380</width>
+    <height>197</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>380</width>
+    <height>197</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Slice Converter</string>
