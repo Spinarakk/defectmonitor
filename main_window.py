@@ -24,6 +24,7 @@ from Queue import Queue
 # Import external modules
 import cv2
 import numpy as np
+import pypylon
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt
 
@@ -772,14 +773,21 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonBrowse.clicked.connect(self.browse)
         self.buttonCameraSettings.clicked.connect(self.camera_settings)
         self.buttonCheckCamera.clicked.connect(self.check_camera)
+        self.buttonCheckTrigger.clicked.connect(self.check_trigger)
         self.buttonCapture.clicked.connect(self.capture)
         self.buttonRun.clicked.connect(self.run)
         self.buttonStop.clicked.connect(self.stop)
 
         # These are flags to check if both the browse and check camera settings are successful
         self.browse_flag = False
-        self.check_flag = False
+        self.camera_flag = False
+        self.trigger_flag = False
         self.save_folder = None
+
+        self.queue1 = Queue()
+        self.counter = 0
+        # Instantiate an ImageCapture instance
+
 
     def browse(self):
 
@@ -791,8 +799,9 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
             # Display the folder name
             self.textSaveLocation.setText(self.save_folder)
             self.browse_flag = True
-            if self.browse_flag & self.check_flag:
+            if self.browse_flag & self.camera_flag:
                 self.buttonCapture.setEnabled(True)
+            if self.browse_flag & self.camera_flag & self.trigger_flag:
                 self.buttonRun.setEnabled(True)
 
     def camera_settings(self):
@@ -805,17 +814,81 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         camera_settings_dialog.exec_()
 
     def check_camera(self):
-        """For testing purposes, this button just pretends that a camera was found no problem
-        TO BE CHANGED LATER
-        """
-        self.check_flag = True
-        self.labelCameraStatus.setText('OK')
-        if self.browse_flag & self.check_flag:
-            self.buttonCapture.setEnabled(True)
-            self.buttonRun.setEnabled(True)
+        """Checks that a camera is found and available"""
+
+        self.camera_flag = image_capture.ImageCapture(self.queue1, self.save_folder).acquire_cameras()
+
+        if self.camera_flag:
+            self.labelCameraStatus.setText('FOUND')
+            #self.labelStatusBar.setText('Status: Acquired %s.' % self)
+            if self.browse_flag & self.camera_flag:
+                self.buttonCapture.setEnabled(True)
+            if self.browse_flag & self.camera_flag & self.trigger_flag:
+                self.buttonRun.setEnabled(True)
+        else:
+            self.labelCameraStatus.setText('NOT FOUND')
+
+    def check_trigger(self):
+        """Checks that a triggering device is found and available"""
+        self.trigger_flag = image_capture.ImageCapture(None).trigger_device()
+
+        if self.trigger_flag:
+            self.labelTriggerStatus.setText('FOUND')
+            if self.browse_flag & self.camera_flag & self.trigger_flag:
+                self.buttonRun.setEnabled(True)
+        else:
+            self.labelTriggerStatus.setText('NOT FOUND')
 
     def capture(self):
-        pass
+        self.available_cameras = pypylon.factory.find_devices()
+        self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
+        self.labelStatusBar.setText('Status: Acquired %s.' % self.camera1.device_info)
+        self.camera1.open()
+        self.camera1.properties['PixelFormat'] = 'Mono8'  # 12 bit (4096 level) monochrome
+        # self.camera2.properties['PixelFormat'] = 'Mono8'
+        self.camera1.properties['AcquisitionMode'] = 'SingleFrame'
+        # self.camera2.properties['AcquisitionMode'] = 'SingleFrame'
+        self.camera1.properties['TriggerSelector'] = 'AcquisitionStart'  # Select AcquisitionStart Trigger
+        # self.camera2.properties['TriggerSelector'] = 'AcquisitionStart'
+        self.camera1.properties['TriggerMode'] = 'Off'  # software acquisition
+        # self.camera2.properties['TriggerMode']= 'Off'
+        self.camera1.properties['AcquisitionFrameRateEnable'] = 'False'
+        # self.camera2.properties['AcquisitionFrameRateEnable'] = 'False'
+        self.camera1.properties['TriggerSelector'] = 'FrameStart'  # Select FrameStart Trigger
+        # self.camera2.properties['TriggerSelector']= 'FrameStart'
+        # trig_present = self._serial_interface()
+        # if not trig_present:
+        #     self.stop = True
+        #     print 'No triggering device found',
+        #     return False
+
+        # if hwfstrig:
+        #     self.camera1.properties['TriggerMode'] = 'On'  # For hardware frame start triggering
+        # self.camera2.properties['TriggerMode']= 'On'
+        self.camera1.properties['TriggerSource'] = 'Line1'
+        # self.camera2.properties['TriggerSource'] = 'Line1'
+        self.camera1.properties['TriggerActivation'] = 'RisingEdge'
+        # self.camera2.properties['TriggerActivation'] = 'RisingEdge'
+        self.camera1.properties['ExposureMode'] = 'Timed'
+        # self.camera2.properties['ExposureMode'] = 'Timed'
+        self.camera1.properties['ExposureTimeAbs'] = 23000.0
+        # self.camera2.properties['ExposureTimeAbs']=35000.0
+        self.camera1.properties['AcquisitionFrameCount'] = 1  # Number of frames to grab
+        # self.camera2.properties['AcquisitionFrameCount'] = 1
+        self.camera1.properties['GevSCPSPacketSize'] = 500
+        # self.camera2.properties['GevSCPSPacketSize'] = 500
+        self.camera1.properties['GevSCPD'] = 6900  # Inter-packet delay
+        # self.camera2.properties['GevSCPD'] = 6900
+        self.camera1.properties['GevSCFTD'] = 1000  # Frame transfer delay
+        # self.camera2.properties['GevSCFTD'] = 1000
+
+
+        image = next(self.camera1.grab_images(1))
+
+        cv2.imwrite(str(self.save_folder) + '/image_' + str(self.counter) + '.png', image)
+        self.counter += 1
+        self.queue1.put_nowait((image))
+        self.labelStatusBar.setText('Status: Image Captured.')
 
     def run(self):
         
@@ -832,8 +905,11 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.connect(self.stopwatch_instance, SIGNAL("update_stopwatch(QString)"), self.update_stopwatch)
         self.stopwatch_instance.start()
 
+        self.image_capture = image_capture.ImageCapture(self.save_folder, self.queue1)
+        self.image_capture.start()
+
     def update_stopwatch(self, time):
-        self.labelTime.setText(time)
+        self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
 
     def stop(self):
         # Stop the stopwatch Qthread

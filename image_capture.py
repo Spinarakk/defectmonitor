@@ -9,12 +9,13 @@ import time
 import cv2
 import pypylon
 import serial
+import serial.tools.list_ports
 
 from PyQt4.QtCore import QThread, SIGNAL
 
 class ImageCapture(QThread):
 
-    def __init__(self, queue1, storage_folder, simulation=False):
+    def __init__(self, save_folder, queue1=None, storage_folder=None, simulation=False, ):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -29,7 +30,7 @@ class ImageCapture(QThread):
         self.simulation = simulation
         self.start_layer = self.config['StartLayer']
         self.start_phase = self.config['StartPhase']
-
+        self.save_folder = save_folder
         # Determine the current layer number of the current scan or coat image being captured
         push_offset = 1
         self.push_counter = 2 * self.start_layer
@@ -46,9 +47,9 @@ class ImageCapture(QThread):
             self.emit(SIGNAL("update_status(QString)"), 'Acquiring Images...')
             self.acquire_image(self.simulation)
         else:
-            self.acquire_cameras()
-            if bool(self.camera1):
-                self._camera_settings()
+            #self.acquire_cameras()
+            #if bool(self.camera1):
+                #self._camera_settings()
                 self.acquire_image()
 
     def acquire_cameras(self):
@@ -58,15 +59,18 @@ class ImageCapture(QThread):
             self.emit(SIGNAL("update_status(QString)"), 'No cameras available...')
             return False
         else:
-            self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
-            self.camera1.open()
-            self.emit(SIGNAL("update_status(QString)"), 'Acquired %s.' % self.camera1.device_info)
+            #self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
+            #self.camera1.open()
+            #self.emit(SIGNAL("update_status(QString)"), 'Acquired %s.' % self.camera1.device_info)
+            return True
 
     def acquire_image(self, simulation=False):
         """Acquire images from the camera(s)
         If simulation flag is true, images are read from the samples folder
         """
-
+        self.available_cameras = pypylon.factory.find_devices()
+        self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
+        self.camera1.open()
         if simulation:
             self.raw_image_scan = cv2.imread('samples/sample_scan.png')
             self.emit(SIGNAL("update_status(QString)"), 'Acquired scan image.')
@@ -75,45 +79,57 @@ class ImageCapture(QThread):
             self.raw_image_coat = cv2.imread('samples/sample_coat.png')
             self.emit(SIGNAL("update_status(QString)"), 'Acquired coat image.')
             self.emit(SIGNAL("update_progress(QString)"), '100')
-        else:
-            raw_image = next(self.camera1.grab_images)
+        #else:
+            #raw_image = next(self.camera1.grab_images)
 
         # Emit the read images back to main_window.py for processing
-        self.emit(SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
-        self.emit(SIGNAL("update_layer(QString, QString)"), str(self.start_layer), str(self.start_phase))
+        #self.emit(SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
+        #self.emit(SIGNAL("update_layer(QString, QString)"), str(self.start_layer), str(self.start_phase))
 
+        self.trigger_device()
+        self.counter = 0
         while True:
             if simulation:
                 break
             time.sleep(0.1)
-            trigger = self.serial_trig.readline().strip()
+            trigger = self.serial_trigger.readline().strip()
 
             if trigger == 'TRIG':
-                image = next(self.camera1.grab_images(1))
-                print self.push_counter
-                if self.push_counter % 2:
-                    save_folder = self.storage_folder['coat']
-                    self.start_phase = 'coat'
-                    layer = str((self.push_counter - 1) / 2).zfill(5)
-                    cv2.imwrite(save_folder + '/' + layer + '.png', image)
+                try:
+                    image = next(self.camera1.grab_images(1))
+                except(RuntimeError):
+                    time.sleep(2)
+                    image = next(self.camera1.grab_images(1))
 
-                else:
-                    save_folder = self.storage_folder['scan']
-                    self.start_phase = 'scan'
-                    layer = str(self.push_counter / 2).zfill(5)
-                    cv2.imwrite(save_folder + '/' + layer + '.png', image)
+                cv2.imwrite(str(self.save_folder) + '/image_' + str(self.counter) + '.png', image)
 
-                self.push_image(image, self.start_phase)
-                self.emit(SIGNAL("update_layer(QString)"), '%s_%s' % (layer, self.start_phase))
-                self.config['StartPhase'] = self.start_phase
-                self.config['StartLayer'] = layer
-
-                with open('config.json', 'w+') as config:
-                    json.dump(self.config, config)
-
-                if self.stop:
-                    self.queue1.put_nowait((None, None))
-                    break
+                self.counter += 1
+                # image = next(self.camera1.grab_images(1))
+                # print self.push_counter
+                # if self.push_counter % 2:
+                #     save_folder = self.storage_folder['coat']
+                #     self.start_phase = 'coat'
+                #     layer = str((self.push_counter - 1) / 2).zfill(5)
+                #     cv2.imwrite(save_folder + '/' + layer + '.png', image)
+                #
+                # else:
+                #     save_folder = self.storage_folder['scan']
+                #     self.start_phase = 'scan'
+                #     layer = str(self.push_counter / 2).zfill(5)
+                #     cv2.imwrite(save_folder + '/' + layer + '.png', image)
+                #
+                # self.push_image(image, self.start_phase)
+                # self.emit(SIGNAL("update_layer(QString)"), '%s_%s' % (layer, self.start_phase))
+                # self.config['StartPhase'] = self.start_phase
+                # self.config['StartLayer'] = layer
+                #
+                # with open('config.json', 'w+') as config:
+                #     json.dump(self.config, config)
+                #
+                # if self.stop:
+                #     self.queue1.put_nowait((None, None))
+                #     break
+                time.sleep(2)
 
     def push_image(self, image, phase):
 
@@ -122,25 +138,33 @@ class ImageCapture(QThread):
 
 
     
-    def _serial_interface(self):
-        ports = ['com%s' % number for number in xrange(1, 10)]
-        for port in ports:
-            try:
-                ser = serial.Serial(port, 9600)
-                self.serial_trig = ser
-                init_read = self.serial_trig.readline().strip()
-                if '~' in init_read:
-                    self.emit(SIGNAL("update_status(QString)"), 'Hardware trigger detected.')
-                    return True
-                else:
-                    ser.close()
-            except (OSError, serial.SerialException, serial.SerialTimeoutException):
-                pass
+    def trigger_device(self):
+        # Gather all available ports
+        #ports = ['COM%s' % number for number in xrange(1, 10)]
+
+        # Check all the gathered ports
+        #for port in ports:
+
+        ports = list(serial.tools.list_ports.comports())
+        for p in ports:
+            print p
+
+        try:
+            self.serial_trigger = serial.Serial('COM3')
+            serial_trigger_read = self.serial_trigger.readline().strip()
+
+            # Return true if serial trigger found
+            if '~' in serial_trigger_read:
+                return True
+            else:
+                self.serial_trigger.close()
+        except (OSError, serial.SerialException, serial.SerialTimeoutException):
+            pass
 
         return False
     
-    def _camera_settings(self):
-        if bool(self.available_cameras):
+    def camera_settings(self):
+        #if bool(self.available_cameras):
             self.camera1.properties['PixelFormat'] = 'Mono12'  # 12 bit (4096 level) monochrome
             # self.camera2.properties['PixelFormat'] = 'Mono8'
             self.camera1.properties['AcquisitionMode'] = 'SingleFrame'
@@ -179,7 +203,7 @@ class ImageCapture(QThread):
             self.camera1.properties['GevSCFTD'] = 1000  # Frame transfer delay
             # self.camera2.properties['GevSCFTD'] = 1000
             self._camera_calibration()
-        else:
-            self.stop = True
-            return False
+        # else:
+        #     self.stop = True
+        #     return False
         

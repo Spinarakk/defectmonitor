@@ -9,15 +9,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>458</width>
-    <height>281</height>
+    <width>482</width>
+    <height>309</height>
    </rect>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>458</width>
-    <height>281</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>Image Capture</string>
@@ -32,9 +26,9 @@
   <widget class="QLabel" name="labelCameraStatus">
    <property name="geometry">
     <rect>
-     <x>340</x>
-     <y>162</y>
-     <width>111</width>
+     <x>330</x>
+     <y>132</y>
+     <width>141</width>
      <height>28</height>
     </rect>
    </property>
@@ -61,8 +55,8 @@
    <property name="geometry">
     <rect>
      <x>180</x>
-     <y>162</y>
-     <width>151</width>
+     <y>132</y>
+     <width>141</width>
      <height>28</height>
     </rect>
    </property>
@@ -74,7 +68,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>162</y>
+     <y>132</y>
      <width>161</width>
      <height>28</height>
     </rect>
@@ -87,8 +81,8 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>126</y>
-     <width>321</width>
+     <y>96</y>
+     <width>311</width>
      <height>28</height>
     </rect>
    </property>
@@ -96,9 +90,9 @@
   <widget class="QPushButton" name="buttonBrowse">
    <property name="geometry">
     <rect>
-     <x>340</x>
-     <y>126</y>
-     <width>111</width>
+     <x>330</x>
+     <y>96</y>
+     <width>141</width>
      <height>28</height>
     </rect>
    </property>
@@ -110,7 +104,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>106</y>
+     <y>76</y>
      <width>141</width>
      <height>16</height>
     </rect>
@@ -124,12 +118,12 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>441</width>
-     <height>91</height>
+     <width>461</width>
+     <height>61</height>
     </rect>
    </property>
    <property name="text">
-    <string>This tool allows the user to change camera settings and take images from the camera which are saved to the given location. Please check that a camera is available and browse to a save location before capturing images. Press Capture to take one picture. Press Run and run the 3D machine, where the magnetic trigger will take images as the machine completes the scan and coat processes.</string>
+    <string>This tool allows the user to change camera settings and take images from the camera which are saved to the given location. To Capture individual images, please select a save location and check for an available camera. To Run using the hardware trigger, please also check for an available triggering device.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>
@@ -138,10 +132,10 @@
   <widget class="QPushButton" name="buttonDone">
    <property name="geometry">
     <rect>
-     <x>340</x>
-     <y>241</y>
-     <width>111</width>
-     <height>31</height>
+     <x>330</x>
+     <y>270</y>
+     <width>141</width>
+     <height>28</height>
     </rect>
    </property>
    <property name="text">
@@ -155,9 +149,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>198</y>
+     <y>168</y>
      <width>161</width>
-     <height>58</height>
+     <height>64</height>
     </rect>
    </property>
    <property name="font">
@@ -178,8 +172,8 @@
    <property name="geometry">
     <rect>
      <x>180</x>
-     <y>198</y>
-     <width>151</width>
+     <y>204</y>
+     <width>141</width>
      <height>28</height>
     </rect>
    </property>
@@ -193,9 +187,9 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>180</x>
-     <y>228</y>
-     <width>151</width>
+     <x>330</x>
+     <y>204</y>
+     <width>141</width>
      <height>28</height>
     </rect>
    </property>
@@ -249,40 +243,100 @@
   <widget class="QLabel" name="labelTimeElapsed">
    <property name="geometry">
     <rect>
-     <x>350</x>
-     <y>198</y>
-     <width>101</width>
+     <x>10</x>
+     <y>238</y>
+     <width>311</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>Time Elapsed:</string>
+    <string>Time Elapsed: 00:00:00</string>
    </property>
-  </widget>
-  <widget class="QLabel" name="labelTime">
-   <property name="geometry">
-    <rect>
-     <x>350</x>
-     <y>218</y>
-     <width>101</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>00:00:00</string>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="labelStatusBar">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>260</y>
+     <y>287</y>
      <width>321</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
     <string>Status:</string>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="progressBar">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>260</y>
+     <width>311</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>0</number>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkToggleCorrection">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>241</y>
+     <width>131</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>Apply Correction</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelTriggerStatus">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>168</y>
+     <width>141</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::Panel</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Sunken</enum>
+   </property>
+   <property name="lineWidth">
+    <number>2</number>
+   </property>
+   <property name="midLineWidth">
+    <number>0</number>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="buttonCheckTrigger">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>168</y>
+     <width>141</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Check Trigger</string>
    </property>
   </widget>
  </widget>

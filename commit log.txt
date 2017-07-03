@@ -1,3 +1,17 @@
+July 3
+- Removed the hardware trigger from the 3D machine and moved it to the office
+- Setup the camera and hooked it up to the laptop
+- Wrote some simple code to take pictures and set the settings (Mono8)
+- Tested hardware trigger (works properly)
+- Doesn't appear to require the grey cable
+- Need to refine the code to work with threads
+
+June 30
+- Created an Image Capture and a Camera Settings window
+- Initialized them and connected them to buttons
+- Added some basic functionality
+- Coded a timer to work with the Run button (extra_functions.py)
+
 June 29
 - Added functionality to the export image menu option, allowing the user to save the currently displayed image to a location on disk
 - Created a new window specifically for slice converter
