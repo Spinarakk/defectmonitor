@@ -11,6 +11,8 @@ slice_converter.py
 extra_functions.py
 """
 
+
+
 # Import built-ins
 import os
 import sys
@@ -28,18 +30,17 @@ import pypylon
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt
 
+# Compile and import PyQt GUIs
+os.system('build_gui.bat')
+from gui import mainWindow
+
 # Import related modules
+import dialog_windows
 import slice_converter
 import image_capture
 import camera_calibration
 import image_processing
 import extra_functions
-
-# Compile and import PyQt GUIs
-os.system('build_gui.bat')
-from gui import mainWindow, dialogNewBuild, dialogCameraCalibration, dialogSliceConverter, dialogImageCapture
-from gui import dialogCameraSettings
-
 
 class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     """Main Window:
@@ -132,10 +133,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.platform_dimensions = self.config['PlatformDimension']
         self.boundary_offset = self.config['BoundaryOffset']
 
-        # Initialize multithreading queues
-        # TODO Probably not needed?
-        self.queue1 = Queue()
-        self.queue2 = Queue()
+        # # Initialize multithreading queues
+        # # TODO Probably not needed?
+        # self.queue1 = Queue()
+        # self.queue2 = Queue()
 
         # Generate a timestamp for folder labelling purposes
         current_time = datetime.now()
@@ -182,7 +183,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Opens the New Build Dialog box
         If the OK button is clicked (success), the following processes are executed
         """
-        new_build_dialog = NewBuild()
+        new_build_dialog = dialog_windows.NewBuild()
         success = new_build_dialog.exec_()
 
         if success:
@@ -229,7 +230,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
     def camera_settings(self):
         """Opens the Camera Settings Dialog box"""
-        ImageCapture().camera_settings()
+        dialog_windows.ImageCapture().camera_settings()
 
     def defect_processing(self):
         """Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
@@ -272,7 +273,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         self.update_status('')
-        image_capture_dialog = ImageCapture()
+        image_capture_dialog = dialog_windows.ImageCapture()
         image_capture_dialog.exec_()
 
     def slice_converter(self):
@@ -281,7 +282,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         self.update_status('')
-        slice_converter_dialog = SliceConverter()
+        slice_converter_dialog = dialog_windows.SliceConverter()
         slice_converter_dialog.exec_()
 
     def camera_calibration(self):
@@ -289,7 +290,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         If the Done button is clicked, this box is closed and focus returns to the MainWindow
         """
         self.update_status('')
-        camera_calibration_dialog = CameraCalibration()
+        camera_calibration_dialog = dialog_windows.CameraCalibration()
         camera_calibration_dialog.exec_()
 
     def defect_actions(self):
@@ -428,8 +429,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Displays the current layer on the UI
         self.labelLayerNumber.setText(str(self.current_layer).zfill(5))
         
-        self.config['StartLayer'] = self.current_layer
-        self.config['StartPhase'] = self.current_phase
+        self.config['CurrentLayer'] = self.current_layer
+        self.config['CurrentPhase'] = self.current_phase
         
         for itemidx, item in enumerate(self.slice_file_dictionary):
             item_contours = self.slice_file_dictionary[item][self.current_layer]['Contours']
@@ -704,371 +705,30 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
     def closeEvent(self, event):
         """When either the Exit button or the top-right X is pressed, these processes happen:
-        Erase the current build name.
-        Delete any created folders.
+        Erase the current build name
+        Reset the current layer and phase back to default
+        Delete any created folders
         """
-        with open('config.json', 'w+') as config:
-            self.config['BuildName'] = ""
-            json.dump(self.config, config)
 
-        # Deleting the created folders (for simulation purposes)
-        if self.simulation:
-            try:
-                shutil.rmtree('%s' % self.storage_folder_name)
-                shutil.rmtree('images')
-                try:
-                    shutil.rmtree('%s' % self.image_folder_name)
-                except AttributeError:
-                    pass
-            except WindowsError:
-                pass
-
-
-class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
-    """
-    Opens a Dialog Window:
-    When File > New Build... is clicked.
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup the dialog window
-        super(NewBuild, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
+        # For some reason it isn't possible to load and dump within the same open function so they're split
         with open('config.json') as config:
             self.config = json.load(config)
 
-    def accept(self):
-        self.config['BuildName'] = str(self.lineBuildName.text())
-
-        if self.comboPlatform.currentIndex() == 0:
-            self.config['PlatformDimension'] = [636.0, 406.0]
-        elif self.comboPlatform.currentIndex() == 1:
-            self.config['PlatformDimension'] = [800.0, 400.0]
-        elif self.comboPlatform.currentIndex() == 2:
-            self.config['PlatformDimension'] = [250.0, 250.0]
+        self.config['BuildName'] = 'Default'
+        self.config['CurrentLayer'] = 1
+        self.config['CurrentPhase'] = 0
+        self.config['CaptureCount'] = 1
 
         with open('config.json', 'w+') as config:
             json.dump(self.config, config)
 
-        self.done(1)
-
-
-class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
-    """
-    Opens a Dialog Window:
-    When Image Capture button is pressed
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup the dialog window
-        super(ImageCapture, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonCameraSettings.clicked.connect(self.camera_settings)
-        self.buttonCheckCamera.clicked.connect(self.check_camera)
-        self.buttonCheckTrigger.clicked.connect(self.check_trigger)
-        self.buttonCapture.clicked.connect(self.capture)
-        self.buttonRun.clicked.connect(self.run)
-        self.buttonStop.clicked.connect(self.stop)
-
-        # These are flags to check if both the browse and check camera settings are successful
-        self.browse_flag = False
-        self.camera_flag = False
-        self.trigger_flag = False
-        self.save_folder = None
-
-        self.queue1 = Queue()
-        self.counter = 0
-        # Instantiate an ImageCapture instance
-
-
-    def browse(self):
-
-        # Opens a folder select dialog, allowing the user to choose a folder
-        self.save_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
-
-        # Checks if a folder is actually selected
-        if self.save_folder:
-            # Display the folder name
-            self.textSaveLocation.setText(self.save_folder)
-            self.browse_flag = True
-            if self.browse_flag & self.camera_flag:
-                self.buttonCapture.setEnabled(True)
-            if self.browse_flag & self.camera_flag & self.trigger_flag:
-                self.buttonRun.setEnabled(True)
-
-    def camera_settings(self):
-        """Opens the Camera Settings dialog box
-        If the OK button is clicked (success), it does the same thing as apply but also closes the box
-        If the Apply button is clicked, it saves the settings to a text file
-        """
-
-        camera_settings_dialog = CameraSettings()
-        camera_settings_dialog.exec_()
-
-    def check_camera(self):
-        """Checks that a camera is found and available"""
-
-        self.camera_flag = image_capture.ImageCapture(self.queue1, self.save_folder).acquire_cameras()
-
-        if self.camera_flag:
-            self.labelCameraStatus.setText('FOUND')
-            #self.labelStatusBar.setText('Status: Acquired %s.' % self)
-            if self.browse_flag & self.camera_flag:
-                self.buttonCapture.setEnabled(True)
-            if self.browse_flag & self.camera_flag & self.trigger_flag:
-                self.buttonRun.setEnabled(True)
-        else:
-            self.labelCameraStatus.setText('NOT FOUND')
-
-    def check_trigger(self):
-        """Checks that a triggering device is found and available"""
-        self.trigger_flag = image_capture.ImageCapture(None).trigger_device()
-
-        if self.trigger_flag:
-            self.labelTriggerStatus.setText('FOUND')
-            if self.browse_flag & self.camera_flag & self.trigger_flag:
-                self.buttonRun.setEnabled(True)
-        else:
-            self.labelTriggerStatus.setText('NOT FOUND')
-
-    def capture(self):
-        self.available_cameras = pypylon.factory.find_devices()
-        self.camera1 = pypylon.factory.create_device(self.available_cameras[0])
-        self.labelStatusBar.setText('Status: Acquired %s.' % self.camera1.device_info)
-        self.camera1.open()
-        self.camera1.properties['PixelFormat'] = 'Mono8'  # 12 bit (4096 level) monochrome
-        # self.camera2.properties['PixelFormat'] = 'Mono8'
-        self.camera1.properties['AcquisitionMode'] = 'SingleFrame'
-        # self.camera2.properties['AcquisitionMode'] = 'SingleFrame'
-        self.camera1.properties['TriggerSelector'] = 'AcquisitionStart'  # Select AcquisitionStart Trigger
-        # self.camera2.properties['TriggerSelector'] = 'AcquisitionStart'
-        self.camera1.properties['TriggerMode'] = 'Off'  # software acquisition
-        # self.camera2.properties['TriggerMode']= 'Off'
-        self.camera1.properties['AcquisitionFrameRateEnable'] = 'False'
-        # self.camera2.properties['AcquisitionFrameRateEnable'] = 'False'
-        self.camera1.properties['TriggerSelector'] = 'FrameStart'  # Select FrameStart Trigger
-        # self.camera2.properties['TriggerSelector']= 'FrameStart'
-        # trig_present = self._serial_interface()
-        # if not trig_present:
-        #     self.stop = True
-        #     print 'No triggering device found',
-        #     return False
-
-        # if hwfstrig:
-        #     self.camera1.properties['TriggerMode'] = 'On'  # For hardware frame start triggering
-        # self.camera2.properties['TriggerMode']= 'On'
-        self.camera1.properties['TriggerSource'] = 'Line1'
-        # self.camera2.properties['TriggerSource'] = 'Line1'
-        self.camera1.properties['TriggerActivation'] = 'RisingEdge'
-        # self.camera2.properties['TriggerActivation'] = 'RisingEdge'
-        self.camera1.properties['ExposureMode'] = 'Timed'
-        # self.camera2.properties['ExposureMode'] = 'Timed'
-        self.camera1.properties['ExposureTimeAbs'] = 23000.0
-        # self.camera2.properties['ExposureTimeAbs']=35000.0
-        self.camera1.properties['AcquisitionFrameCount'] = 1  # Number of frames to grab
-        # self.camera2.properties['AcquisitionFrameCount'] = 1
-        self.camera1.properties['GevSCPSPacketSize'] = 500
-        # self.camera2.properties['GevSCPSPacketSize'] = 500
-        self.camera1.properties['GevSCPD'] = 6900  # Inter-packet delay
-        # self.camera2.properties['GevSCPD'] = 6900
-        self.camera1.properties['GevSCFTD'] = 1000  # Frame transfer delay
-        # self.camera2.properties['GevSCFTD'] = 1000
-
-
-        image = next(self.camera1.grab_images(1))
-
-        cv2.imwrite(str(self.save_folder) + '/image_' + str(self.counter) + '.png', image)
-        self.counter += 1
-        self.queue1.put_nowait((image))
-        self.labelStatusBar.setText('Status: Image Captured.')
-
-    def run(self):
-        
-        # Disable buttons to prevent overlapping actions
-        self.buttonBrowse.setEnabled(False)
-        self.buttonCameraSettings.setEnabled(False)
-        self.buttonCapture.setEnabled(False)
-        self.buttonRun.setEnabled(False)
-        self.buttonCheckCamera.setEnabled(False)
-        self.buttonDone.setEnabled(False)
-        self.buttonStop.setEnabled(True)
-
-        self.stopwatch_instance = extra_functions.Stopwatch()
-        self.connect(self.stopwatch_instance, SIGNAL("update_stopwatch(QString)"), self.update_stopwatch)
-        self.stopwatch_instance.start()
-
-        self.image_capture = image_capture.ImageCapture(self.save_folder, self.queue1)
-        self.image_capture.start()
-
-    def update_stopwatch(self, time):
-        self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
-
-    def stop(self):
-        # Stop the stopwatch Qthread
-        self.stopwatch_instance.terminate()
-
-        # Re-enable buttons
-        self.buttonBrowse.setEnabled(True)
-        self.buttonCameraSettings.setEnabled(True)
-        self.buttonCapture.setEnabled(True)
-        self.buttonRun.setEnabled(True)
-        self.buttonCheckCamera.setEnabled(True)
-        self.buttonDone.setEnabled(True)
-        self.buttonStop.setEnabled(False)
-
-class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
-    """
-    Opens a Dialog Window:
-    When Camera Settings button is pressed within the Image Capture dialog window
-    Or when Camera Settings action is pressed within the Setup menu bar
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup the dialog window
-        super(CameraSettings, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
-
-class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
-    """
-    Opens a Dialog Window:
-    When Slice Converter button is pressed
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup the dialog window
-        super(SliceConverter, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonStartConversion.clicked.connect(self.conversion_start)
-
-    def browse(self):
-        self.slice_file = None
-        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
-
-        if self.slice_file:
-            self.textFileName.setText(self.slice_file)
-            self.buttonStartConversion.setEnabled(True)
-            self.update_status('Waiting to start process.')
-        else:
-            self.buttonStartConversion.setEnabled(False)
-
-    def conversion_start(self):
-        # Disable all buttons to prevent user from doing other tasks
-        self.buttonStartConversion.setEnabled(False)
-        self.buttonBrowse.setEnabled(False)
-
-        self.slice_converter_instance = slice_converter.SliceConverter(self.slice_file)
-        self.connect(self.slice_converter_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.slice_converter_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.slice_converter_instance, SIGNAL("successful()"), self.conversion_done)
-        self.slice_converter_instance.start()
-
-    def conversion_done(self):
-        self.buttonStartConversion.setEnabled(True)
-        self.buttonBrowse.setEnabled(True)
-
-    def update_status(self, string):
-        self.labelProgress.setText(string)
-        return
-
-    def update_progress(self, percentage):
-        self.progressBar.setValue(int(percentage))
-        return
-
-    def accept(self):
-        """If you press the 'done' button, this just closes the dialog window without doing anything"""
-        self.done(1)
-
-
-class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
-    """
-    Opens a Dialog Window:
-    When Calibrate Camera button is pressed
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup the dialog window
-        super(CameraCalibration, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonStartCalibration.clicked.connect(self.calibration_start)
-
-    def browse(self):
-
-        # Empty the image lists
-        self.image_list_valid = []
-
-        # Opens a folder select dialog, allowing the user to choose a folder
-        self.calibration_folder = None
-        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
-
-        # Checks if a folder is actually selected
-        if self.calibration_folder:
-            # Store a list of the files found in the folder
-            self.image_list = os.listdir(self.calibration_folder)
-            self.listImages.clear()
-
-            # Search for images containing the word calibration_image in the folder
-            for image_name in self.image_list:
-                if 'calibration_image' in str(image_name):
-                    self.image_list_valid.append(str(image_name))
-
-            if not self.image_list_valid:
-                self.update_status('No valid calibration images found.')
-                self.buttonStartCalibration.setEnabled(False)
-            else:
-                # Remove previous entries and fill with new entries
-                self.listImages.addItems(self.image_list_valid)
-                self.textFolderName.setText(self.calibration_folder)
-                self.buttonStartCalibration.setEnabled(True)
-                self.update_status('Waiting to start process.')
-
-    def calibration_start(self):
-
-        # Disable all buttons to prevent user from doing other tasks
-        self.buttonStartCalibration.setEnabled(False)
-        self.buttonBrowse.setEnabled(False)
-
-        self.camera_calibration_instance = camera_calibration.Calibration(self.calibration_folder)
-        self.connect(self.camera_calibration_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.camera_calibration_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.camera_calibration_instance, SIGNAL("successful()"), self.calibration_done)
-        self.camera_calibration_instance.start()
-
-    def calibration_done(self):
-        """Used to turn buttons back on after processes are done"""
-        self.buttonStartCalibration.setEnabled(True)
-        self.buttonBrowse.setEnabled(True)
-
-    def update_status(self, string):
-        self.labelProgress.setText(string)
-        return
-
-    def update_progress(self, percentage):
-        self.progressBar.setValue(int(percentage))
-        return
-
-    def accept(self):
-        """If you press the 'done' button, this just closes the dialog window without doing anything"""
-        self.done(1)
+        # Deleting the created folders (for simulation purposes)
+        if self.checkCleanup.isChecked():
+            try:
+                shutil.rmtree('%s' % self.storage_folder_name)
+                shutil.rmtree('%s' % self.image_folder_name)
+            except (WindowsError, AttributeError):
+                pass
 
 
 if __name__ == '__main__':

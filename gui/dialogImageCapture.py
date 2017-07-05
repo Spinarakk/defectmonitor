@@ -105,10 +105,10 @@ class Ui_dialogImageCapture(object):
         self.progressBar.setGeometry(QtCore.QRect(10, 260, 311, 23))
         self.progressBar.setProperty("value", 0)
         self.progressBar.setObjectName(_fromUtf8("progressBar"))
-        self.checkToggleCorrection = QtGui.QCheckBox(dialogImageCapture)
-        self.checkToggleCorrection.setGeometry(QtCore.QRect(340, 241, 131, 20))
-        self.checkToggleCorrection.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.checkToggleCorrection.setObjectName(_fromUtf8("checkToggleCorrection"))
+        self.checkApplyCorrection = QtGui.QCheckBox(dialogImageCapture)
+        self.checkApplyCorrection.setGeometry(QtCore.QRect(340, 241, 131, 20))
+        self.checkApplyCorrection.setLayoutDirection(QtCore.Qt.LeftToRight)
+        self.checkApplyCorrection.setObjectName(_fromUtf8("checkApplyCorrection"))
         self.labelTriggerStatus = QtGui.QLabel(dialogImageCapture)
         self.labelTriggerStatus.setGeometry(QtCore.QRect(330, 168, 141, 28))
         self.labelTriggerStatus.setFrameShape(QtGui.QFrame.Panel)
@@ -139,7 +139,7 @@ class Ui_dialogImageCapture(object):
         self.buttonStop.setText(_translate("dialogImageCapture", "Stop", None))
         self.labelTimeElapsed.setText(_translate("dialogImageCapture", "Time Elapsed: 00:00:00", None))
         self.labelStatusBar.setText(_translate("dialogImageCapture", "Status:", None))
-        self.checkToggleCorrection.setText(_translate("dialogImageCapture", "Apply Correction", None))
+        self.checkApplyCorrection.setText(_translate("dialogImageCapture", "Apply Correction", None))
         self.buttonCheckTrigger.setText(_translate("dialogImageCapture", "Check Trigger", None))
 
 import icons_rc

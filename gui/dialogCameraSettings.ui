@@ -75,12 +75,12 @@
     <string>Apply</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>291</width>
+     <width>292</width>
      <height>201</height>
     </rect>
    </property>
@@ -252,18 +252,14 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="1">
-     <widget class="QLineEdit" name="lineExposureTime">
-      <property name="inputMask">
-       <string/>
-      </property>
-      <property name="text">
-       <string>23000.0</string>
-      </property>
-     </widget>
-    </item>
     <item row="6" column="1">
      <widget class="QSpinBox" name="spinAcquisitionFC">
+      <property name="frame">
+       <bool>true</bool>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::UpDownArrows</enum>
+      </property>
       <property name="minimum">
        <number>1</number>
       </property>
@@ -272,7 +268,46 @@
       </property>
      </widget>
     </item>
+    <item row="5" column="1">
+     <widget class="QSpinBox" name="spinExposureTime">
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="minimum">
+       <number>35</number>
+      </property>
+      <property name="maximum">
+       <number>50000</number>
+      </property>
+      <property name="value">
+       <number>23000</number>
+      </property>
+     </widget>
+    </item>
    </layout>
+  </widget>
+  <widget class="QLabel" name="labelInformation">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>220</y>
+     <width>291</width>
+     <height>101</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+     <weight>50</weight>
+     <bold>false</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Some of these settings appear to break the capturing feature so the only settings you should change are the Pixel Format and the Exposure Time. The rest are just there temporarily for now.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
   </widget>
  </widget>
  <resources>

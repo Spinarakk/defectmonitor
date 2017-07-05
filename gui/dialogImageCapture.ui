@@ -282,7 +282,7 @@
     <number>0</number>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkToggleCorrection">
+  <widget class="QCheckBox" name="checkApplyCorrection">
    <property name="geometry">
     <rect>
      <x>340</x>
