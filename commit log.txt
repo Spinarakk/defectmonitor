@@ -1,3 +1,14 @@
+July 5
+- Separated the dialog window code to its own python module to improve readibility
+- Configured the settings window to work properly (apply button)
+- Saves the settings to the config.json file so that future iterations use the same settings
+- Added error checking for the exposure time value
+- Added more elements to the config.json file to remember more values across programs
+- Added a cleanup button that allows the user to specify whether to delete created folders or not
+- Moved the capture and run code blocks into their respective modules
+- Capture and Run buttons work as intended
+	- ISSUE: Run doesn't wait properly, and keeps capturing images if triggered repeatedly during wait time
+
 July 3
 - Removed the hardware trigger from the 3D machine and moved it to the office
 - Setup the camera and hooked it up to the laptop

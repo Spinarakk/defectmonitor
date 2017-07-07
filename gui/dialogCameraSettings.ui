@@ -2,27 +2,24 @@
 <ui version="4.0">
  <class>dialogCameraSettings</class>
  <widget class="QDialog" name="dialogCameraSettings">
-  <property name="windowModality">
-   <enum>Qt::NonModal</enum>
-  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>311</width>
-    <height>371</height>
+    <width>310</width>
+    <height>269</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>311</width>
-    <height>371</height>
+    <width>310</width>
+    <height>269</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>311</width>
-    <height>371</height>
+    <width>310</width>
+    <height>269</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -32,14 +29,11 @@
    <iconset resource="icons.qrc">
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
-  <property name="modal">
-   <bool>true</bool>
-  </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>330</y>
+     <y>230</y>
      <width>191</width>
      <height>31</height>
     </rect>
@@ -66,7 +60,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>331</y>
+     <y>231</y>
      <width>92</width>
      <height>28</height>
     </rect>
@@ -78,22 +72,28 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>0</x>
      <y>10</y>
-     <width>292</width>
-     <height>201</height>
+     <width>311</width>
+     <height>169</height>
     </rect>
    </property>
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="0">
-     <widget class="QLabel" name="label2">
+   <layout class="QFormLayout" name="formLayout">
+    <property name="sizeConstraint">
+     <enum>QLayout::SetDefaultConstraint</enum>
+    </property>
+    <item row="0" column="0">
+     <widget class="QLabel" name="label1">
       <property name="font">
        <font>
         <pointsize>9</pointsize>
        </font>
       </property>
+      <property name="toolTip">
+       <string>Sets the format of the pixel data transmitted for acquired images.</string>
+      </property>
       <property name="text">
-       <string>Trigger Selector</string>
+       <string>Pixel Format</string>
       </property>
      </widget>
     </item>
@@ -116,27 +116,68 @@
       </item>
      </widget>
     </item>
-    <item row="0" column="0">
-     <widget class="QLabel" name="label1">
+    <item row="1" column="0">
+     <widget class="QLabel" name="label2">
       <property name="font">
        <font>
         <pointsize>9</pointsize>
        </font>
       </property>
+      <property name="toolTip">
+       <string>Directly sets the camera's exposure time in microseconds.</string>
+      </property>
       <property name="text">
-       <string>Pixel Format</string>
+       <string>Exposure Time</string>
       </property>
      </widget>
     </item>
-    <item row="4" column="0">
-     <widget class="QLabel" name="label5">
+    <item row="1" column="1">
+     <widget class="QSpinBox" name="spinExposureTime">
+      <property name="toolTip">
+       <string>0 - 100,000</string>
+      </property>
+      <property name="minimum">
+       <number>35</number>
+      </property>
+      <property name="maximum">
+       <number>100000</number>
+      </property>
+      <property name="value">
+       <number>23000</number>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label3">
       <property name="font">
        <font>
         <pointsize>9</pointsize>
        </font>
       </property>
+      <property name="toolTip">
+       <string>Sets the packet size in bytes for the selected stream channel.</string>
+      </property>
       <property name="text">
-       <string>Trigger Activation</string>
+       <string>Packet Size</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QSpinBox" name="spinPacketSize">
+      <property name="toolTip">
+       <string>0 - 1,500</string>
+      </property>
+      <property name="minimum">
+       <number>0</number>
+      </property>
+      <property name="maximum">
+       <number>1500</number>
+      </property>
+      <property name="singleStep">
+       <number>4</number>
+      </property>
+      <property name="value">
+       <number>500</number>
       </property>
      </widget>
     </item>
@@ -147,20 +188,58 @@
         <pointsize>9</pointsize>
        </font>
       </property>
+      <property name="toolTip">
+       <string>Sets the inter-packet delay (in ticks) for the selected stream channel.</string>
+      </property>
       <property name="text">
-       <string>Trigger Source</string>
+       <string>Inter-Packet Delay</string>
       </property>
      </widget>
     </item>
-    <item row="6" column="0">
-     <widget class="QLabel" name="label7">
+    <item row="3" column="1">
+     <widget class="QSpinBox" name="spinInterPacketDelay">
+      <property name="toolTip">
+       <string>0 - 10,000</string>
+      </property>
+      <property name="suffix">
+       <string/>
+      </property>
+      <property name="maximum">
+       <number>10000</number>
+      </property>
+      <property name="value">
+       <number>6900</number>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label5">
       <property name="font">
        <font>
         <pointsize>9</pointsize>
        </font>
       </property>
+      <property name="toolTip">
+       <string>Sets the frame transfer start delay (in ticks) for the selected stream channel.</string>
+      </property>
       <property name="text">
-       <string>Acquisition Frame Count</string>
+       <string>Frame Transmission Delay</string>
+      </property>
+      <property name="scaledContents">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QSpinBox" name="spinFrameDelay">
+      <property name="toolTip">
+       <string>0 -10,000</string>
+      </property>
+      <property name="maximum">
+       <number>10000</number>
+      </property>
+      <property name="value">
+       <number>1000</number>
       </property>
      </widget>
     </item>
@@ -171,116 +250,24 @@
         <pointsize>9</pointsize>
        </font>
       </property>
-      <property name="text">
-       <string>Exposure Time</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QComboBox" name="comboTriggerSelector">
-      <item>
-       <property name="text">
-        <string>Acquisition Start</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Frame Start</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QComboBox" name="comboTriggerMode">
-      <item>
-       <property name="text">
-        <string>Off</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>On</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QComboBox" name="comboTriggerSource">
-      <property name="currentIndex">
-       <number>1</number>
-      </property>
-      <item>
-       <property name="text">
-        <string>Trigger Software</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Line 1</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Action 1</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item row="4" column="1">
-     <widget class="QComboBox" name="comboTriggerActivation">
-      <item>
-       <property name="text">
-        <string>Rising Edge</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Falling Edge</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label3">
-      <property name="font">
-       <font>
-        <pointsize>9</pointsize>
-       </font>
+      <property name="toolTip">
+       <string>Sets how long (in seconds) until the trigger can be triggered again.</string>
       </property>
       <property name="text">
-       <string>Trigger Mode</string>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="1">
-     <widget class="QSpinBox" name="spinAcquisitionFC">
-      <property name="frame">
-       <bool>true</bool>
-      </property>
-      <property name="buttonSymbols">
-       <enum>QAbstractSpinBox::UpDownArrows</enum>
-      </property>
-      <property name="minimum">
-       <number>1</number>
-      </property>
-      <property name="maximum">
-       <number>255</number>
+       <string>Trigger Timeout</string>
       </property>
      </widget>
     </item>
     <item row="5" column="1">
-     <widget class="QSpinBox" name="spinExposureTime">
-      <property name="buttonSymbols">
-       <enum>QAbstractSpinBox::NoButtons</enum>
-      </property>
-      <property name="minimum">
-       <number>35</number>
+     <widget class="QSpinBox" name="spinTriggerTimeout">
+      <property name="toolTip">
+       <string>0 - 60</string>
       </property>
       <property name="maximum">
-       <number>50000</number>
+       <number>60</number>
       </property>
       <property name="value">
-       <number>23000</number>
+       <number>3</number>
       </property>
      </widget>
     </item>
@@ -290,20 +277,13 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>220</y>
+     <y>170</y>
      <width>291</width>
-     <height>101</height>
+     <height>61</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>9</pointsize>
-     <weight>50</weight>
-     <bold>false</bold>
-    </font>
-   </property>
    <property name="text">
-    <string>Some of these settings appear to break the capturing feature so the only settings you should change are the Pixel Format and the Exposure Time. The rest are just there temporarily for now.</string>
+    <string>Hover over the labels for a brief explanation of what that setting does, and over the spinboxes for the min/max values that can be accepted.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>

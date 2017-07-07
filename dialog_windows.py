@@ -109,9 +109,12 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         If the OK button is clicked (success), it does the same thing as apply but also closes the box
         If the Apply button is clicked, it saves the settings to a text file
         """
-
-        camera_settings_dialog = CameraSettings()
-        camera_settings_dialog.exec_()
+        asdf = self.image_capture_instance.isRunning()
+        print asdf
+        print self.image_capture_instance.isFinished()
+        print self.stopwatch_instance.isRunning()
+        #camera_settings_dialog = CameraSettings(self)
+        #camera_settings_dialog.show()
 
     def check_camera(self):
         """Checks that a camera is found and available"""
@@ -135,12 +138,17 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         if bool(self.trigger_flag):
             self.labelTriggerStatus.setText(str(self.trigger_flag))
+            self.update_status('Trigger detected on %s' % str(self.trigger_flag) + '.')
             if self.browse_flag & bool(self.camera_flag) & bool(self.trigger_flag):
                 self.buttonRun.setEnabled(True)
         else:
             self.labelTriggerStatus.setText('NOT FOUND')
 
     def capture(self):
+        """Captures and saves a single image to the save location"""
+
+        self.update_status('Capturing single image...')
+
         # Instantiate and run an ImageCapture instance that will only take one image
         self.image_capture_instance_single = image_capture.ImageCapture(self.save_folder, True)
         self.connect(self.image_capture_instance_single, SIGNAL("update_status(QString)"), self.update_status)
@@ -155,6 +163,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonCapture.setEnabled(False)
         self.buttonRun.setEnabled(False)
         self.buttonCheckCamera.setEnabled(False)
+        self.buttonCheckTrigger.setEnabled(False)
         self.buttonDone.setEnabled(False)
         self.buttonStop.setEnabled(True)
 
@@ -166,7 +175,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
         self.image_capture_instance = image_capture.ImageCapture(self.save_folder)
         self.connect(self.image_capture_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.image_capture_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.image_capture_instance, SIGNAL("stop()"), self.stop)
+        self.image_capture_instance.setTerminationEnabled(True)
         self.image_capture_instance.start()
 
     def update_stopwatch(self, time):
@@ -180,8 +190,11 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         Also enables or re-enables buttons
         """
 
+        self.update_status('Image acquisition stopped.')
+
         self.stopwatch_instance.terminate()
-        self.image_capture_instance.terminate()
+        self.image_capture_instance.stop()
+
 
         # Re-enable buttons
         self.buttonBrowse.setEnabled(True)
@@ -189,6 +202,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonCapture.setEnabled(True)
         self.buttonRun.setEnabled(True)
         self.buttonCheckCamera.setEnabled(True)
+        self.buttonCheckTrigger.setEnabled(True)
         self.buttonDone.setEnabled(True)
         self.buttonStop.setEnabled(False)
 
@@ -196,9 +210,6 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.labelStatusBar.setText('Status: ' + string)
         return
 
-    def update_progress(self, percentage):
-        self.progressBar.setValue(int(percentage))
-        return
 
 class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
     """
@@ -219,12 +230,11 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
 
         # Setup event listeners for all the setting boxes to detect a change
         self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
-        self.comboTriggerSelector.currentIndexChanged.connect(self.apply_enable)
-        self.comboTriggerMode.currentIndexChanged.connect(self.apply_enable)
-        self.comboTriggerSource.currentIndexChanged.connect(self.apply_enable)
-        self.comboTriggerActivation.currentIndexChanged.connect(self.apply_enable)
         self.spinExposureTime.valueChanged.connect(self.apply_enable)
-        self.spinAcquisitionFC.valueChanged.connect(self.apply_enable)
+        self.spinPacketSize.valueChanged.connect(self.apply_enable)
+        self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
+        self.spinFrameDelay.valueChanged.connect(self.apply_enable)
+        self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
 
         # Load the camera settings which are saved to the config.json file
         with open('config.json') as config:
@@ -233,12 +243,11 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
         # Set the combo box and settings to the previously saved values
         # Combo box settings are saved as their index values in the config.json file
         self.comboPixelFormat.setCurrentIndex(int(self.config['PixelFormat']))
-        self.comboTriggerSelector.setCurrentIndex(int(self.config['TriggerSelector']))
-        self.comboTriggerMode.setCurrentIndex(int(self.config['TriggerMode']))
-        self.comboTriggerSource.setCurrentIndex(int(self.config['TriggerSource']))
-        self.comboTriggerActivation.setCurrentIndex(int(self.config['TriggerActivation']))
         self.spinExposureTime.setValue(int(self.config['ExposureTimeAbs']))
-        self.spinAcquisitionFC.setValue(int(self.config['AcquisitionFrameCount']))
+        self.spinPacketSize.setValue(int(self.config['PacketSize']))
+        self.spinInterPacketDelay.setValue(int(self.config['InterPacketDelay']))
+        self.spinFrameDelay.setValue(int(self.config['FrameTransmissionDelay']))
+        self.spinTriggerTimeout.setValue(int(self.config['TriggerTimeout']))
 
         self.buttonApply.setEnabled(False)
 
@@ -248,12 +257,11 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
     def apply(self):
         # Save the new index values from the changed settings to the config dictionary
         self.config['PixelFormat'] = self.comboPixelFormat.currentIndex()
-        self.config['TriggerSelector'] = self.comboTriggerSelector.currentIndex()
-        self.config['TriggerMode'] = self.comboTriggerMode.currentIndex()
-        self.config['TriggerSource'] = self.comboTriggerSource.currentIndex()
-        self.config['TriggerActivation'] = self.comboTriggerActivation.currentIndex()
         self.config['ExposureTimeAbs'] = self.spinExposureTime.value()
-        self.config['AcquisitionFrameCount'] = self.spinAcquisitionFC.value()
+        self.config['PacketSize'] = self.spinPacketSize.value()
+        self.config['InterPacketDelay'] = self.spinInterPacketDelay.value()
+        self.config['FrameTransmissionDelay'] = self.spinFrameDelay.value()
+        self.config['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
         # Save the settings to the config.json file
         with open('config.json', 'w+') as config:
@@ -270,6 +278,7 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
             self.apply()
 
         self.done(1)
+
 
 class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     """

@@ -183,7 +183,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Opens the New Build Dialog box
         If the OK button is clicked (success), the following processes are executed
         """
-        new_build_dialog = dialog_windows.NewBuild()
+        new_build_dialog = dialog_windows.NewBuild(self)
         success = new_build_dialog.exec_()
 
         if success:
@@ -230,7 +230,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
     def camera_settings(self):
         """Opens the Camera Settings Dialog box"""
-        dialog_windows.ImageCapture().camera_settings()
+        camera_settings_dialog = dialog_windows.CameraSettings(self)
+        camera_settings_dialog.show()
 
     def defect_processing(self):
         """Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
@@ -273,7 +274,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         self.update_status('')
-        image_capture_dialog = dialog_windows.ImageCapture()
+        image_capture_dialog = dialog_windows.ImageCapture(self)
         image_capture_dialog.exec_()
 
     def slice_converter(self):
@@ -282,7 +283,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         self.update_status('')
-        slice_converter_dialog = dialog_windows.SliceConverter()
+        slice_converter_dialog = dialog_windows.SliceConverter(self)
         slice_converter_dialog.exec_()
 
     def camera_calibration(self):
@@ -290,7 +291,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         If the Done button is clicked, this box is closed and focus returns to the MainWindow
         """
         self.update_status('')
-        camera_calibration_dialog = dialog_windows.CameraCalibration()
+        camera_calibration_dialog = dialog_windows.CameraCalibration(self)
         camera_calibration_dialog.exec_()
 
     def defect_actions(self):

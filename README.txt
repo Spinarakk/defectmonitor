@@ -80,3 +80,8 @@ extra_functions.py
 - Slice Overlay & Comparison
 - Report Generation
 - Notification
+
+Camera
+- Has lots of features and changeable settings
+- Most of these can be ignored as we are only using the camera to take one image every few seconds
+- Software trigger through the Python program
