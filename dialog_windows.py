@@ -7,6 +7,7 @@ Secondary module used to initiate any sub-windows that open when you click on th
 import os
 #import sys
 import json
+import time
 
 # Import external modules
 import cv2
@@ -64,12 +65,16 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     When Image Capture button is pressed
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, image_folder=None):
 
         # Setup the dialog window
         super(ImageCapture, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+
+        # Set and display the default image folder name to be used to store all acquired images
+        self.save_folder = image_folder
+        self.textSaveLocation.setText(self.save_folder)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowse.clicked.connect(self.browse)
@@ -82,12 +87,9 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.checkApplyCorrection.toggled.connect(self.apply_correction)
 
         # These are flags to check if both the browse and check camera settings are successful
-        self.browse_flag = False
+        self.browse_flag = True
         self.camera_flag = False
         self.trigger_flag = False
-        self.save_folder = None
-
-        self.counter = 0
 
     def browse(self):
 
@@ -109,12 +111,9 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         If the OK button is clicked (success), it does the same thing as apply but also closes the box
         If the Apply button is clicked, it saves the settings to a text file
         """
-        asdf = self.image_capture_instance.isRunning()
-        print asdf
-        print self.image_capture_instance.isFinished()
-        print self.stopwatch_instance.isRunning()
-        #camera_settings_dialog = CameraSettings(self)
-        #camera_settings_dialog.show()
+
+        camera_settings_dialog = CameraSettings(self)
+        camera_settings_dialog.show()
 
     def check_camera(self):
         """Checks that a camera is found and available"""
@@ -147,15 +146,36 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def capture(self):
         """Captures and saves a single image to the save location"""
 
-        self.update_status('Capturing single image...')
+        # Disable buttons to prevent overlapping actions
+        self.buttonBrowse.setEnabled(False)
+        self.buttonCameraSettings.setEnabled(False)
+        self.buttonCapture.setEnabled(False)
+        self.buttonCheckCamera.setEnabled(False)
+        self.buttonCheckTrigger.setEnabled(False)
+        self.buttonDone.setEnabled(False)
 
         # Instantiate and run an ImageCapture instance that will only take one image
-        self.image_capture_instance_single = image_capture.ImageCapture(self.save_folder, True)
-        self.connect(self.image_capture_instance_single, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.image_capture_instance_single, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.image_capture_instance_single.start()
+        self.image_capture_single_instance = image_capture.ImageCapture(self.save_folder, single_flag=True)
+        self.connect(self.image_capture_single_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.image_capture_single_instance, SIGNAL("send_image(PyQt_PyObject, QString)"), self.send_image)
+        self.connect(self.image_capture_single_instance, SIGNAL("finished()"), self.capture_finished)
+        self.image_capture_single_instance.start()
+
+    def capture_finished(self):
+        """Executes when the capture instance has finished"""
+
+        # Re-enable buttons
+        self.buttonBrowse.setEnabled(True)
+        self.buttonCameraSettings.setEnabled(True)
+        self.buttonCapture.setEnabled(True)
+        self.buttonCheckCamera.setEnabled(True)
+        self.buttonCheckTrigger.setEnabled(True)
+        self.buttonDone.setEnabled(True)
 
     def run(self):
+        """Wait indefinitely until trigger device sends a signal
+        An image is captured and saved to the save location, and goes back to waiting after a pre-determined timeout
+        """
 
         # Disable buttons to prevent overlapping actions
         self.buttonBrowse.setEnabled(False)
@@ -173,28 +193,14 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.image_capture_instance = image_capture.ImageCapture(self.save_folder)
-        self.connect(self.image_capture_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.image_capture_instance, SIGNAL("stop()"), self.stop)
-        self.image_capture_instance.setTerminationEnabled(True)
-        self.image_capture_instance.start()
+        self.image_capture_run_instance = image_capture.ImageCapture(self.save_folder, run_flag=True)
+        self.connect(self.image_capture_run_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.image_capture_run_instance, SIGNAL("send_image(PyQt_PyObject)"), self.send_image)
+        self.connect(self.image_capture_run_instance, SIGNAL("finished()"), self.run_finished)
+        self.image_capture_run_instance.start()
 
-    def update_stopwatch(self, time):
-        self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
-
-    def apply_correction(self):
-        pass
-
-    def stop(self):
-        """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances
-        Also enables or re-enables buttons
-        """
-
-        self.update_status('Image acquisition stopped.')
-
-        self.stopwatch_instance.terminate()
-        self.image_capture_instance.stop()
-
+    def run_finished(self):
+        """Executes when the run instance has finished"""
 
         # Re-enable buttons
         self.buttonBrowse.setEnabled(True)
@@ -205,6 +211,25 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonCheckTrigger.setEnabled(True)
         self.buttonDone.setEnabled(True)
         self.buttonStop.setEnabled(False)
+
+        self.update_status('Stopped.')
+
+    def send_image(self, image, file_name):
+        """Sends the image as received from the ImageCapture back to the MainWindow to be displayed"""
+        self.emit(SIGNAL("update_display_RM(PyQt_PyObject, QString)"), image, file_name)
+
+    def update_stopwatch(self, time):
+        self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
+
+    def apply_correction(self):
+        pass
+
+    def stop(self):
+        """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances"""
+
+        self.update_status('Stopped. Waiting for timeout to end.')
+        self.stopwatch_instance.stop()
+        self.image_capture_run_instance.stop()
 
     def update_status(self, string):
         self.labelStatusBar.setText('Status: ' + string)

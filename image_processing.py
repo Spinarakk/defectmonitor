@@ -1,7 +1,8 @@
 """
 image_processing.py
-Module containing mostly OpenCV code used to process the images for initial analysis or for defect identification.
+Module containing mostly OpenCV code used to process the images for initial analysis or for defect identification
 """
+
 import cv2
 import json
 import numpy as np
@@ -21,7 +22,7 @@ class ImageCorrection(QThread):
     Respective capital letters suffixed to the image array name indicate which processes have been applied
     """
 
-    def __init__(self, image_folder_name, image_scan, image_coat):
+    def __init__(self, image_folder, image_scan, image_coat):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -42,13 +43,14 @@ class ImageCorrection(QThread):
         self.output_resolution = self.camera_parameters[23:].reshape(1, 2).astype(np.int32)
 
         # Define lists containing the 2 image arrays, 2 phase strings, 3 processing tag strings and 3 status messages
-        self.image_folder_name = image_folder_name
-        self.images = (image_scan, image_coat)
-        self.phases = ('scan', 'coat')
-        self.tags = ('DP', 'DPC', 'DPCE')
-        self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
-                                'Applying CLAHE algorithm...')
-        self.progress_counter = 0.0
+        if bool(image_folder):
+            self.image_folder = image_folder + '/processed'
+            self.images = (image_scan, image_coat)
+            self.phases = ('scan', 'coat')
+            self.tags = ('DP', 'DPC', 'DPCE')
+            self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
+                                    'Applying CLAHE algorithm...')
+            self.progress_counter = 0.0
 
     def run(self):
         """This for loop loops through the three tags and two phases to produce six processed images
@@ -72,10 +74,10 @@ class ImageCorrection(QThread):
                 self.progress_counter += 8.333
                 self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
                 self.emit(SIGNAL("update_status(QString)"), self.status_messages[tag_index] +
-                          ' Saving sample_%s_%s.png to %s folder...' % (phase, tag, self.image_folder_name))
+                          ' Saving sample_%s_%s.png...' % (phase, tag))
 
                 # Write the current processed image to disk named using appropriate tags, and send back to main function
-                #TODO cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder_name, phase, tag), self.image)
+                cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder, phase, tag), self.image)
                 self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image, phase, tag)
 
                 self.progress_counter += 8.333
@@ -145,7 +147,6 @@ class DefectDetection(QThread):
 
     PUT ALL OPENCV CODE TO BE TESTED HERE IN ONE OF THE FIVE METHODS
     TRY NOT TO MODIFY TOO MUCH OF THE CODE OUTSIDE OF THESE METHODS
-
     """
     def __init__(self, original_image):
 

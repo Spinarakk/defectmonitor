@@ -1,3 +1,23 @@
+July 10
+- Did a quick runthrough of the comments for consistency and accuracy
+- Added additional comments throughout the code
+- Fixed up the serial port issue outlined on July 7
+- Moved around a lot of the code so the QThreads work properly
+- Pressing the Stop button now waits for a running timeout and the QThread to finish before allowing user to use the panel
+- Consolidated all the captured images to one root folder and its subfolders
+- Created an image converter button that allows the user to easily convert an image using stored calibration values
+- Created a new tab on the MainWindow widget that allows the user to view the captured images on the window itself
+
+July 7
+- Did some testing of the Basler camera using the pylon Viewer to try out different camera settings
+- Checking to see which have an appreciable affect on the output picture, though most of them don't
+- Added/Removed some settings from the UI and tested their functionality
+- Fixed a UI window parent issue where new dialogs were creating a separate taskbar entry and clicking the main window when it is not the focus when another dialog is open doesn't cause the window to be the focus in Windows
+- ISSUE: Clicking the stop button doesn't terminate the QThread
+- Appears to be because of the serial readline reading it the and holding it there
+- Adding a timeout to the serial port appears to fix this issue, but there still lie other issues such as premature termination of the Thread
+- Will need to fix
+
 July 5
 - Separated the dialog window code to its own python module to improve readibility
 - Configured the settings window to work properly (apply button)

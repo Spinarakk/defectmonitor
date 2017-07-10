@@ -13,17 +13,17 @@ class SliceConverter(QThread):
     Future implementation will look to either shifting or adding .cli slice conversion
     """
 
-    def __init__(self, slice_file):
+    def __init__(self, slice_raw_folder, slice_parsed_folder):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
         # Sets up lists to store the raw and parsed data
-        self.slice_file = slice_file
-        # self.slice_raw_folder = slice_raw_folder
-        # self.slice_parsed_folder = slice_parsed_folder
-        # self.slice_raw_list = os.listdir(self.slice_raw_folder)
-        # self.slice_parsed_list = os.listdir(self.slice_parsed_folder)
+        #self.slice_file = slice_file
+        self.slice_raw_folder = slice_raw_folder
+        self.slice_parsed_folder = slice_parsed_folder
+        self.slice_raw_list = os.listdir(self.slice_raw_folder)
+        self.slice_parsed_list = os.listdir(self.slice_parsed_folder)
 
         # Create a dictionary to store the list of slice files (found in the slice raw folder) to be converted
         self.slice_file_dictionary = dict()

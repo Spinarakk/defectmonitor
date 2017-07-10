@@ -12,8 +12,7 @@ from PyQt4.QtCore import QThread, SIGNAL
 
 class Stopwatch(QThread):
     """
-    A regular stopwatch module
-    Works as a stopwatch would
+    A regular stopwatch module, working as a stopwatch would
     """
 
     def __init__(self):
@@ -27,13 +26,21 @@ class Stopwatch(QThread):
         self.minutes = 0
         self.hours = 0
 
+        # Flag to start and terminate the while loop
+        self.run_flag = True
+
     def run(self):
-        while True:
+        while self.run_flag:
+            # Send a formatted time string to the main function
             self.time = '%s:%s:%s' % (str(self.hours).zfill(2), str(self.minutes).zfill(2), str(self.seconds).zfill(2))
             self.emit(SIGNAL("update_stopwatch(QString)"), str(self.time))
             time.sleep(1)
+
             # Convert the counter into hours seconds and minutes
             self.counter += 1
             self.seconds = self.counter % 60
             self.minutes = int(self.counter / 60)
             self.hours = int(self.counter / 3600)
+
+    def stop(self):
+        self.run_flag = False
