@@ -1,18 +1,6 @@
-"""
-dialog_window.py
-Secondary module used to initiate any sub-windows that open when you click on the appropriate buttons on the main window
-"""
-
-# Import built-ins
+# Import external libraries
 import os
-#import sys
 import json
-import time
-
-# Import external modules
-import cv2
-#import numpy as np
-import pypylon
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt
 
@@ -20,7 +8,6 @@ from PyQt4.QtCore import SIGNAL, Qt
 import slice_converter
 import image_capture
 import camera_calibration
-#import image_processing
 import extra_functions
 
 # Import PyQt GUIs
@@ -28,18 +15,19 @@ from gui import dialogNewBuild, dialogCameraCalibration, dialogSliceConverter, d
 
 
 class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
-    """
-    Opens a Dialog Window:
-    When File > New Build... is clicked.
+    """Opens a Dialog Window when File > New Build... is clicked
+    Allows user to setup a new build and change settings
+    Setup as a Modal window, blocking input to other visible windows until this window is closed
     """
 
     def __init__(self, parent=None):
 
-        # Setup the dialog window
+        # Setup Dialog UI with MainWindow as parent
         super(NewBuild, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
+        # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -53,6 +41,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         elif self.comboPlatform.currentIndex() == 2:
             self.config['PlatformDimension'] = [250.0, 250.0]
 
+        # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config)
 
@@ -60,14 +49,14 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
 
 class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
-    """
-    Opens a Dialog Window:
-    When Image Capture button is pressed
+    """Opens a Dialog Window when Image Capture button is clicked
+    Allows user to capture images using a connected camera
+    Setup as a Modeless window, operating independently of other windows
     """
 
     def __init__(self, parent=None, image_folder=None):
 
-        # Setup the dialog window
+        # Setup Dialog UI with MainWindow as parent
         super(ImageCapture, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -77,6 +66,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.textSaveLocation.setText(self.save_folder)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        # Buttons
         self.buttonBrowse.clicked.connect(self.browse)
         self.buttonCameraSettings.clicked.connect(self.camera_settings)
         self.buttonCheckCamera.clicked.connect(self.check_camera)
@@ -84,26 +74,28 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonCapture.clicked.connect(self.capture)
         self.buttonRun.clicked.connect(self.run)
         self.buttonStop.clicked.connect(self.stop)
+
+        # Toggles
         self.checkApplyCorrection.toggled.connect(self.apply_correction)
+        self.checkDisplayImage.toggled.connect(self.display_image)
 
         # These are flags to check if both the browse and check camera settings are successful
-        self.browse_flag = True
         self.camera_flag = False
         self.trigger_flag = False
 
     def browse(self):
 
         # Opens a folder select dialog, allowing the user to choose a folder
+        # noinspection PyCallByClass
         self.save_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
 
         # Checks if a folder is actually selected
         if self.save_folder:
             # Display the folder name
             self.textSaveLocation.setText(self.save_folder)
-            self.browse_flag = True
-            if self.browse_flag & bool(self.camera_flag):
+            if bool(self.camera_flag):
                 self.buttonCapture.setEnabled(True)
-            if self.browse_flag & bool(self.camera_flag) & bool(self.trigger_flag):
+            if bool(self.camera_flag) & bool(self.trigger_flag):
                 self.buttonRun.setEnabled(True)
 
     def camera_settings(self):
@@ -124,9 +116,9 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
             self.labelCameraStatus.setText('FOUND')
             self.camera_flag = str(self.camera_flag).replace('DeviceInfo ', '')
             self.update_status(str(self.camera_flag))
-            if self.browse_flag & bool(self.camera_flag):
+            if bool(self.camera_flag):
                 self.buttonCapture.setEnabled(True)
-            if self.browse_flag & bool(self.camera_flag) & bool(self.trigger_flag):
+            if bool(self.camera_flag) & bool(self.trigger_flag):
                 self.buttonRun.setEnabled(True)
         else:
             self.labelCameraStatus.setText('NOT FOUND')
@@ -138,7 +130,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         if bool(self.trigger_flag):
             self.labelTriggerStatus.setText(str(self.trigger_flag))
             self.update_status('Trigger detected on %s' % str(self.trigger_flag) + '.')
-            if self.browse_flag & bool(self.camera_flag) & bool(self.trigger_flag):
+            if bool(self.camera_flag) & bool(self.trigger_flag):
                 self.buttonRun.setEnabled(True)
         else:
             self.labelTriggerStatus.setText('NOT FOUND')
@@ -146,7 +138,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def capture(self):
         """Captures and saves a single image to the save location"""
 
-        # Disable buttons to prevent overlapping actions
+        ## Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(False)
         self.buttonCameraSettings.setEnabled(False)
         self.buttonCapture.setEnabled(False)
@@ -155,16 +147,16 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonDone.setEnabled(False)
 
         # Instantiate and run an ImageCapture instance that will only take one image
-        self.image_capture_single_instance = image_capture.ImageCapture(self.save_folder, single_flag=True)
-        self.connect(self.image_capture_single_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.image_capture_single_instance, SIGNAL("send_image(PyQt_PyObject, QString)"), self.send_image)
-        self.connect(self.image_capture_single_instance, SIGNAL("finished()"), self.capture_finished)
-        self.image_capture_single_instance.start()
+        self.ICS_instance = image_capture.ImageCapture(self.save_folder, single_flag=True)
+        self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.ICS_instance, SIGNAL("send_image(QString)"), self.send_image)
+        self.connect(self.ICS_instance, SIGNAL("finished()"), self.capture_finished)
+        self.ICS_instance.start()
 
     def capture_finished(self):
-        """Executes when the capture instance has finished"""
+        """Method that happens when the ImageCapture instance has finished"""
 
-        # Re-enable buttons
+        # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(True)
         self.buttonCameraSettings.setEnabled(True)
         self.buttonCapture.setEnabled(True)
@@ -177,7 +169,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         An image is captured and saved to the save location, and goes back to waiting after a pre-determined timeout
         """
 
-        # Disable buttons to prevent overlapping actions
+        ## Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(False)
         self.buttonCameraSettings.setEnabled(False)
         self.buttonCapture.setEnabled(False)
@@ -193,16 +185,16 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.image_capture_run_instance = image_capture.ImageCapture(self.save_folder, run_flag=True)
-        self.connect(self.image_capture_run_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.image_capture_run_instance, SIGNAL("send_image(PyQt_PyObject)"), self.send_image)
-        self.connect(self.image_capture_run_instance, SIGNAL("finished()"), self.run_finished)
-        self.image_capture_run_instance.start()
+        self.ICR_instance = image_capture.ImageCapture(self.save_folder, run_flag=True)
+        self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.ICR_instance, SIGNAL("send_image(QString)"), self.send_image)
+        self.connect(self.ICR_instance, SIGNAL("finished()"), self.run_finished)
+        self.ICR_instance.start()
 
     def run_finished(self):
-        """Executes when the run instance has finished"""
+        """Method that happens when the ImageCapture Run instance has finished"""
 
-        # Re-enable buttons
+        # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(True)
         self.buttonCameraSettings.setEnabled(True)
         self.buttonCapture.setEnabled(True)
@@ -214,9 +206,16 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         self.update_status('Stopped.')
 
-    def send_image(self, image, file_name):
-        """Sends the image as received from the ImageCapture back to the MainWindow to be displayed"""
-        self.emit(SIGNAL("update_display_RM(PyQt_PyObject, QString)"), image, file_name)
+    def stop(self):
+        """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances"""
+
+        self.update_status('Stopped. Waiting for timeout to end.')
+        self.stopwatch_instance.stop()
+        self.ICR_instance.stop()
+
+    def send_image(self, image_name):
+        """Sends the image name as received from the ImageCapture back to the MainWindow to be displayed"""
+        self.emit(SIGNAL("update_display_iv(QString)"), image_name)
 
     def update_stopwatch(self, time):
         self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
@@ -224,28 +223,23 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def apply_correction(self):
         pass
 
-    def stop(self):
-        """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances"""
-
-        self.update_status('Stopped. Waiting for timeout to end.')
-        self.stopwatch_instance.stop()
-        self.image_capture_run_instance.stop()
+    def display_image(self):
+        pass
 
     def update_status(self, string):
         self.labelStatusBar.setText('Status: ' + string)
-        return
 
 
 class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
-    """
-    Opens a Dialog Window:
-    When Camera Settings button is pressed within the Image Capture dialog window
-    Or when Camera Settings action is pressed within the Setup menu bar
+    """Opens a Dialog Window when Camera Settings button is clicked within the Image Capture dialog window
+    Or when Setup > Camera Settings is clicked
+    Allows the user to change camera settings which will be sent to the camera before images are taken
+    Setup as a Modeless window, operating independently of other windows
     """
 
     def __init__(self, parent=None):
 
-        # Setup the dialog window
+        # Setup Dialog UI with MainWindow as parent
         super(CameraSettings, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -261,7 +255,7 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
         self.spinFrameDelay.valueChanged.connect(self.apply_enable)
         self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
 
-        # Load the camera settings which are saved to the config.json file
+        # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -288,7 +282,7 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
         self.config['FrameTransmissionDelay'] = self.spinFrameDelay.value()
         self.config['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
-        # Save the settings to the config.json file
+        # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config)
 
@@ -306,20 +300,20 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
 
 
 class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
-    """
-    Opens a Dialog Window:
-    When Slice Converter button is pressed
+    """Opens a Dialog Window when Slice Converter button is clicked
+    Allows user to convert .cls or .cli files into OpenCV readable ASCII format
+    Setup as a Modal window, blocking input to other visible windows until this window is closed
     """
 
     def __init__(self, parent=None):
 
-        # Setup the dialog window
+        # Setup Dialog UI with MainWindow as parent
         super(SliceConverter, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
         self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonStartConversion.clicked.connect(self.conversion_start)
+        self.buttonStartConversion.clicked.connect(self.start_conversion)
 
     def browse(self):
         self.slice_file = None
@@ -332,43 +326,46 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         else:
             self.buttonStartConversion.setEnabled(False)
 
-    def conversion_start(self):
+    def start_conversion(self):
         # Disable all buttons to prevent user from doing other tasks
         self.buttonStartConversion.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
 
-        self.slice_converter_instance = slice_converter.SliceConverter(self.slice_file)
-        self.connect(self.slice_converter_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.slice_converter_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.slice_converter_instance, SIGNAL("successful()"), self.conversion_done)
-        self.slice_converter_instance.start()
+        # Instantiate and run a SliceConverter instance
+        self.SC_instance = slice_converter.SliceConverter(self.slice_file)
+        self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.SC_instance, SIGNAL("finished()"), self.start_conversion_finished)
+        self.SC_instance.start()
 
-    def conversion_done(self):
+    def start_conversion_finished(self):
+        """Method that happens when the SliceConverter instance has finished"""
+
         self.buttonStartConversion.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
 
     def update_status(self, string):
         self.labelProgress.setText(string)
-        return
 
     def update_progress(self, percentage):
         self.progressBar.setValue(int(percentage))
-        return
 
     def accept(self):
         """If you press the 'done' button, this just closes the dialog window without doing anything"""
         self.done(1)
 
 
+# noinspection PyCallByClass
 class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
-    """
-    Opens a Dialog Window:
-    When Calibrate Camera button is pressed
+    """Opens a Dialog Window when Camera Calibration button is clicked
+    Or when Setup > Camera Calibration is clicked
+    Allows the user to select a folder of checkboard images to calculate the camera's intrinsic values
+    Setup as a Modal window, blocking input to other visible windows until this window is closed
     """
 
     def __init__(self, parent=None):
 
-        # Setup the dialog window
+        # Setup Dialog UI with MainWindow as parent
         super(CameraCalibration, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -409,29 +406,32 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
     def calibration_start(self):
 
-        # Disable all buttons to prevent user from doing other tasks
+        # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonStartCalibration.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
 
-        self.camera_calibration_instance = camera_calibration.Calibration(self.calibration_folder)
-        self.connect(self.camera_calibration_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.camera_calibration_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.camera_calibration_instance, SIGNAL("successful()"), self.calibration_done)
-        self.camera_calibration_instance.start()
+        # Instantiate and run a CameraCalibration instance
+        self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
+        self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
+        self.CC_instance.start()
 
-    def calibration_done(self):
-        """Used to turn buttons back on after processes are done"""
+    def calibration_finished(self):
+        """Used to re-enable buttons after processes are done"""
+
         self.buttonStartCalibration.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
 
     def update_status(self, string):
         self.labelProgress.setText(string)
-        return
 
     def update_progress(self, percentage):
         self.progressBar.setValue(int(percentage))
-        return
 
     def accept(self):
-        """If you press the 'done' button, this just closes the dialog window without doing anything"""
+        """Method that happens when the Done button is clicked
+         Closes the dialog window without doing anything
+        """
+
         self.done(1)

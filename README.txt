@@ -85,3 +85,10 @@ Camera
 - Has lots of features and changeable settings
 - Most of these can be ignored as we are only using the camera to take one image every few seconds
 - Software trigger through the Python program
+
+Nomenclature Notes
+- All CLASS names use CamelCaps
+- All METHOD & VARIABLE names use full words in all lower caps with underscore spacing
+- All INSTANCE (QThread) names use capital abbreviation of the called method + _instance
+- All PyQt GUI Object names use camelCaps with the first word being what the object is
+- Similar code grouped in boxes with comment describing what that block does

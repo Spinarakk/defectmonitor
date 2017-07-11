@@ -1,19 +1,10 @@
-"""
-extra_functions.py
-Extraneous module that contains functions that supply features that are otherwise unnecessary for the proper operation
-of the main program
-Nevertheless they still add quality of life features to the main program
-"""
-
-import os
+# Import external libraries
 import time
 from PyQt4.QtCore import QThread, SIGNAL
 
 
 class Stopwatch(QThread):
-    """
-    A regular stopwatch module, working as a stopwatch would
-    """
+    """ Module used to simulate a stopwatch"""
 
     def __init__(self):
 

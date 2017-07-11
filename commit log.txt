@@ -1,5 +1,14 @@
+July 11
+- Another quick runthrough of the comments (main_window.py) for consistency and accuracy
+- Added additional comments throughout the code
+- Fixed up the MainWindow Image Viewer
+- Added an error checker for the config.json file in case it gets wiped
+- Cleaned up the camera calibration code to remove all unneeded commented code
+- Added a few settings to the Camera Calibration UI for changeable variables
+- Tested some other calibration code
+
 July 10
-- Did a quick runthrough of the comments for consistency and accuracy
+- Did a quick runthrough of the comments (main_window.py) for consistency and accuracy
 - Added additional comments throughout the code
 - Fixed up the serial port issue outlined on July 7
 - Moved around a lot of the code so the QThreads work properly

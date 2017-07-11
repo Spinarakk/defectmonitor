@@ -1,19 +1,17 @@
+# Import external libraries
 import os
 import re
-
 from collections import OrderedDict
-
 from PyQt4.QtCore import QThread, SIGNAL
 
 class SliceConverter(QThread):
-    """
-    Module to convert any slice files from the weird format they're in into ASCII characters
-    Output can then be used to draw contours
-    Currently only converts .cls files
+    """Module used to convert any slice files from .cls or .cli format into ASCII format
+    Output can then be used to draw contours using OpenCV
+    Currently only supports converting .cls files
     Future implementation will look to either shifting or adding .cli slice conversion
     """
 
-    def __init__(self, slice_raw_folder, slice_parsed_folder):
+    def __init__(self, slice_raw_folder, slice_parsed_folder=None):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -267,4 +265,3 @@ class SliceConverter(QThread):
 
         # Parsing of the slice file to human-readable format
         pass
-

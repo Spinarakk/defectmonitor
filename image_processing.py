@@ -1,19 +1,13 @@
-"""
-image_processing.py
-Module containing mostly OpenCV code used to process the images for initial analysis or for defect identification
-"""
-
-import cv2
+# Import external libraries
 import json
+import cv2
 import numpy as np
-
 from PyQt4.QtCore import QThread, SIGNAL
 
 
 class ImageCorrection(QThread):
-    """
-    Prepares the source/captured images by fixing various optical related problems
-    Processed images to then be scanned for any particular defects
+    """Module used to correct the raw images taken by the camera for various optical related issues
+    Processed images to then be scanned for any particular defects using the DefectDetection module
     Applies the following OpenCV processes in order:
     Distortion Correction (D)
     Perspective Warp (P)
@@ -22,17 +16,16 @@ class ImageCorrection(QThread):
     Respective capital letters suffixed to the image array name indicate which processes have been applied
     """
 
-    def __init__(self, image_folder, image_scan, image_coat):
+    def __init__(self, image_folder, image_coat, image_scan):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
-        # Loads configuration settings from respective .json file
+        # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Loads camera parameter settings from respective .dat file
-
+        # Load camera parameters from camera_parameters.txt file
         with open('camera_parameters.txt') as camera_parameters:
             self.camera_parameters = np.fromstring(camera_parameters.read(), dtype=float, sep=',')
 
@@ -45,8 +38,8 @@ class ImageCorrection(QThread):
         # Define lists containing the 2 image arrays, 2 phase strings, 3 processing tag strings and 3 status messages
         if bool(image_folder):
             self.image_folder = image_folder + '/processed'
-            self.images = (image_scan, image_coat)
-            self.phases = ('scan', 'coat')
+            self.images = (image_coat, image_scan)
+            self.phases = ('coat', 'scan')
             self.tags = ('DP', 'DPC', 'DPCE')
             self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
                                     'Applying CLAHE algorithm...')
@@ -69,7 +62,7 @@ class ImageCorrection(QThread):
                 if tag is not 'DP':
                     self.image = self.crop(self.image)
                     if tag is not 'DPC':
-                        self.image = self.CLAHE(self.image)
+                        self.image = self.clahe(self.image)
 
                 self.progress_counter += 8.333
                 self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
@@ -78,7 +71,7 @@ class ImageCorrection(QThread):
 
                 # Write the current processed image to disk named using appropriate tags, and send back to main function
                 cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder, phase, tag), self.image)
-                self.emit(SIGNAL("assign_image(PyQt_PyObject, QString, QString)"), self.image, phase, tag)
+                self.emit(SIGNAL("assign_images(PyQt_PyObject, QString, QString)"), self.image, phase, tag)
 
                 self.progress_counter += 8.333
                 self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
@@ -117,7 +110,7 @@ class ImageCorrection(QThread):
         crop_boundary = self.config['CropBoundary']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
-        image = image[crop_boundary[0] : crop_boundary[1], crop_boundary[2] : crop_boundary[3]]
+        image = image[crop_boundary[0]: crop_boundary[1], crop_boundary[2]: crop_boundary[3]]
 
         # Rotate the image by creating and using a 2x3 rotation matrix
         rotation_matrix = cv2.getRotationMatrix2D((image.shape[1] / 2, image.shape[0] / 2), rotation_angle, 1.0)
@@ -125,38 +118,37 @@ class ImageCorrection(QThread):
 
         return image_C
 
-    def CLAHE(self, image):
+    @staticmethod
+    def clahe(image):
         """
         Applies a Contrast Limited Adaptive Histogram Equalization to the image
         Used to improve the contrast of the image to make it clearer/visible
         """
 
-        # CLAHE requires the image to be grayscale to function
+        # Algorithm requires the image to be in grayscale format to function
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        CLAHE_filter = cv2.createCLAHE(8.0, (64, 64))
-        image = CLAHE_filter.apply(image)
+        clahe_filter = cv2.createCLAHE(8.0, (64, 64))
+        image = clahe_filter.apply(image)
         image_E = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
         return image_E
 
 
 class DefectDetection(QThread):
-    """
-    Processes the prepared images using OpenCV to detect a variety of different defects
-    Defects to be detected and a brief explanation:
-
+    """Module used to process the corrected images using OpenCV to detect a variety of different defects
+    Defects as outlined in the README.txt file
     PUT ALL OPENCV CODE TO BE TESTED HERE IN ONE OF THE FIVE METHODS
     TRY NOT TO MODIFY TOO MUCH OF THE CODE OUTSIDE OF THESE METHODS
     """
-    def __init__(self, original_image):
 
+    def __init__(self, image_raw):
         # Defines the class as a thread
         QThread.__init__(self)
 
-        self.original_image = original_image
+        # Save the received argument as an instance variable
+        self.original_image = image_raw
 
     def run(self):
-
         self.emit(SIGNAL("update_progress(QString)"), '0')
 
         self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 1...')
@@ -179,30 +171,33 @@ class DefectDetection(QThread):
         self.image_5 = self.test_code_5(self.original_image)
         self.emit(SIGNAL("update_progress(QString)"), '100')
 
-        self.emit(SIGNAL("defect_processing_done(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
-                  self.image_1, self.image_2, self.image_3, self.image_4, self.image_5)
+        self.emit(SIGNAL("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, "
+                         "PyQt_PyObject)"), self.image_1, self.image_2, self.image_3, self.image_4, self.image_5)
 
-    def test_code_1(self, image):
+    @staticmethod
+    def test_code_1(image):
         processed_image = cv2.bilateralFilter(image, 9, 75, 75)
         return processed_image
 
-    def test_code_2(self, image):
+    @staticmethod
+    def test_code_2(image):
         processed_image = cv2.erode(image, (5, 5))
         return processed_image
 
-    def test_code_3(self, image):
+    @staticmethod
+    def test_code_3(image):
         processed_image = cv2.blur(image, (10, 10))
         return processed_image
 
-    def test_code_4(self, image):
-        """For now, this code applies a 2D Convolution"""
-        kernel = np.ones((5,5),np.float32)/25
-        processed_image = cv2.filter2D(image,-1,kernel)
+    @staticmethod
+    def test_code_4(image):
+        kernel = np.ones((5, 5), np.float32) / 25
+        processed_image = cv2.filter2D(image, -1, kernel)
         return processed_image
 
-    def test_code_5(self, image):
-        """For now, this code rotates the image 90 degrees"""
-        rows,columns,_ = image.shape
+    @staticmethod
+    def test_code_5(image):
+        rows, columns, _ = image.shape
         rotation_matrix = cv2.getRotationMatrix2D((columns / 2, rows / 2), 90, 1)
         processed_image = cv2.warpAffine(image, rotation_matrix, (columns, rows))
         return processed_image
