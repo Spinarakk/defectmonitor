@@ -152,7 +152,7 @@ class Ui_dialogCameraSettings(object):
         self.label5.setToolTip(_translate("dialogCameraSettings", "Sets the frame transfer start delay (in ticks) for the selected stream channel.", None))
         self.label5.setText(_translate("dialogCameraSettings", "Frame Transmission Delay", None))
         self.spinFrameDelay.setToolTip(_translate("dialogCameraSettings", "0 -10,000", None))
-        self.label6.setToolTip(_translate("dialogCameraSettings", "Sets how long (in seconds) until the trigger can be triggered again.", None))
+        self.label6.setToolTip(_translate("dialogCameraSettings", "Sets how long (in seconds) until the trigger can be triggered again. Timeout starts upon saving the image.", None))
         self.label6.setText(_translate("dialogCameraSettings", "Trigger Timeout", None))
         self.spinTriggerTimeout.setToolTip(_translate("dialogCameraSettings", "0 - 60", None))
         self.labelInformation.setText(_translate("dialogCameraSettings", "Hover over the labels for a brief explanation of what that setting does, and over the spinboxes for the min/max values that can be accepted.", None))

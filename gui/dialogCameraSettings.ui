@@ -251,7 +251,7 @@
        </font>
       </property>
       <property name="toolTip">
-       <string>Sets how long (in seconds) until the trigger can be triggered again.</string>
+       <string>Sets how long (in seconds) until the trigger can be triggered again. Timeout starts upon saving the image.</string>
       </property>
       <property name="text">
        <string>Trigger Timeout</string>

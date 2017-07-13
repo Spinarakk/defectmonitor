@@ -328,7 +328,7 @@
     <enum>Qt::StrongFocus</enum>
    </property>
    <property name="toolTip">
-    <string>Check to apply image correction techniques to the captured image before saving it.</string>
+    <string>Check to apply image correction techniques to the captured image. The processed image will be saved separately to the processed folder.</string>
    </property>
    <property name="layoutDirection">
     <enum>Qt::LeftToRight</enum>
@@ -401,6 +401,9 @@
    </property>
    <property name="text">
     <string>Display Image</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

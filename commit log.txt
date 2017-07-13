@@ -1,3 +1,11 @@
+July 13
+- Added closeEvent methods to all the dialog windows so that the program knows what to do if the user presses the X button
+- Linked the settings to the config.json file
+- Fixed the Display Image and Apply Correction checkboxes
+- CLAHE correction using random pictures appears to be buggy not sure why at the moment
+- Setup the Monash box with Python, PyCharm, PyQt and Basler SDK and the program runs no issues
+- Further increased my understanding of the calibration code
+
 July 11
 - Another quick runthrough of the comments (main_window.py) for consistency and accuracy
 - Added additional comments throughout the code

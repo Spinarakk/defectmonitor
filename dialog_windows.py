@@ -7,7 +7,6 @@ from PyQt4.QtCore import SIGNAL, Qt
 # Import related modules
 import slice_converter
 import image_capture
-import camera_calibration
 import extra_functions
 
 # Import PyQt GUIs
@@ -77,7 +76,6 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         # Toggles
         self.checkApplyCorrection.toggled.connect(self.apply_correction)
-        self.checkDisplayImage.toggled.connect(self.display_image)
 
         # These are flags to check if both the browse and check camera settings are successful
         self.camera_flag = False
@@ -147,14 +145,15 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonDone.setEnabled(False)
 
         # Instantiate and run an ImageCapture instance that will only take one image
-        self.ICS_instance = image_capture.ImageCapture(self.save_folder, single_flag=True)
+        self.ICS_instance = image_capture.ImageCapture(self.save_folder, single_flag=True,
+                                                       correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICS_instance, SIGNAL("send_image(QString)"), self.send_image)
+        self.connect(self.ICS_instance, SIGNAL("display_image(QString)"), self.display_image)
         self.connect(self.ICS_instance, SIGNAL("finished()"), self.capture_finished)
         self.ICS_instance.start()
 
     def capture_finished(self):
-        """Method that happens when the ImageCapture instance has finished"""
+        """Executes when the ImageCapture instance has finished"""
 
         # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(True)
@@ -185,14 +184,15 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.ICR_instance = image_capture.ImageCapture(self.save_folder, run_flag=True)
+        self.ICR_instance = image_capture.ImageCapture(self.save_folder, run_flag=True,
+                                                       correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICR_instance, SIGNAL("send_image(QString)"), self.send_image)
+        self.connect(self.ICR_instance, SIGNAL("display_image(QString)"), self.display_image)
         self.connect(self.ICR_instance, SIGNAL("finished()"), self.run_finished)
         self.ICR_instance.start()
 
     def run_finished(self):
-        """Method that happens when the ImageCapture Run instance has finished"""
+        """Executes when the ImageCapture Run instance has finished"""
 
         # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(True)
@@ -213,21 +213,31 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.stop()
         self.ICR_instance.stop()
 
-    def send_image(self, image_name):
-        """Sends the image name as received from the ImageCapture back to the MainWindow to be displayed"""
-        self.emit(SIGNAL("update_display_iv(QString)"), image_name)
+    def display_image(self, image_name):
+        """Sends the image name as received from the ImageCapture back to the Main Window to be displayed
+        Depends if the Display Image checkbox is checked or not
+        """
+
+        if self.checkDisplayImage.isChecked():
+            self.emit(SIGNAL("update_display_iv(QString)"), image_name)
 
     def update_stopwatch(self, time):
+        """Updates the stopwatch label at the bottom of the dialog window with the received time"""
         self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
 
     def apply_correction(self):
         pass
 
-    def display_image(self):
-        pass
-
     def update_status(self, string):
         self.labelStatusBar.setText('Status: ' + string)
+
+    def closeEvent(self, event):
+        """Executes when the top-right X is clicked"""
+
+        # Stop any running QThreads cleanly before closing the dialog window
+        if self.ICR_instance.isRunning:
+            self.stopwatch_instance.stop()
+            self.ICR_instance.stop()
 
 
 class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
@@ -271,6 +281,7 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
         self.buttonApply.setEnabled(False)
 
     def apply_enable(self):
+        """Enable the Apply button on any change of setting values"""
         self.buttonApply.setEnabled(True)
 
     def apply(self):
@@ -339,7 +350,7 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.SC_instance.start()
 
     def start_conversion_finished(self):
-        """Method that happens when the SliceConverter instance has finished"""
+        """Executes when the SliceConverter instance has finished"""
 
         self.buttonStartConversion.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
@@ -355,7 +366,6 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.done(1)
 
 
-# noinspection PyCallByClass
 class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
     """Opens a Dialog Window when Camera Calibration button is clicked
     Or when Setup > Camera Calibration is clicked
@@ -373,6 +383,15 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowse.clicked.connect(self.browse)
         self.buttonStartCalibration.clicked.connect(self.calibration_start)
+
+        # Load configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Set the spinbox settings to the previously saved values
+        self.spinWidth.setValue(int(self.config['CalibrationWidth']))
+        self.spinHeight.setValue(int(self.config['CalibrationHeight']))
+        self.spinRatio.setValue(int(self.config['DownscalingRatio']))
 
     def browse(self):
 
@@ -405,23 +424,43 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
                 self.update_status('Waiting to start process.')
 
     def calibration_start(self):
+        """Executes when the Start Calibration button is clicked
+        Starts the calibration process after saving the calibration settings to config.json file
+        """
 
         # Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonStartCalibration.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
+        self.buttonStartCalibration.setEnabled(False)
+        self.buttonDone.setEnabled(False)
+
+        # Save calibration settings
+        self.save_settings()
 
         # Instantiate and run a CameraCalibration instance
-        self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
-        self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
-        self.CC_instance.start()
+        # self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
+        # self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
+        # self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        # self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
+        # self.CC_instance.start()
 
     def calibration_finished(self):
-        """Used to re-enable buttons after processes are done"""
+        """Used to re-enable buttons after the calibration process is finished"""
 
-        self.buttonStartCalibration.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
+        self.buttonStartCalibration.setEnabled(True)
+        self.buttonDone.setEnabled(True)
+
+    def save_settings(self):
+        """Save the spinxbox values to config.json file"""
+
+        # Save the new values from the changed settings to the config dictionary
+        self.config['CalibrationWidth'] = self.spinWidth.value()
+        self.config['CalibrationHeight'] = self.spinHeight.value()
+        self.config['DownscalingRatio'] = self.spinRatio.value()
+
+        # Save configuration settings to config.json file
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config)
 
     def update_status(self, string):
         self.labelProgress.setText(string)
@@ -430,8 +469,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         self.progressBar.setValue(int(percentage))
 
     def accept(self):
-        """Method that happens when the Done button is clicked
-         Closes the dialog window without doing anything
+        """Executes when the Done button is clicked
+         Saves the settings before closing the dialog window
         """
 
+        self.save_settings()
         self.done(1)

@@ -139,6 +139,7 @@ class Ui_dialogImageCapture(object):
         self.checkDisplayImage.setGeometry(QtCore.QRect(195, 238, 131, 20))
         self.checkDisplayImage.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.checkDisplayImage.setLayoutDirection(QtCore.Qt.LeftToRight)
+        self.checkDisplayImage.setChecked(True)
         self.checkDisplayImage.setObjectName(_fromUtf8("checkDisplayImage"))
 
         self.retranslateUi(dialogImageCapture)
@@ -158,7 +159,7 @@ class Ui_dialogImageCapture(object):
         self.buttonStop.setText(_translate("dialogImageCapture", "Stop", None))
         self.labelTimeElapsed.setText(_translate("dialogImageCapture", "Time Elapsed: 00:00:00", None))
         self.labelStatusBar.setText(_translate("dialogImageCapture", "Status:", None))
-        self.checkApplyCorrection.setToolTip(_translate("dialogImageCapture", "Check to apply image correction techniques to the captured image before saving it.", None))
+        self.checkApplyCorrection.setToolTip(_translate("dialogImageCapture", "Check to apply image correction techniques to the captured image. The processed image will be saved separately to the processed folder.", None))
         self.checkApplyCorrection.setText(_translate("dialogImageCapture", "Apply Correction", None))
         self.buttonCheckTrigger.setText(_translate("dialogImageCapture", "Check Trigger", None))
         self.checkDisplayImage.setToolTip(_translate("dialogImageCapture", "Check to display the captured image (processed or not) on the Main Window under the Image Viewer tab.", None))

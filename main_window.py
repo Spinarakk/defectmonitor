@@ -105,13 +105,15 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.widgetDisplay.currentChanged.connect(self.tab_change)
 
         # Load configuration settings from config.json file
-        # If config.json is empty or missing, config_backup.json is read and later saved as config.json
+        # If config.json is empty or missing, config_backup.json is read and dumped as config.json
         try:
             with open('config.json') as config:
                 self.config = json.load(config)
         except:
             with open('config_backup.json') as config:
                 self.config = json.load(config)
+            with open('config.json', 'w+') as config:
+                json.dump(self.config, config)
 
         # Store config settings as respective variables
         self.build_name = self.config['BuildName']
@@ -261,7 +263,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.update_status('Image successfully processed.')
 
     def defect_processing(self):
-        """Method that happens when the Analyze for Defects button is clicked
+        """Executes when the Analyze for Defects button is clicked
         Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
         Displays the processed image on the label in the Defect Analyzer tab on the MainWindow
         """
@@ -290,7 +292,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.DD_instance.start()
 
     def defect_processing_finished(self, image_1, image_2, image_3, image_4, image_5):
-        """Method that happens when the DefectDetection instance has finished"""
+        """Executes when the DefectDetection instance has finished"""
 
         # Saves the processed images in their respective variables
         self.image_defect_1 = image_1
@@ -353,7 +355,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         pass
 
     def initialize_1(self):
-        """Method that happens when the Initialize button is clicked
+        """Executes when the Initialize button is clicked
         Does the following modules by calling QThreads so that the main window can still be manipulated
         - Converts the .cls or .cli slice files into ASCII format that can be displayed as contours
         - Calibrate and thus acquire the attached camera's intrinsic values
@@ -461,8 +463,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Update the widgetDisplay to display the processed images
         self.update_display()
         self.update_status('Displaying processed images.')
-
-
 
     def toggle_overlay(self):
         """Draws the part contour of the current layer and displays it on top of the current displayed image"""
@@ -573,7 +573,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             json.dump(self.config, config)
 
     def start(self):
-        """Method that happens when you press the "Start" button
+        """Executes when the Start button is clicked
 
         """
         # TODO Stuff that happens when you press the Start button
@@ -740,16 +740,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # This block updates the Defect Analyzer tab
         if self.groupOpenCV.isEnabled():
-            if self.radioOpenCV1.isChecked():
-                self.image_display_defect = self.image_defect_1
-            if self.radioOpenCV2.isChecked():
-                self.image_display_defect = self.image_defect_2
-            if self.radioOpenCV3.isChecked():
-                self.image_display_defect = self.image_defect_3
-            if self.radioOpenCV4.isChecked():
-                self.image_display_defect = self.image_defect_4
-            if self.radioOpenCV5.isChecked():
-                self.image_display_defect = self.image_defect_5
+            if self.radioOpenCV1.isChecked(): self.image_display_defect = self.image_defect_1
+            if self.radioOpenCV2.isChecked(): self.image_display_defect = self.image_defect_2
+            if self.radioOpenCV3.isChecked(): self.image_display_defect = self.image_defect_3
+            if self.radioOpenCV4.isChecked(): self.image_display_defect = self.image_defect_4
+            if self.radioOpenCV5.isChecked(): self.image_display_defect = self.image_defect_5
 
             # Display the defect image on its respective label after converting it to pixmap
             self.labelDisplayDA.setPixmap(self.convert2pixmap(self.image_display_defect))
@@ -791,7 +786,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        """When either the Exit button or the top-right X is pressed, these processes happen"""
+        """Menu -> Exit or the top-rght X is clicked"""
 
         # For some reason it isn't possible to load and dump within the same open function so they're split
         # Load configuration settings from config.json file

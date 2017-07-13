@@ -7,6 +7,8 @@ import pypylon
 import serial
 from PyQt4.QtCore import QThread, SIGNAL
 
+# Import related modules
+import image_processing
 
 class ImageCapture(QThread):
     """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached
@@ -17,7 +19,7 @@ class ImageCapture(QThread):
     It then acquires and saves the image, then sleeps for a predefined time until the next trigger is allowed
     """
 
-    def __init__(self, save_folder, simulation_flag=False, single_flag=False, run_flag=False):
+    def __init__(self, save_folder, simulation_flag=False, single_flag=False, run_flag=False, correction_flag=False):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -30,6 +32,7 @@ class ImageCapture(QThread):
         self.simulation_flag = simulation_flag
         self.single_flag = single_flag
         self.run_flag = run_flag
+        self.correction_flag = correction_flag
 
         # Checks if the save folder location has a scan, coat and single folder, if not, create them
         try:
@@ -41,7 +44,10 @@ class ImageCapture(QThread):
                 try:
                     os.mkdir('%s\single' % self.save_folder)
                 except WindowsError:
-                    pass
+                    try:
+                        os.mkdir('%s\processed' % self.save_folder)
+                    except WindowsError:
+                        pass
 
         # For CurrentPhase, 0 corresponds to Coat, 1 corresponds to Scan
         self.current_layer = self.config['CurrentLayer']
@@ -197,7 +203,12 @@ class ImageCapture(QThread):
         cv2.imwrite(image_name, image)
 
         # Emit the file name back to the dialog, which in turn emits it back to the MainWindow to display the image
-        self.emit(SIGNAL("send_image(QString)"), str(image_name))
+        self.emit(SIGNAL("display_image(QString)"), str(image_name))
+
+        # Apply image correction if the Apply Correction checkbox is checked
+        if self.correction_flag:
+            self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
+            self.correction(image, count=self.config['CaptureCount'])
 
         # Update the capture counter which will be saved to the config.json file
         self.config['CaptureCount'] += 1
@@ -212,7 +223,7 @@ class ImageCapture(QThread):
         # Arduino has been programmed to return a 'TRIG' if reed switch has been triggered
         if self.trigger == 'TRIG':
 
-            self.emit(SIGNAL("update_status(QString)"), 'Trigger Detected. Capturing image.')
+            self.emit(SIGNAL("update_status(QString)"), 'Trigger Detected. Capturing image...')
 
             # Grab the image from the camera, error checking in case something fails
             try:
@@ -229,7 +240,12 @@ class ImageCapture(QThread):
             cv2.imwrite(image_name, image)
 
             # Emit the file name back to the dialog, which in turn emits it back to the MainWindow to display the image
-            self.emit(SIGNAL("send_image(QString)"), image_name)
+            self.emit(SIGNAL("display_image(QString)"), image_name)
+
+            # Apply image correction if the Apply Correction checkbox is checked
+            if self.correction_flag:
+                self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
+                self.correction(image, phase=self.current_phase, layer=self.current_layer)
 
             # Loop used to disallow triggering for additional images for however many seconds
             # Also displays remaining timeout on the status bar
@@ -245,6 +261,22 @@ class ImageCapture(QThread):
 
             # Reset the serial input buffer to prevent triggers within the timeout window causing another image save
             self.serial_trigger.reset_input_buffer()
+
+    def correction(self, image, phase=None, layer=None, count=None):
+        """Executes if the Apply Correction checkbox has been checked"""
+
+        # Apply the image processing techniques in order
+        image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
+        image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
+        image = image_processing.ImageCorrection(None, None, None).crop(image)
+        image = image_processing.ImageCorrection(None, None, None).clahe(image)
+
+        # Save the processed image in the processed folder with an appended file name
+        if bool(count):
+            cv2.imwrite(str(self.save_folder + '/processed/image_capture_' + str(count) + 'processed.png'), image)
+        else:
+            cv2.imwrite(str(self.save_folder + '/processed/image_' + self.phases[phase] + '_' + str(int(layer)) +
+                        'processed.png'), image)
 
     def stop(self):
         """Method that happens if the Stop button is pressed, which terminates the QThread"""
