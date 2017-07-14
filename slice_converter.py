@@ -9,259 +9,187 @@ class SliceConverter(QThread):
     Output can then be used to draw contours using OpenCV
     Currently only supports converting .cls files
     Future implementation will look to either shifting or adding .cli slice conversion
+
+    Currently checks if 'sample_converted.txt' exists in the slice folder
+    Otherwise it looks for and converts 'sample.cls'
     """
 
-    def __init__(self, slice_raw_folder, slice_parsed_folder=None):
+    def __init__(self, cls_file=None, cli_file=None):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
-        # Sets up lists to store the raw and parsed data
-        #self.slice_file = slice_file
-        self.slice_raw_folder = slice_raw_folder
-        self.slice_parsed_folder = slice_parsed_folder
-        self.slice_raw_list = os.listdir(self.slice_raw_folder)
-        self.slice_parsed_list = os.listdir(self.slice_parsed_folder)
 
+        self.cls_file = cls_file
+        self.cli_file = cli_file
         # Create a dictionary to store the list of slice files (found in the slice raw folder) to be converted
         self.slice_file_dictionary = dict()
 
     def run(self):
         self.emit(SIGNAL("update_progress(QString)"), '0')
-        self._parse_slice(self.slice_raw_list, self.slice_parsed_list)
+        #self._parse_slice(self.slice_raw_list, self.slice_parsed_list)
+        if bool(self.cls_file) or bool(self.cli_file):
+            self.parse_cls(self.cls_file)
+
         self.emit(SIGNAL("update_progress(QString)"), '100')
 
-    def _parse_slice(self, input_list, output_list):
-        for idx, item in enumerate(input_list):
-            self.emit(SIGNAL("update_status(QString)"), 'Processing slice files...')
-            self.slice_file_dictionary[item] = {'Format': item[-3:]}
+    def parse_cls(self, cls_file):
+        """Parses and converts the .cls file into ASCII"""
 
-            # Checks if a parsed slice is already available in the output directory, if not, parse the slice file
-            if not item[:-3] + 'txt' in output_list:
-                if self.slice_file_dictionary[item]['Format'] == 'cls':
+        #self.slice_file_dictionary[self.slice_file] = {'Format': self.slice_file[-3:]}
 
-                    with open(self.input_folder + r'\%s' % item, 'rb') as input:
-                        bin_slice = input.read()
+        # Open the slice file and read it as binary
+        with open(cls_file, 'rb') as slice_file:
+            bin_slice = slice_file.read()
 
-                    bin_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
-                                         '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', bin_slice)
-                    bin_split = filter(None, bin_split)
-                    bin_split = bin_split[1:]
+        # Splits the string bin_slice by the occurrences of the aforelisted patterns into a list
+        # Parentheses around each word means to also return that word in the resulting list
+        bin_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
+                             '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', bin_slice)
 
-                    # Initialise dictionaries
-                    presort = OrderedDict()
-                    output = OrderedDict()
+        # Remove any parts of the list that return a NoneType
+        bin_split = filter(None, bin_split)
 
-                    out = []
+        # Remove the first line of the list
+        bin_split = bin_split[1:]
 
-                    # Initialise boolean toggles
-                    layer_switch = False
-                    support_switch = False
-                    border_switch = False
-                    offset_switch = False
-                    quadrant_switch = False
-                    island_switch = False
-                    skin_switch = False
-                    core_switch = False
-
-                    # Initialise counters
-                    island_count = 0
-                    layer_count = 0
-                    border_count = 0
-
-                    # Main parsing of cls to human-readable format
-                    for idx, s in enumerate(bin_split):
-
-                        # Progress bar percentage calculation
-                        progress_percentage = int(float(idx) / float(len(bin_split)) * 100.0)
-                        if idx == len(bin_split):
-                            progress_percentage = 100
-                        self.emit(SIGNAL("update_progress(QString)"), str(progress_percentage))
-
-                        e = []
-                        if layer_switch:
-                            for c in s:
-                                e.append(bin(ord(c))[2:].zfill(8))
-                            presort['Layer %s.' % layer_count] = e[:]
-                            layer_switch = False
-                        if border_switch:
-                            for c in s:
-                                e.append(bin(ord(c))[2:].zfill(8))
-                            if support_switch:
-                                support_switch = False
-                                presort['Layer %s. Support. Border.' % layer_count] = e[:]
-                            else:
-                                presort['Layer %s. Border %s.' % (layer_count, border_count)] = e[:]
-                            border_switch = False
-                        if offset_switch:
-                            ## UNCOMMENT IF THIS IS NEEDED, otherwise it skips storing the data
-                            ## but either way, leave in these if statements
-
-                            # for c in s:
-                            #     e.append(bin(ord(c))[2:].zfill(8))
-                            # presort['Layer %s, Offsets' % layer_count] = e[:]
-                            offset_switch = False
-                        if core_switch:
-                            # for c in s:
-                            #     e.append(bin(ord(c))[2:].zfill(8))
-                            # presort['Layer %s, Core' % layer_count] = e[:]
-                            core_switch = False
-                        if island_switch:
-                            # for c in s:
-                            #     e.append(bin(ord(c))[2:].zfill(8))
-                            # presort['Layer %s, Island %s' % (layer_count, island_count)] = e[:]
-                            island_switch = False
-                        if quadrant_switch:
-                            # for c in s:
-                            #     e.append(bin(ord(c))[2:].zfill(8))
-                            # presort['Layer %s, Quadrant' % layer_count] = e[:]
-                            quadrant_switch = False
-                        if skin_switch:
-                            # for c in s:
-                            #     e.append(bin(ord(c))[2:].zfill(8))
-                            skin_switch = False
-                        if 'NEW_LAYER' in s:
-                            layer_switch = True
-                            layer_count += 1
-                            island_count = 0
-                            border_count = 0
-                            presort['Layer %s.' % layer_count] = []
-                        if 'INC_OFFSETS' in s:
-                            offset_switch = True
-                        if 'NEW_QUADRANT' in s:
-                            quadrant_switch = True
-                        if 'NEW_SKIN' in s:
-                            skin_switch = True
-                        if 'NEW_ISLAND' in s:
-                            island_switch = True
-                            island_count += 1
-                        if 'NEW_CORE' in s:
-                            core_switch = True
-                        if 'SUPPORT' in s:
-                            support_switch = True
-                        if 'NEW_BORDER' in s:
-                            border_switch = True
-                            if support_switch:
-                                pass
-                            else:
-                                border_count += 1
-                                presort['Layer %s. Border %s.' % (layer_count, border_count)] = []
-
-                    for element in presort:
-                        if 'Border 1.' in element:
-                            testval = int(''.join(presort[element][0:4][::-1]), 2)
-                            string = presort[element]
-                            test = ['[%s]' % testval]
-                            try:
-                                num_pt = int(''.join(string[5:9][::-1]), 2)
-                                np_idx = 9
-                                while np_idx < len(string):
-                                    endx = np_idx + num_pt * 8
-                                    test.append('<%s>' % num_pt)
-                                    while np_idx < endx:
-                                        nextpt = ''.join(string[np_idx:np_idx + 4][::-1])
-                                        test.append(str(int(nextpt, 2) if (int(nextpt, 2) <= 2147483647)
-                                                        else (int(nextpt, 2) - 4294967295)))  # Convert uint to int
-                                        np_idx += 4
-                                    np_idx += 1
-                                    try:
-                                        num_pt = int(''.join(string[np_idx:np_idx + 4][::-1]), 2)
-                                    except ValueError:
-                                        break
-                                    np_idx += 4
-                                out = test[::-1]
-                            except ValueError:
-                                pass
-                        else:
-                            string = iter(presort[element][::-1])
-                            out1 = iter([c + next(string, '') for c in string])
-                            out = [((int(c + next(out1, ''), 2)) - 4294967295 if int(c[0]) == 1
-                                    else (int(c + next(out1, ''), 2))) for c in out1]
-
-                        output[element] = out[::-1]
-
-                    output_write = open(self.slice_parsed_folder + r'\\' + item[:-3] + 'txt', 'w+')
-                    for element in output:
-                        if 'Border 1.' in element or 'Border' not in element:
-                            output_write.write(element)
-                            output_write.write(':')
-                            output_list = output[element]
-                            output_list = ','.join(map(str, output_list))
-                            output_write.write(output_list)
-                            output_write.write('\n')
-
-                    output_write.close()
-                    self.slice_file_dictionary[item]['Parsed'] = output
-
-            else:
-                parsed_file = open(self.slice_parsed_folder + r'\\' + item[:-3] + 'txt', 'r')
-                parsed_dict = dict()
-                for line in parsed_file:
-                    raw_dat = re.split(':|,', line.strip())
-                    parsed_dict[raw_dat[0]] = raw_dat[1:]
-                self.slice_file_dictionary[item]['Parsed'] = parsed_dict
-
-            slice_number = 1
-
-            while True:
-                try:
-                    self._deconstruct_cls(item, slice_number)
-                    slice_number += 1
-
-                except KeyError:
-                    self.slice_file_dictionary[item]['Max.Layer'] = slice_number - 1
-                    break
-        return
-
-    def _deconstruct_cls(self, item, slice_number):
-        self.slice_file_dictionary[item][slice_number] = {
-            'Contours': self.slice_file_dictionary[item]['Parsed']['Layer %s. Border 1.' % slice_number], 'Polyline-Indices': []}
-        poly_no = int(re.sub('\[+(\d+)\]+', r'\1', self.slice_file_dictionary[item][slice_number]['Contours'][0]))
-        poly_idx = OrderedDict()
-        i_end = None
-        for poly_gon in xrange(poly_no):
-            if poly_gon == 0:
-                i_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.slice_file_dictionary[item][slice_number]['Contours'][1]))
-                i_start = 2
-                i_end = i_start + i_length
-            else:
-                i_start = i_end + 1
-                i_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.slice_file_dictionary[item][slice_number]['Contours'][i_end]))
-                i_end = i_start + i_length
-            poly_idx[poly_gon] = (i_start, i_length, i_end)
-        self.slice_file_dictionary[item][slice_number]['Polyline-Indices'] = poly_idx
-        return
-
-    def _parser(self):
-        self.slice_file_dictionary[self.slice_file] = {'Format': self.slice_file[-3:]}
-
-        with open(self.slice_file, 'rb') as slice_file:
-            self.bin_slice = slice_file.read()
-
-        self.bin_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
-                             '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', self.bin_slice)
-        self.bin_split = filter(None, self.bin_split)
-        self.bin_split = self.bin_split[1:]
-
-        self.pre_sorting = OrderedDict()
-        self.slice_output = OrderedDict()
+        # Create dictionary subclasses that remember the order entries were added
+        pre_sorting = OrderedDict()
+        slice_output = OrderedDict()
 
         out = []
 
         # Initialize boolean toggles
-        self.layer_flag = False
-        self.support_flag = False
-        self.border_flag = False
-        self.offset_flag = False
-        self.quadrant_flag = False
-        self.island_flag = False
-        self.skin_flag = False
-        self.core_flag = False
+        layer_flag = False
+        support_flag = False
+        border_flag = False
+        offset_flag = False
+        quadrant_flag = False
+        island_flag = False
+        skin_flag = False
+        core_flag = False
 
         # Initialize counters
-        self.island_count = 0
-        self.layer_count = 0
-        self.border_count = 0
+        island_count = 0
+        layer_count = 0
+        border_count = 0
 
         # Parsing of the slice file to human-readable format
-        pass
+        for index, string in enumerate(bin_split):
+            # Initialize a temporary list to use
+            temporary_list = []
+
+            # If NEW_LAYER string encountered
+            if layer_flag:
+                for element in string:
+                    # Append adds the argument to the end of the list
+                    # Bin converts an integer number to a binary string
+                    # Ord returns an integer representing the unicode code point of the character
+                    # [2:] removes the 0b that appears at the start of each converted character
+                    # zfill(8) adds up to 8 zeros to the left of the string
+                    temporary_list.append(bin(ord(element))[2:].zfill(8))
+
+                # Makes a copy of the list and saves it in pre_sorting at Layer X
+                pre_sorting['Layer %s.' % layer_count] = temporary_list[:]
+                layer_flag = False
+
+            # If NEW_BORDER string encountered
+            if border_flag:
+                for element in string:
+                    temporary_list.append(bin(ord(element))[2:].zfill(8))
+
+                if support_flag:
+                    pre_sorting['Layer %s. Support. Border.' % layer_count] = temporary_list[:]
+                    support_flag = False
+                else:
+                    pre_sorting['Layer %s. Border %s.' % (layer_count, border_count)] = temporary_list[:]
+
+                border_flag = False
+
+            if offset_flag:
+                # Currently doesn't do anything as unneeded to draw contours
+                # Only Layer and Border required it seems
+                offset_flag = False
+            if core_flag:
+                core_flag = False
+            if island_flag:
+                island_flag = False
+            if quadrant_flag:
+                quadrant_flag = False
+            if skin_flag:
+                skin_flag = False
+            if 'NEW_LAYER' in string:
+                layer_flag = True
+                layer_count += 1
+                island_count = 0
+                border_count = 0
+                pre_sorting['Layer %s.' % layer_count] = []
+            if 'INC_OFFSETS' in string:
+                offset_flag = True
+            if 'NEW_QUADRANT' in string:
+                quadrant_flag = True
+            if 'NEW_SKIN' in string:
+                skin_flag = True
+            if 'NEW_ISLAND' in string:
+                island_flag = True
+                island_count += 1
+            if 'NEW_CORE' in string:
+                core_flag = True
+            if 'SUPPORT' in string:
+                support_flag = True
+            if 'NEW_BORDER' in string:
+                border_flag = True
+                if support_flag:
+                    pass
+                else:
+                    border_count += 1
+                    pre_sorting['Layer %s. Border %s.' % (layer_count, border_count)] = []
+
+        for element in pre_sorting:
+            if 'Border 1.' in element:
+                # Joins together the elements with the spacer represented by '',
+                # [0:4] Returns the first four elements of the list
+                # [::-1] appears to reverse the list
+                # Converts the integer from the given base (2) into base 10
+                test_value = int(''.join(pre_sorting[element][0:4][::-1]), 2)
+                string = pre_sorting[element]
+                test = ['[%s]' % test_value]
+                try:
+                    number_points = int(''.join(string[5:9][::-1]), 2)
+                    index = 9
+                    while index < len(string):
+                        endx = index + number_points * 8
+                        test.append('<%s>' % number_points)
+                        while index < endx:
+                            next_point = ''.join(string[index:index + 4][::-1])
+                            test.append(str(int(next_point, 2) if (int(next_point, 2) <= 2147483647)
+                                            else (int(next_point, 2) - 4294967295)))
+                            index += 4
+                        index += 1
+                        try:
+                            number_points = int(''.join(string[index:index + 4][::-1]), 2)
+                        except ValueError:
+                            break
+
+                        index += 4
+                    out = test[::-1]
+                except ValueError:
+                    pass
+
+            else:
+                string = iter(pre_sorting[element][::-1])
+                out1 = iter([c + next(string, '') for c in string])
+                out = [((int(c + next(out1, ''), 2)) - 4294967295 if int(c[0]) == 1
+                        else (int(c + next(out1, ''), 2))) for c in out1]
+
+            slice_output[element] = out[::-1]
+
+        with open('slice/sample_processed.txt', 'w+') as output_write:
+            for element in slice_output:
+                if 'Border 1.' in element or 'Border' not in element:
+                    output_write.write(element)
+                    output_write.write(':')
+                    output_list = slice_output[element]
+                    output_list = ','.join(map(str, output_list))
+                    output_write.write(output_list)
+                    output_write.write('\n')

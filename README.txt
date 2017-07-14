@@ -92,3 +92,7 @@ Nomenclature Notes
 - All INSTANCE (QThread) names use capital abbreviation of the called method + _instance
 - All PyQt GUI Object names use camelCaps with the first word being what the object is
 - Similar code grouped in boxes with comment describing what that block does
+
+GUI Standard Sizes
+- Button Height -> 28
+- Space between Vertical Buttons -> 6

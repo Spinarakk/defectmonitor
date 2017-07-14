@@ -6,20 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
-    <height>197</height>
+    <width>381</width>
+    <height>210</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>380</width>
-    <height>197</height>
+    <width>381</width>
+    <height>210</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>380</width>
-    <height>197</height>
+    <width>381</width>
+    <height>210</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -55,32 +55,13 @@
    <property name="geometry">
     <rect>
      <x>280</x>
-     <y>70</y>
-     <width>93</width>
+     <y>69</y>
+     <width>91</width>
      <height>28</height>
     </rect>
    </property>
    <property name="text">
     <string>Browse...</string>
-   </property>
-  </widget>
-  <widget class="QTextBrowser" name="textFileName">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>70</y>
-     <width>261</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="verticalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
-   </property>
-   <property name="horizontalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
-   </property>
-   <property name="lineWrapMode">
-    <enum>QTextEdit::NoWrap</enum>
    </property>
   </widget>
   <widget class="QPushButton" name="buttonStartConversion">
@@ -90,7 +71,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>160</y>
+     <y>172</y>
      <width>261</width>
      <height>28</height>
     </rect>
@@ -103,8 +84,8 @@
    <property name="geometry">
     <rect>
      <x>280</x>
-     <y>160</y>
-     <width>93</width>
+     <y>172</y>
+     <width>91</width>
      <height>28</height>
     </rect>
    </property>
@@ -116,9 +97,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>130</y>
+     <y>138</y>
      <width>361</width>
-     <height>23</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="value">
@@ -135,9 +116,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>100</y>
+     <y>104</y>
      <width>361</width>
-     <height>31</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="text">
@@ -145,6 +126,19 @@
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineSliceFile">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>70</y>
+     <width>261</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

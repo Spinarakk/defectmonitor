@@ -143,10 +143,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         os.mkdir('%s\single' % self.image_folder)
         os.mkdir('%s\processed' % self.image_folder)
 
-        # Setup input and output slice directories
-        self.slice_raw_folder = 'slice_raw'
-        self.slice_parsed_folder = 'slice_parsed'
-
         # Set initial current layer
         self.current_layer = 1
 
@@ -194,24 +190,24 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        self.export_name = None
-        self.export_name = QtGui.QFileDialog.getSaveFileName(self, 'Export Image As', '',
-                                                                 'Image (*.png)', selectedFilter='*.png')
+        self.export_image_name = None
+        self.export_image_name = QtGui.QFileDialog.getSaveFileName(self, 'Export Image As', '',
+                                                             'Image (*.png)', selectedFilter='*.png')
 
         # Checking if user has chosen to save the image or clicked cancel
-        if self.export_name:
+        if self.export_image_name:
             # Check which tab is currently being displayed on the widgetDisplay
             if self.widgetDisplay.currentIndex() == 0:
-                cv2.imwrite(str(self.export_name), self.image_display_scan)
+                cv2.imwrite(str(self.export_image_name), self.image_display_scan)
             elif self.widgetDisplay.currentIndex() == 1:
-                cv2.imwrite(str(self.export_name), self.image_display_coat)
+                cv2.imwrite(str(self.export_image_name), self.image_display_coat)
             else:
-                cv2.imwrite(str(self.export_name), self.image_display_defect)
+                cv2.imwrite(str(self.export_image_name), self.image_display_defect)
 
             # Open a message box with a save confirmation message
             self.export_confirmation = QtGui.QMessageBox()
             self.export_confirmation.setIcon(QtGui.QMessageBox.Information)
-            self.export_confirmation.setText('Your image has been saved to %s.' % self.export_name)
+            self.export_confirmation.setText('Your image has been saved to %s.' % self.export_image_name)
             self.export_confirmation.setWindowTitle('Export Image')
             self.export_confirmation.exec_()
 
@@ -275,6 +271,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             image_raw = self.image_display_scan
         elif self.widgetDisplay.currentIndex() == 1:
             image_raw = self.image_display_coat
+        else:
+            image_raw = None
 
         # Instantiate a DefectDetection instance
         self.DD_instance = image_processing.DefectDetection(image_raw)
@@ -372,8 +370,15 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.update_progress(0)
         self.update_display()
 
-        # Instantiate a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_raw_folder, self.slice_parsed_folder)
+        # Reload configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Get the name of the slice file as specified in the New Build dialog
+        self.slice_file_name = self.config['WorkingDirectory'] + '/' + self.config['SliceFile']
+
+        # Instantiate a SliceConverter instance and send the slice file name
+        self.SC_instance = slice_converter.SliceConverter(cls_file=self.slice_file_name)
 
         # Listen for emitted signals from the created instance, and send them to the corresponding method
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
@@ -469,7 +474,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         if self.checkToggleOverlay.isChecked():
             # Creates an empty array to draw contours on
-            self.image_overlay = np.zeros(self.display_image.shape).astype(np.uint8)
+            self.image_overlay = np.zeros(self.image_display_scan.shape).astype(np.uint8)
             self.image_overlay = cv2.cvtColor(self.image_overlay, cv2.COLOR_BGR2RGB)
 
             # Draws the contours
@@ -755,13 +760,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Read the image as dictated by the received image name
-        self.display_image_iv = cv2.imread('%s' % image_name)
+        self.image_display_iv = cv2.imread('%s' % image_name)
 
         # Sets the Image Viewer tab as main focus whenever an image is captured
         self.widgetDisplay.setCurrentIndex(3)
 
         # Display the captured image on its respective label after converting it to pixmap
-        self.labelDisplayIV.setPixmap(self.convert2pixmap(self.display_image_iv))
+        self.labelDisplayIV.setPixmap(self.convert2pixmap(self.image_display_iv))
 
         self.update_status('Displaying captured image.')
 
@@ -777,16 +782,18 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         return q_pixmap.scaled(987, 605, aspectRatioMode=Qt.KeepAspectRatio)
 
-    def update_status(self, string):
-        """Updates the status bar at the bottom of the Main Window with the received string argument"""
-        self.statusBar.showMessage(string)
+    def update_status(self, string, duration=0):
+        """Updates the status bar at the bottom of the Main Window with the received string argument
+        Duration refers to how long the message will be displayed in milliseconds
+        """
+        self.statusBar.showMessage(string, duration)
 
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
         self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        """Menu -> Exit or the top-rght X is clicked"""
+        """Menu -> Exit or the top-right X is clicked"""
 
         # For some reason it isn't possible to load and dump within the same open function so they're split
         # Load configuration settings from config.json file

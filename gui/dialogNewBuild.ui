@@ -9,21 +9,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>391</width>
-    <height>186</height>
+    <width>430</width>
+    <height>218</height>
    </rect>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>391</width>
-    <height>186</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>391</width>
-    <height>186</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>New Build</string>
@@ -38,17 +26,11 @@
   <widget class="QLineEdit" name="lineBuildName">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>140</x>
      <y>10</y>
-     <width>131</width>
-     <height>20</height>
+     <width>281</width>
+     <height>26</height>
     </rect>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
    </property>
    <property name="text">
     <string>Default</string>
@@ -60,10 +42,10 @@
   <widget class="QComboBox" name="comboPlatform">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>37</y>
-     <width>251</width>
-     <height>22</height>
+     <x>140</x>
+     <y>44</y>
+     <width>281</width>
+     <height>26</height>
     </rect>
    </property>
    <property name="focusPolicy">
@@ -89,9 +71,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>40</y>
+     <y>44</y>
      <width>121</width>
-     <height>16</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="font">
@@ -105,13 +87,13 @@
     <string>Build Platform</string>
    </property>
   </widget>
-  <widget class="QToolButton" name="toolChangeDirectory">
+  <widget class="QPushButton" name="buttonChangeWD">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>10</y>
-     <width>111</width>
-     <height>21</height>
+     <x>10</x>
+     <y>180</y>
+     <width>211</width>
+     <height>28</height>
     </rect>
    </property>
    <property name="toolTip">
@@ -121,164 +103,16 @@
     <string/>
    </property>
    <property name="text">
-    <string>Change Directory</string>
+    <string>Change Working Directory</string>
    </property>
-  </widget>
-  <widget class="Line" name="line">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>60</y>
-     <width>371</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-  </widget>
-  <widget class="QGroupBox" name="groupNotificationSettings">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>70</y>
-     <width>271</width>
-     <height>111</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>Notification Settings</string>
-   </property>
-   <widget class="QPushButton" name="buttonUseLast">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>80</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Use Last</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelEmail">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>20</y>
-      <width>81</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>9</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>Email</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEmail">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>20</y>
-      <width>141</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="maxLength">
-     <number>100</number>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="linePassword">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>50</y>
-      <width>141</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <property name="inputMask">
-     <string/>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="maxLength">
-     <number>24</number>
-    </property>
-    <property name="frame">
-     <bool>true</bool>
-    </property>
-    <property name="echoMode">
-     <enum>QLineEdit::Password</enum>
-    </property>
-    <property name="placeholderText">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelAccessCode">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>50</y>
-      <width>91</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>9</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>Access code</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="buttonSetupFCM">
-    <property name="geometry">
-     <rect>
-      <x>64</x>
-      <y>80</y>
-      <width>121</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Setup FCM</string>
-    </property>
-   </widget>
   </widget>
   <widget class="QLabel" name="labelBuildName">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>13</y>
+     <y>10</y>
      <width>101</width>
-     <height>16</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="font">
@@ -293,19 +127,139 @@
    </property>
   </widget>
   <widget class="QDialogButtonBox" name="buttonBox">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>110</y>
-     <width>91</width>
-     <height>61</height>
+     <x>230</x>
+     <y>180</y>
+     <width>191</width>
+     <height>28</height>
     </rect>
    </property>
    <property name="orientation">
-    <enum>Qt::Vertical</enum>
+    <enum>Qt::Horizontal</enum>
    </property>
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelCalibrationFile">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>78</y>
+     <width>121</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Calibration File</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelSliceFile">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>112</y>
+     <width>121</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Slice File</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineCalibrationFile">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>78</y>
+     <width>181</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineSliceFile">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>112</y>
+     <width>181</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="buttonBrowseCF">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>77</y>
+     <width>91</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string/>
+   </property>
+   <property name="statusTip">
+    <string/>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="buttonBrowseSF">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>111</y>
+     <width>91</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string/>
+   </property>
+   <property name="statusTip">
+    <string/>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineWorkingDirectory">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>146</y>
+     <width>411</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

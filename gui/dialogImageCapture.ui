@@ -7,20 +7,8 @@
     <x>0</x>
     <y>0</y>
     <width>491</width>
-    <height>301</height>
+    <height>308</height>
    </rect>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>491</width>
-    <height>301</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>491</width>
-    <height>301</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>Image Capture</string>
@@ -36,7 +24,7 @@
    <property name="geometry">
     <rect>
      <x>330</x>
-     <y>132</y>
+     <y>134</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -64,7 +52,7 @@
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>132</y>
+     <y>134</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -80,7 +68,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>132</y>
+     <y>134</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -92,30 +80,11 @@
     <string>Camera Settings</string>
    </property>
   </widget>
-  <widget class="QTextBrowser" name="textSaveLocation">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>96</y>
-     <width>311</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="verticalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
-   </property>
-   <property name="horizontalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
-   </property>
-   <property name="lineWrapMode">
-    <enum>QTextEdit::NoWrap</enum>
-   </property>
-  </widget>
   <widget class="QPushButton" name="buttonBrowse">
    <property name="geometry">
     <rect>
      <x>330</x>
-     <y>96</y>
+     <y>99</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -133,11 +102,11 @@
      <x>10</x>
      <y>76</y>
      <width>141</width>
-     <height>16</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="text">
-    <string>Save Location</string>
+    <string>Image Save Location</string>
    </property>
   </widget>
   <widget class="QLabel" name="labelInformation">
@@ -160,7 +129,7 @@
    <property name="geometry">
     <rect>
      <x>330</x>
-     <y>265</y>
+     <y>270</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -181,7 +150,7 @@
      <x>10</x>
      <y>168</y>
      <width>151</width>
-     <height>64</height>
+     <height>61</height>
     </rect>
    </property>
    <property name="font">
@@ -205,7 +174,7 @@
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>204</y>
+     <y>202</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -224,7 +193,7 @@
    <property name="geometry">
     <rect>
      <x>330</x>
-     <y>204</y>
+     <y>202</y>
      <width>151</width>
      <height>28</height>
     </rect>
@@ -283,9 +252,9 @@
    <property name="geometry">
     <rect>
      <x>330</x>
-     <y>238</y>
+     <y>236</y>
      <width>151</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="text">
@@ -299,7 +268,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>265</y>
+     <y>270</y>
      <width>321</width>
      <height>28</height>
     </rect>
@@ -307,8 +276,6 @@
    <property name="font">
     <font>
      <pointsize>9</pointsize>
-     <weight>50</weight>
-     <bold>false</bold>
     </font>
    </property>
    <property name="text">
@@ -319,19 +286,13 @@
    <property name="geometry">
     <rect>
      <x>27</x>
-     <y>238</y>
+     <y>236</y>
      <width>131</width>
-     <height>20</height>
+     <height>28</height>
     </rect>
-   </property>
-   <property name="focusPolicy">
-    <enum>Qt::StrongFocus</enum>
    </property>
    <property name="toolTip">
     <string>Check to apply image correction techniques to the captured image. The processed image will be saved separately to the processed folder.</string>
-   </property>
-   <property name="layoutDirection">
-    <enum>Qt::LeftToRight</enum>
    </property>
    <property name="text">
     <string>Apply Correction</string>
@@ -385,13 +346,10 @@
    <property name="geometry">
     <rect>
      <x>195</x>
-     <y>238</y>
+     <y>236</y>
      <width>131</width>
-     <height>20</height>
+     <height>28</height>
     </rect>
-   </property>
-   <property name="focusPolicy">
-    <enum>Qt::StrongFocus</enum>
    </property>
    <property name="toolTip">
     <string>Check to display the captured image (processed or not) on the Main Window under the Image Viewer tab.</string>
@@ -403,6 +361,19 @@
     <string>Display Image</string>
    </property>
    <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineImageFolder">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>100</y>
+     <width>311</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="readOnly">
     <bool>true</bool>
    </property>
   </widget>

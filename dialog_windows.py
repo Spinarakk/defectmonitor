@@ -30,6 +30,42 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         with open('config.json') as config:
             self.config = json.load(config)
 
+        self.working_directory = self.config['WorkingDirectory']
+
+        # Setup event listeners for all the relevent UI components, and connect them to specific functions
+        # Buttons
+        self.buttonBrowseCF.clicked.connect(self.browse_calibration)
+        self.buttonBrowseSF.clicked.connect(self.browse_slice)
+        self.buttonChangeWD.clicked.connect(self.change_working_directory)
+
+        # Set and display the default calibration file and slice file as stated in the config.json file
+        self.lineCalibrationFile.setText(self.config['CalibrationFile'])
+        self.lineSliceFile.setText(self.config['SliceFile'])
+        self.lineWorkingDirectory.setText(self.working_directory)
+
+    def browse_calibration(self):
+
+        # Opens a file select dialog, allowing user to select a calibration file
+        self.calibration_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Calibration Files (*.txt)')
+
+        if self.calibration_file:
+            self.calibration_file.replace(self.working_directory + '/', '')
+            self.lineCalibrationFile.setText(self.calibration_file)
+            self.config['CalibrationFile'] = str(self.calibration_file)
+
+    def browse_slice(self):
+
+        # Opens a file select dialog, allowing user to select a slice file
+        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.txt)')
+
+        if self.slice_file:
+            self.slice_file.replace(self.working_directory + '/', '')
+            self.lineSliceFile.setText(self.slice_file)
+            self.config['SliceFile'] = str(self.slice_file)
+
+    def change_working_directory(self):
+        pass
+
     def accept(self):
         self.config['BuildName'] = str(self.lineBuildName.text())
 
@@ -61,8 +97,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.setupUi(self)
 
         # Set and display the default image folder name to be used to store all acquired images
-        self.save_folder = image_folder
-        self.textSaveLocation.setText(self.save_folder)
+        self.image_folder = image_folder
+        self.lineImageFolder.setText(self.image_folder)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Buttons
@@ -84,13 +120,12 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def browse(self):
 
         # Opens a folder select dialog, allowing the user to choose a folder
-        # noinspection PyCallByClass
-        self.save_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
+        self.image_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
 
         # Checks if a folder is actually selected
-        if self.save_folder:
+        if self.image_folder:
             # Display the folder name
-            self.textSaveLocation.setText(self.save_folder)
+            self.lineImageFolder.setText(self.image_folder)
             if bool(self.camera_flag):
                 self.buttonCapture.setEnabled(True)
             if bool(self.camera_flag) & bool(self.trigger_flag):
@@ -108,7 +143,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def check_camera(self):
         """Checks that a camera is found and available"""
 
-        self.camera_flag = image_capture.ImageCapture(self.save_folder).acquire_camera()
+        self.camera_flag = image_capture.ImageCapture(self.image_folder).acquire_camera()
 
         if bool(self.camera_flag):
             self.labelCameraStatus.setText('FOUND')
@@ -145,7 +180,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonDone.setEnabled(False)
 
         # Instantiate and run an ImageCapture instance that will only take one image
-        self.ICS_instance = image_capture.ImageCapture(self.save_folder, single_flag=True,
+        self.ICS_instance = image_capture.ImageCapture(self.image_folder, single_flag=True,
                                                        correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.ICS_instance, SIGNAL("display_image(QString)"), self.display_image)
@@ -184,7 +219,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.ICR_instance = image_capture.ImageCapture(self.save_folder, run_flag=True,
+        self.ICR_instance = image_capture.ImageCapture(self.image_folder, run_flag=True,
                                                        correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.ICR_instance, SIGNAL("display_image(QString)"), self.display_image)
@@ -327,11 +362,13 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.buttonStartConversion.clicked.connect(self.start_conversion)
 
     def browse(self):
+
+        # Opens a file select dialog, allowing user to select a slice file
         self.slice_file = None
         self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         if self.slice_file:
-            self.textFileName.setText(self.slice_file)
+            self.lineSliceFile.setText(self.slice_file)
             self.buttonStartConversion.setEnabled(True)
             self.update_status('Waiting to start process.')
         else:
@@ -342,8 +379,12 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.buttonStartConversion.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
 
-        # Instantiate and run a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_file)
+        # Instantiate and run a SliceConverter instance depending on whether the input file is .cls or .cli
+        if '.cls' in self.slice_file:
+            self.SC_instance = slice_converter.SliceConverter(cls_file=self.slice_file)
+        elif '.cli' in self.slice_file:
+            self.SC_instance = slice_converter.SliceConverter(cli_file=self.slice_file)
+
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
         self.connect(self.SC_instance, SIGNAL("finished()"), self.start_conversion_finished)
@@ -400,13 +441,16 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
         # Opens a folder select dialog, allowing the user to choose a folder
         self.calibration_folder = None
-        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
+        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         # Checks if a folder is actually selected
         if self.calibration_folder:
             # Store a list of the files found in the folder
             self.image_list = os.listdir(self.calibration_folder)
             self.listImages.clear()
+
+            # Update the lineEdit with the new folder name
+            self.lineCalibrationFolder.setText(self.calibration_folder)
 
             # Search for images containing the word calibration_image in the folder
             for image_name in self.image_list:
@@ -419,7 +463,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             else:
                 # Remove previous entries and fill with new entries
                 self.listImages.addItems(self.image_list_valid)
-                self.textFolderName.setText(self.calibration_folder)
+
                 self.buttonStartCalibration.setEnabled(True)
                 self.update_status('Waiting to start process.')
 
@@ -463,7 +507,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             json.dump(self.config, config)
 
     def update_status(self, string):
-        self.labelProgress.setText(string)
+        self.labelStatus.setText(string)
 
     def update_progress(self, percentage):
         self.progressBar.setValue(int(percentage))

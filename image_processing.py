@@ -25,8 +25,11 @@ class ImageCorrection(QThread):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Load camera parameters from camera_parameters.txt file
-        with open('camera_parameters.txt') as camera_parameters:
+        # Get the name of the calibration file as specified in the New Build dialog
+        self.calibration_file_name = self.config['WorkingDirectory'] + '/' + self.config['CalibrationFile']
+
+        # Load camera parameters from specified calibration file
+        with open('%s' % self.calibration_file_name) as camera_parameters:
             self.camera_parameters = np.fromstring(camera_parameters.read(), dtype=float, sep=',')
 
         # Save respective values to be used in OpenCV functions
