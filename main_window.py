@@ -60,11 +60,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.actionStartBuild.triggered.connect(self.start)
         self.actionPauseBuild.triggered.connect(self.pause)
         self.actionStopBuild.triggered.connect(self.stop)
+
         # Buttons
         self.buttonInitialize.clicked.connect(self.initialize_1)
         self.buttonStart.clicked.connect(self.start)
         self.buttonPause.clicked.connect(self.pause)
         self.buttonStop.clicked.connect(self.stop)
+        self.buttonSet.clicked.connect(self.set_layer)
         self.buttonPhase.clicked.connect(self.toggle_phase)
         self.buttonImageConverter.clicked.connect(self.image_converter)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
@@ -98,7 +100,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonShiftRight.clicked.connect(self.shift_right)
         self.buttonRotateACW.clicked.connect(self.rotate_acw)
         self.buttonRotateCW.clicked.connect(self.rotate_cw)
-        self.buttonSet.clicked.connect(self.set_layer)
 
         # Display Widget Tabs
         self.widgetDisplay.blockSignals(True)
@@ -144,7 +145,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         os.mkdir('%s\processed' % self.image_folder)
 
         # Set initial current layer
-        self.current_layer = 1
+        self.layer = 1
 
         # TODO Temporary Variables (To investigate what they do)
         self.item_dictionary = dict()
@@ -153,6 +154,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Check if resuming from scan or coat phase
         self.phase_flag = False
         self.current_phase = self.toggle_phase()
+
+    # MENUBAR
 
     def new_build(self):
         """Opens a Dialog Window when File > New Build... is clicked
@@ -224,40 +227,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         camera_settings_dialog = dialog_windows.CameraSettings(self)
         camera_settings_dialog.show()
 
-    def image_converter(self):
-        """Opens a FileDialog when Image Converter button is pressed
-        Prompts the user to select an image to apply image correction on
-        Saves the processed image in the same folder
-        """
-
-        # Get the name of the image file to be processed
-        image_name = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')
-
-        # Checking if user has selected a file or clicked cancel
-        if image_name:
-            self.update_progress(0)
-            self.update_status('Processing image...')
-
-            # Read the image
-            image_raw = cv2.imread('%s' % image_name)
-
-            # Apply the image processing techniques in order
-            image_raw = image_processing.ImageCorrection(None, None, None).distortion_fix(image_raw)
-            self.update_progress(20)
-            image_raw = image_processing.ImageCorrection(None, None, None).perspective_fix(image_raw)
-            self.update_progress(40)
-            image_raw = image_processing.ImageCorrection(None, None, None).crop(image_raw)
-            self.update_progress(60)
-            image_processed = image_processing.ImageCorrection(None, None, None).clahe(image_raw)
-            self.update_progress(80)
-
-            # Save the processed image in the same folder after removing .png from the file name
-            image_name.replace('.png', '')
-            cv2.imwrite('%s_processed.png' % image_name, image_processed)
-
-            self.update_progress(100)
-            self.update_status('Image successfully processed.')
-
     def defect_processing(self):
         """Executes when the Analyze for Defects button is clicked
         Takes the currently displayed image and applies a bunch of OpenCV code as defined under DefectDetection
@@ -307,21 +276,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Display the defect images on the widgetDisplay tab
         self.update_display()
 
-    def image_capture(self):
-        """Opens a Dialog Window when the Image Capture button is clicked
-        Allows the user to capture images from an attached camera, either a single shot or continuously using a trigger
-        Setup as a Modeless window, operating independently of other windows
-        """
-
-        self.update_status('')
-
-        # Create the dialog variable and execute it as a modeless window
-        image_capture_dialog = dialog_windows.ImageCapture(self, self.image_folder)
-
-        # Receive the image name from the ImageCapture Run instance and send it to be displayed
-        self.connect(image_capture_dialog, SIGNAL("update_display_iv(QString)"), self.update_display_iv)
-        image_capture_dialog.show()
-
     def slice_converter(self):
         """Opens a Dialog Window when the Slice Converter button is clicked
         Allows the user to convert any slice files from .cls or .cli format into ASCII format
@@ -352,6 +306,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def notification_setup(self):
         pass
 
+    # BUTTONS
+
     def initialize_1(self):
         """Executes when the Initialize button is clicked
         Does the following modules by calling QThreads so that the main window can still be manipulated
@@ -378,7 +334,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.slice_file_name = self.config['WorkingDirectory'] + '/' + self.config['SliceFile']
 
         # Instantiate a SliceConverter instance and send the slice file name
-        self.SC_instance = slice_converter.SliceConverter(cls_file=self.slice_file_name)
+        self.SC_instance = slice_converter.SliceConverter(self.slice_file_name)
 
         # Listen for emitted signals from the created instance, and send them to the corresponding method
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
@@ -398,8 +354,12 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_progress(0)
 
-        # Saves a copy of the converted slice array in self
-        self.slice_file_dictionary = self.SC_instance.slice_file_dictionary
+        # Save a copy of the converted slice array in self
+        self.slice_parsed = self.SC_instance.slice_parsed
+
+        # Set the maximum of the Layer spinBox to the length of the parsed slice file
+        self.spinLayer.setMaximum(self.slice_parsed['Parsed'].__len__())
+        self.spinLayer.setToolTip('1 - %s' % self.slice_parsed['Parsed'].__len__())
 
         # Instantiate an ImageCapture instance
         self.ICA_instance = image_capture.ImageCapture(self.image_folder,
@@ -411,7 +371,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Specific signal that moves on to the next task once the current QThread finishes running
         self.connect(self.ICA_instance, SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.initialize_3)
-        # self.connect(self.acquire_image_run, SIGNAL("update_layer(QString, QString)"), self.update_layer)
 
         # Start the ImageCapture instance which performs the contained Run method
         self.ICA_instance.start()
@@ -426,7 +385,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         Respective capital letters suffixed to the image array indicate which processes have been applied
         """
 
-        # Saves the received images as instance variables
+        # Save the received images as instance variables
         self.image_coat = image_coat
         self.image_scan = image_scan
 
@@ -465,117 +424,12 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Set flag to indicate no longer the initial process
         self.initial_flag = False
 
+        self.convert2contours(1)
+
+
         # Update the widgetDisplay to display the processed images
         self.update_display()
         self.update_status('Displaying processed images.')
-
-    def toggle_overlay(self):
-        """Draws the part contour of the current layer and displays it on top of the current displayed image"""
-
-        if self.checkToggleOverlay.isChecked():
-            # Creates an empty array to draw contours on
-            self.image_overlay = np.zeros(self.image_display_scan.shape).astype(np.uint8)
-            self.image_overlay = cv2.cvtColor(self.image_overlay, cv2.COLOR_BGR2RGB)
-
-            # Draws the contours
-            for item in self.item_dictionary:
-                cv2.drawContours(self.image_overlay, self.item_dictionary[item]['PartData']['Contours'],
-                                 -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
-            self.update_status('Displaying slice outlines.')
-
-        else:
-            self.update_status('Hiding slice outlines.')
-
-        self.update_display()
-
-    def update_layer(self, layer, phase):
-        """Updates the layer number"""
-
-        min_x = None
-        min_y = None
-
-        part_contours = None
-        hierachy = None
-
-        self.current_layer = int(layer)
-        self.current_phase = str(phase)
-
-        # Displays the current layer on the UI
-        self.labelLayerNumber.setText(str(self.current_layer).zfill(5))
-
-        self.config['CurrentLayer'] = self.current_layer
-        self.config['CurrentPhase'] = self.current_phase
-
-        for itemidx, item in enumerate(self.slice_file_dictionary):
-            item_contours = self.slice_file_dictionary[item][self.current_layer]['Contours']
-            poly_idx = self.slice_file_dictionary[item][self.current_layer]['Polyline-Indices']
-            # if negative values exist (part is set up in quadrant other than top-right and buildplate centre is (0,0))
-            # translate part to positive
-
-            # finds minimum x and y values over all contours in given part
-            for p in xrange(len(poly_idx)):
-                if min_x is None:
-                    min_x = np.array(item_contours[poly_idx[p][0]:poly_idx[p][2]:2]).astype(np.int32).min()
-                else:
-                    pot_min_x = np.array(item_contours[poly_idx[p][0]:poly_idx[p][2]:2]).astype(np.int32).min()
-                    if pot_min_x < min_x:
-                        min_x = pot_min_x
-                if min_y is None:
-                    min_y = np.array(item_contours[poly_idx[p][0] + 1:poly_idx[p][2]:2]).astype(np.int32).min()
-                else:
-                    pot_min_y = np.array(item_contours[poly_idx[p][0] + 1:poly_idx[p][2]:2]).astype(np.int32).min()
-                    if pot_min_y < min_y:
-                        min_y = pot_min_y
-
-            self.adj_dict = self.slice_file_dictionary
-
-            # image resizing factor - relates image pixels and part mm
-            # (assumes image is cropped exactly at top and bottom edge of platform)
-            scale_height = self.scale_shape[0]
-            platform_height = self.platform_dimensions[1]
-            self.scale_factor = scale_height / platform_height
-
-            self.boundary_offset = self.config['BoundaryOffset']
-
-            blank_image = np.zeros(self.scale_shape).astype(np.uint8)
-            output_image = blank_image.copy()
-            # for each vector in the set of vectors, find the area enclosed by the resultant contours
-            # find the hierarchy of each contour, subtract area if it is an internal contour (i.e. a hole)
-            for p in xrange(len(poly_idx)):
-                # gets contours in scaled coordinates (scale_factor * part mm)
-                self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0]:poly_idx[p][2]:2] = [
-                    np.float32(
-                        self.scale_factor * (int(x) / 10000. + self.platform_dimensions[0] / 2) + self.boundary_offset[
-                            0])
-                    for x
-                    in
-                    self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0]:poly_idx[p][2]:2]]
-                self.adj_dict[item][self.current_layer]['Contours'][(poly_idx[p][0] + 1):poly_idx[p][2]:2] = [
-                    np.float32(
-                        self.scale_factor * (-int(y) / 10000. + self.platform_dimensions[1] / 2) + self.boundary_offset[
-                            1])
-                    for
-                    y in
-                    self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0] + 1:poly_idx[p][2]:2]]
-
-                this_contour = np.array(
-                    self.adj_dict[item][self.current_layer]['Contours'][poly_idx[p][0]:poly_idx[p][2]]).reshape(1, (
-                    poly_idx[p][1]) / 2, 2)
-                this_contour = this_contour.astype(np.int32)
-                poly_image = blank_image.copy()
-                cv2.fillPoly(poly_image, this_contour, (255, 255, 255))  # draw filled poly on blank image
-                # if contour overlaps other poly, it is a hole and is subtracted
-                output_image = cv2.bitwise_xor(output_image, poly_image)
-                # find vectorised contours and put into 2 level hierarchy (-1 for ext, parent-id for int)
-                output_image = cv2.cvtColor(output_image, cv2.COLOR_BGR2GRAY)
-                _, part_contours, hierarchy = cv2.findContours(output_image.copy(), cv2.RETR_CCOMP,
-                                                               cv2.CHAIN_APPROX_SIMPLE)
-            self.item_dictionary[item] = {'PartIdx': itemidx, 'PartTopleft': (min_x, min_y),
-                                          'PartData': {'Contours': part_contours, 'Hierarchy': hierarchy}}
-
-        # Save configuration settings to config.json file
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
 
     def start(self):
         """Executes when the Start button is clicked
@@ -592,40 +446,56 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def stop(self):
         pass
 
-    def toggle_simulation(self):
-        """Checks if the simulation_flag toggle is checked or not, and sets the appropriate boolean as such"""
+    def image_capture(self):
+        """Opens a Dialog Window when the Image Capture button is clicked
+        Allows the user to capture images from an attached camera, either a single shot or continuously using a trigger
+        Setup as a Modeless window, operating independently of other windows
+        """
 
-        if self.checkSimulation.isChecked():
-            self.simulation_flag = True
-            self.update_status("Program in Simulation Mode.")
-        else:
-            self.simulation_flag = False
-            self.update_status("Program in Camera Mode.")
+        self.update_status('')
 
-    def toggle_phase(self):
-        """Toggles the current 3D printing machine phase to either the scan or coat phase"""
+        # Create the dialog variable and execute it as a modeless window
+        image_capture_dialog = dialog_windows.ImageCapture(self, self.image_folder)
 
-        # Toggles the phase flag
-        self.phase_flag = not self.phase_flag
+        # Receive the image name from the ImageCapture Run instance and send it to be displayed
+        self.connect(image_capture_dialog, SIGNAL("update_display_iv(QString)"), self.update_display_iv)
+        image_capture_dialog.show()
 
-        # True = Scan, False = Coat
-        if self.phase_flag:
-            self.buttonPhase.setText('SCAN')
-            current_phase = 'scan'
-        else:
-            self.buttonPhase.setText('COAT')
-            current_phase = 'coat'
-        return current_phase
+    def image_converter(self):
+        """Opens a FileDialog when Image Converter button is pressed
+        Prompts the user to select an image to apply image correction on
+        Saves the processed image in the same folder
+        """
 
-    def tab_change(self, tab_index):
-        """Check which tab is currently being displayed on widgetDisplay to enable a button"""
+        # Get the name of the image file to be processed
+        image_name = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')
 
-        if tab_index == 2:
-            self.buttonDefectProcessing.setEnabled(False)
-        else:
-            self.buttonDefectProcessing.setEnabled(True)
+        # Checking if user has selected a file or clicked cancel
+        if image_name:
+            self.update_progress(0)
+            self.update_status('Processing image...')
 
-    # Position Adjustment Box
+            # Read the image
+            image_raw = cv2.imread('%s' % image_name)
+
+            # Apply the image processing techniques in order
+            image_raw = image_processing.ImageCorrection(None, None, None).distortion_fix(image_raw)
+            self.update_progress(20)
+            image_raw = image_processing.ImageCorrection(None, None, None).perspective_fix(image_raw)
+            self.update_progress(40)
+            image_raw = image_processing.ImageCorrection(None, None, None).crop(image_raw)
+            self.update_progress(60)
+            image_processed = image_processing.ImageCorrection(None, None, None).clahe(image_raw)
+            self.update_progress(80)
+
+            # Save the processed image in the same folder after removing .png from the file name
+            image_name.replace('.png', '')
+            cv2.imwrite('%s_processed.png' % image_name, image_processed)
+
+            self.update_progress(100)
+            self.update_status('Image successfully processed.')
+
+    # POSITION ADJUSTMENT BOX
 
     def toggle_boundary(self):
         """Switches the Position Adjustment arrows to instead control the crop boundary size"""
@@ -653,10 +523,54 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def rotate_cw(self):
         pass
 
-    def set_layer(self):
-        pass
+    # TOGGLES AND CHECKBOXES
 
-    # Miscellaneous Methods
+    def toggle_overlay(self):
+        """Draws the part contour of the current selected layer and displays it on top of the displayed scan image"""
+
+        if self.checkToggleOverlay.isChecked():
+            # Creates an empty array to draw contours on
+            self.image_overlay = np.zeros(self.image_display_scan.shape).astype(np.uint8)
+            self.image_overlay = cv2.cvtColor(self.image_overlay, cv2.COLOR_BGR2RGB)
+
+            # Draws the contours
+            for item in self.item_dictionary:
+                cv2.drawContours(self.image_overlay, self.item_dictionary['PartData']['Contours'],
+                                 -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
+
+            self.update_status('Displaying slice outlines.')
+
+        else:
+            self.update_status('Hiding slice outlines.')
+
+        self.update_display()
+
+    def toggle_simulation(self):
+        """Checks if the simulation_flag toggle is checked or not, and sets the appropriate boolean as such"""
+
+        if self.checkSimulation.isChecked():
+            self.simulation_flag = True
+            self.update_status("Program in Simulation Mode.")
+        else:
+            self.simulation_flag = False
+            self.update_status("Program in Camera Mode.")
+
+    def toggle_phase(self):
+        """Toggles the current 3D printing machine phase to either the scan or coat phase"""
+
+        # Toggles the phase flag
+        self.phase_flag = not self.phase_flag
+
+        # True = Scan, False = Coat
+        if self.phase_flag:
+            self.buttonPhase.setText('SCAN')
+            current_phase = 'scan'
+        else:
+            self.buttonPhase.setText('COAT')
+            current_phase = 'coat'
+        return current_phase
+
+    # MISCELLANEOUS METHODS
 
     def assign_images(self, image, phase, tag):
         """Saves the processed image to a different variable depending on the received name tags"""
@@ -677,7 +591,99 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             elif tag == 'DPCE':
                 self.image_coat_DPCE = image
 
-    # Miscellaneous UI Elements
+    def convert2contours(self, layer):
+        """Convert the vectors from the parsed slice file into contours which can then be drawn"""
+
+        min_x = None
+        min_y = None
+
+        # Save the contours and polyline-indices of the received layer
+        self.layer = int(layer)
+        contours = self.slice_parsed[self.layer]['Contours']
+        polyline = self.slice_parsed[self.layer]['Polyline-Indices']
+
+        # if negative values exist (part is set up in quadrant other than top-right and buildplate centre is (0,0))
+        # translate part to positive
+
+        # Finds minimum x and y values over all contours in given part
+        for p in xrange(len(polyline)):
+            if min_x is None:
+                min_x = np.array(contours[polyline[p][0]:polyline[p][2]:2]).astype(np.int32).min()
+            else:
+                pot_min_x = np.array(contours[polyline[p][0]:polyline[p][2]:2]).astype(np.int32).min()
+                if pot_min_x < min_x:
+                    min_x = pot_min_x
+            if min_y is None:
+                min_y = np.array(contours[polyline[p][0] + 1:polyline[p][2]:2]).astype(np.int32).min()
+            else:
+                pot_min_y = np.array(contours[polyline[p][0] + 1:polyline[p][2]:2]).astype(
+                    np.int32).min()
+                if pot_min_y < min_y:
+                    min_y = pot_min_y
+
+        self.adj_dict = self.slice_parsed
+
+        # image resizing factor - relates image pixels and part mm
+        # (assumes image is cropped exactly at top and bottom edge of platform)
+        scale_height = self.image_scan_DPC.shape[0]
+        platform_height = self.platform_dimensions[1]
+        self.scale_factor = scale_height / platform_height
+
+        self.boundary_offset = self.config['BoundaryOffset']
+
+        blank_image = np.zeros(self.image_scan_DPC.shape).astype(np.uint8)
+        output_image = blank_image.copy()
+        # for each vector in the set of vectors, find the area enclosed by the resultant contours
+        # find the hierarchy of each contour, subtract area if it is an internal contour (i.e. a hole)
+        for p in xrange(len(polyline)):
+            # gets contours in scaled coordinates (scale_factor * part mm)
+            self.adj_dict[self.layer]['Contours'][polyline[p][0]:polyline[p][2]:2] = [
+                np.float32(
+                    self.scale_factor * (int(x) / 10000. + self.platform_dimensions[0] / 2) +
+                    self.boundary_offset[
+                        0])
+                for x
+                in
+                self.adj_dict[self.layer]['Contours'][polyline[p][0]:polyline[p][2]:2]]
+            self.adj_dict[self.layer]['Contours'][(polyline[p][0] + 1):polyline[p][2]:2] = [
+                np.float32(
+                    self.scale_factor * (-int(y) / 10000. + self.platform_dimensions[1] / 2) +
+                    self.boundary_offset[
+                        1])
+                for
+                y in
+                self.adj_dict[self.layer]['Contours'][polyline[p][0] + 1:polyline[p][2]:2]]
+
+            this_contour = np.array(
+                self.adj_dict[self.layer]['Contours'][polyline[p][0]:polyline[p][2]]).reshape(
+                1, (
+                    polyline[p][1]) / 2, 2)
+            this_contour = this_contour.astype(np.int32)
+            poly_image = blank_image.copy()
+            cv2.fillPoly(poly_image, this_contour, (255, 255, 255))  # draw filled poly on blank image
+            # if contour overlaps other poly, it is a hole and is subtracted
+            output_image = cv2.bitwise_xor(output_image, poly_image)
+            # find vectorised contours and put into 2 level hierarchy (-1 for ext, parent-id for int)
+            output_image = cv2.cvtColor(output_image, cv2.COLOR_BGR2GRAY)
+            _, part_contours, hierarchy = cv2.findContours(output_image.copy(), cv2.RETR_CCOMP,
+                                                           cv2.CHAIN_APPROX_SIMPLE)
+        self.item_dictionary = {'PartTopleft': (min_x, min_y), 'PartData': {'Contours': part_contours,
+                                                                            'Hierarchy': hierarchy}}
+
+        # Save configuration settings to config.json file
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config)
+
+    # MISCELLANEOUS UI ELEMENTS
+
+    def set_layer(self):
+        """Choose what layer (and overlay) to display"""
+        layer = self.spinLayer.value()
+
+        # Displays the current layer number on the UI
+        self.labelLayerNumber.setText('%s' % str(layer).zfill(4))
+
+        self.convert2contours(layer)
 
     def update_display(self):
         """Updates the MainWindow widgetDisplay to show images on their respective labels as per toggles
@@ -718,15 +724,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkToggleOverlay.setEnabled(True)
                 self.buttonDefectProcessing.setEnabled(True)
 
-            # If Toggle Overlay is checked, add the slice overlay on top of the displayed image
+            # If Toggle Overlay is checked, add the slice overlay on top of the displayed scan image
             if self.checkToggleOverlay.isChecked():
                 try:
                     self.image_display_scan = cv2.add(self.image_display_scan, self.image_overlay)
-                    self.image_display_coat = cv2.add(self.image_display_coat, self.image_overlay)
                 except:
                     self.toggle_overlay()
                     self.image_display_scan = cv2.add(self.image_display_scan, self.image_overlay)
-                    self.image_display_coat = cv2.add(self.image_display_coat, self.image_overlay)
 
             # Display the scan and coat images on their respective labels after converting them to pixmap
             self.labelDisplaySE.setPixmap(self.convert2pixmap(self.image_display_scan))
@@ -782,6 +786,14 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         return q_pixmap.scaled(987, 605, aspectRatioMode=Qt.KeepAspectRatio)
 
+    def tab_change(self, tab_index):
+        """Check which tab is currently being displayed on widgetDisplay to enable a button"""
+
+        if tab_index == 2:
+            self.buttonDefectProcessing.setEnabled(False)
+        else:
+            self.buttonDefectProcessing.setEnabled(True)
+
     def update_status(self, string, duration=0):
         """Updates the status bar at the bottom of the Main Window with the received string argument
         Duration refers to how long the message will be displayed in milliseconds
@@ -791,6 +803,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
         self.progressBar.setValue(int(percentage))
+
+    # CLEANUP
 
     def closeEvent(self, event):
         """Menu -> Exit or the top-right X is clicked"""

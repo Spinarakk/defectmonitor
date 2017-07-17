@@ -96,3 +96,7 @@ Nomenclature Notes
 GUI Standard Sizes
 - Button Height -> 28
 - Space between Vertical Buttons -> 6
+
+How to Interpret Converted .cls Slice Files
+- Layer X: Layer Height, 
+- Layer X Border X: [Number of Vectors], <Length of Vectors>, Vectors (Twice as length)

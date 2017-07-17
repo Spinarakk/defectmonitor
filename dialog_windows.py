@@ -8,6 +8,7 @@ from PyQt4.QtCore import SIGNAL, Qt
 import slice_converter
 import image_capture
 import extra_functions
+import camera_calibration
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogSliceConverter, dialogImageCapture, dialogCameraSettings
@@ -56,7 +57,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
     def browse_slice(self):
 
         # Opens a file select dialog, allowing user to select a slice file
-        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.txt)')
+        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         if self.slice_file:
             self.slice_file.replace(self.working_directory + '/', '')
@@ -371,20 +372,15 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
             self.lineSliceFile.setText(self.slice_file)
             self.buttonStartConversion.setEnabled(True)
             self.update_status('Waiting to start process.')
-        else:
-            self.buttonStartConversion.setEnabled(False)
 
     def start_conversion(self):
         # Disable all buttons to prevent user from doing other tasks
         self.buttonStartConversion.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
+        self.buttonDone.setEnabled(False)
 
-        # Instantiate and run a SliceConverter instance depending on whether the input file is .cls or .cli
-        if '.cls' in self.slice_file:
-            self.SC_instance = slice_converter.SliceConverter(cls_file=self.slice_file)
-        elif '.cli' in self.slice_file:
-            self.SC_instance = slice_converter.SliceConverter(cli_file=self.slice_file)
-
+        # Instantiate and run a SliceConverter instance
+        self.SC_instance = slice_converter.SliceConverter(self.slice_file)
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
         self.connect(self.SC_instance, SIGNAL("finished()"), self.start_conversion_finished)
@@ -395,6 +391,7 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
 
         self.buttonStartConversion.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
+        self.buttonDone.setEnabled(True)
 
     def update_status(self, string):
         self.labelProgress.setText(string)
@@ -481,11 +478,11 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         self.save_settings()
 
         # Instantiate and run a CameraCalibration instance
-        # self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
-        # self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
-        # self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        # self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
-        # self.CC_instance.start()
+        self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
+        self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
+        self.CC_instance.start()
 
     def calibration_finished(self):
         """Used to re-enable buttons after the calibration process is finished"""

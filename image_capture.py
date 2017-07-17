@@ -188,7 +188,7 @@ class ImageCapture(QThread):
 
         # Emit the read images back to main_window.py for processing
         self.emit(SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
-        # self.emit(SIGNAL("update_layer(QString, QString)"), str(self.start_layer), str(self.start_phase))
+        self.emit(SIGNAL("convert2contours(QString)"), '1')
 
     def acquire_image_single(self):
         """Acquire a single image from the camera"""

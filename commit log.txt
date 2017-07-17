@@ -1,3 +1,9 @@
+July 14
+- Spent time trying to figure out how the cls converter works
+- Modified it so it takes one input cls file and converts it
+- Modified the New Build dialog to allow user to select a specific calibration and slice file to work with (for simulation purposes)
+- Tested out various versions of simple slice files (boxes etc.)
+
 July 13
 - Added closeEvent methods to all the dialog windows so that the program knows what to do if the user presses the X button
 - Linked the settings to the config.json file

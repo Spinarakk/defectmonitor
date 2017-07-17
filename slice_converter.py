@@ -10,33 +10,61 @@ class SliceConverter(QThread):
     Currently only supports converting .cls files
     Future implementation will look to either shifting or adding .cli slice conversion
 
-    Currently checks if 'sample_converted.txt' exists in the slice folder
-    Otherwise it looks for and converts 'sample.cls'
+    Currently takes in a .cls or .cli file and parses it, saving it as a .txt file after conversion
     """
 
-    def __init__(self, cls_file=None, cli_file=None):
+    def __init__(self, file_name=None):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
+        # Save the files as local instance variables
+        self.slice_file_name = str(file_name)
 
-        self.cls_file = cls_file
-        self.cli_file = cli_file
-        # Create a dictionary to store the list of slice files (found in the slice raw folder) to be converted
-        self.slice_file_dictionary = dict()
+        self.slice_parsed = dict()
 
     def run(self):
+
         self.emit(SIGNAL("update_progress(QString)"), '0')
-        #self._parse_slice(self.slice_raw_list, self.slice_parsed_list)
-        if bool(self.cls_file) or bool(self.cli_file):
-            self.parse_cls(self.cls_file)
+
+        # Change the name of the slice file for checking if it already exists
+        self.slice_file_name = self.slice_file_name.replace('.cls', '_cls_processed.txt')
+        self.slice_file_name = self.slice_file_name.replace('.cli', '_cli_processed.txt')
+
+        # Checks if a converted slice file already exists in the form of XXX_processed.txt in the sent folder
+        # If so, load from it instead of converting again
+        if os.path.isfile(self.slice_file_name):
+            print 'FILE FOUND'
+            self.load_slice(self.slice_file_name)
+        else:
+            # Change the name of the slice file back to the original
+            self.slice_file_name.replace('_cls_processed.txt', '.cls')
+            self.slice_file_name.replace('_cli_processed.txt', '.cli')
+
+            # Checks if the sent file is of cls or cli format
+            if '.cls' in self.slice_file_name:
+                self.parse_cls(self.slice_file_name)
+            else:
+                self.parse_cli(self.slice_file_name)
+
+        self.emit(SIGNAL("update_progress(QString)"), '50')
+
+        slice_number = 1
+
+        while True:
+            try:
+                self.deconstruct_cls(slice_number)
+                slice_number += 1
+            except KeyError:
+                self.slice_parsed['Max Layer'] = slice_number - 1
+                break
 
         self.emit(SIGNAL("update_progress(QString)"), '100')
 
     def parse_cls(self, cls_file):
         """Parses and converts the .cls file into ASCII"""
 
-        #self.slice_file_dictionary[self.slice_file] = {'Format': self.slice_file[-3:]}
+        #self.slice_parsed[self.slice_file] = {'Format': self.slice_file[-3:]}
 
         # Open the slice file and read it as binary
         with open(cls_file, 'rb') as slice_file:
@@ -90,7 +118,7 @@ class SliceConverter(QThread):
                     temporary_list.append(bin(ord(element))[2:].zfill(8))
 
                 # Makes a copy of the list and saves it in pre_sorting at Layer X
-                pre_sorting['Layer %s.' % layer_count] = temporary_list[:]
+                pre_sorting['Layer %s' % str(layer_count).zfill(2)] = temporary_list[:]
                 layer_flag = False
 
             # If NEW_BORDER string encountered
@@ -99,42 +127,33 @@ class SliceConverter(QThread):
                     temporary_list.append(bin(ord(element))[2:].zfill(8))
 
                 if support_flag:
-                    pre_sorting['Layer %s. Support. Border.' % layer_count] = temporary_list[:]
+                    pre_sorting['Layer %s Support Border' % str(layer_count).zfill(2)] = temporary_list[:]
                     support_flag = False
                 else:
-                    pre_sorting['Layer %s. Border %s.' % (layer_count, border_count)] = temporary_list[:]
+                    pre_sorting['Layer %s Border %s' % (str(layer_count).zfill(2), str(border_count).zfill(2))] \
+                        = temporary_list[:]
 
                 border_flag = False
 
+            # The following flags currently don't do anything as these features are unnecessary to draw contours
+            # Only Layer and Border required it seems
             if offset_flag:
-                # Currently doesn't do anything as unneeded to draw contours
-                # Only Layer and Border required it seems
                 offset_flag = False
-            if core_flag:
-                core_flag = False
-            if island_flag:
-                island_flag = False
             if quadrant_flag:
                 quadrant_flag = False
+            if island_flag:
+                island_flag = False
             if skin_flag:
                 skin_flag = False
+            if core_flag:
+                core_flag = False
+
+            # If the current string has the following strings in it, flips the flag to parse the next string
             if 'NEW_LAYER' in string:
                 layer_flag = True
                 layer_count += 1
                 island_count = 0
                 border_count = 0
-                pre_sorting['Layer %s.' % layer_count] = []
-            if 'INC_OFFSETS' in string:
-                offset_flag = True
-            if 'NEW_QUADRANT' in string:
-                quadrant_flag = True
-            if 'NEW_SKIN' in string:
-                skin_flag = True
-            if 'NEW_ISLAND' in string:
-                island_flag = True
-                island_count += 1
-            if 'NEW_CORE' in string:
-                core_flag = True
             if 'SUPPORT' in string:
                 support_flag = True
             if 'NEW_BORDER' in string:
@@ -143,10 +162,23 @@ class SliceConverter(QThread):
                     pass
                 else:
                     border_count += 1
-                    pre_sorting['Layer %s. Border %s.' % (layer_count, border_count)] = []
+
+            # The following flags currently don't do anything as these features are unnecessary to draw contours
+            if 'INC_OFFSETS' in string:
+                offset_flag = True
+            if 'NEW_QUADRANT' in string:
+                quadrant_flag = True
+            if 'NEW_ISLAND' in string:
+                island_flag = True
+                island_count += 1
+            if 'NEW_SKIN' in string:
+                skin_flag = True
+            if 'NEW_CORE' in string:
+                core_flag = True
 
         for element in pre_sorting:
-            if 'Border 1.' in element:
+            # Uses the first border to calculate the number of vectors and the
+            if 'Border 01' in element:
                 # Joins together the elements with the spacer represented by '',
                 # [0:4] Returns the first four elements of the list
                 # [::-1] appears to reverse the list
@@ -183,13 +215,58 @@ class SliceConverter(QThread):
                         else (int(c + next(out1, ''), 2))) for c in out1]
 
             slice_output[element] = out[::-1]
+            self.slice_parsed['Parsed'] = slice_output
 
-        with open('slice/sample_processed.txt', 'w+') as output_write:
+        # Change the name of the slice file for export
+        self.slice_file_name.replace('.cls', '_cls_processed.txt')
+
+        # Save the converted slice file as a text document
+        with open(self.slice_file_name, 'w+') as output_write:
             for element in slice_output:
-                if 'Border 1.' in element or 'Border' not in element:
+                if 'Border 01' in element or 'Border' not in element:
                     output_write.write(element)
                     output_write.write(':')
                     output_list = slice_output[element]
                     output_list = ','.join(map(str, output_list))
                     output_write.write(output_list)
                     output_write.write('\n')
+
+    def deconstruct_cls(self, slice_number):
+
+        self.slice_parsed[slice_number] = {'Contours': self.slice_parsed['Parsed']['Layer %s Border 01' %
+                                            str(slice_number).zfill(2)], 'Polyline-Indices': []}
+        polygon_number = int(re.sub('\[+(\d+)\]+', r'\1', self.slice_parsed[slice_number]['Contours'][0]))
+        polygon_index = OrderedDict()
+        contour_end = None
+        for polygon in xrange(polygon_number):
+            # First iteration
+            if polygon == 0:
+                contour_start = 2
+                contour_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.slice_parsed[slice_number]['Contours'][1]))
+                contour_end = contour_start + contour_length
+            # Subsequent iterations
+            else:
+                contour_start = contour_end + 1
+                contour_length = 2 * int(re.sub('<+(\d+)>+', r'\1', self.slice_parsed[slice_number]['Contours']
+                [contour_end]))
+                contour_end = contour_start + contour_length
+
+            polygon_index[polygon] = (contour_start, contour_length, contour_end)
+
+        self.slice_parsed[slice_number]['Polyline-Indices'] = polygon_index
+        return
+
+    def parse_cli(self):
+        """Parses and converts the .cli file into ASCII"""
+        pass
+
+    def load_slice(self, file_name):
+        """Loads the converted slice file instead"""
+
+        slice_dictionary = dict()
+
+        with open(file_name, 'r') as slice_parsed:
+            for string in slice_parsed:
+                data = re.split(':|,', string.strip())
+                slice_dictionary[data[0]] = data[1:]
+            self.slice_parsed['Parsed'] = slice_dictionary
