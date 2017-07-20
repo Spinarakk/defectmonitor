@@ -50,7 +50,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.calibration_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Calibration Files (*.txt)')
 
         if self.calibration_file:
-            self.calibration_file.replace(self.working_directory + '/', '')
+            self.calibration_file = self.calibration_file.replace(self.working_directory + '/', '')
             self.lineCalibrationFile.setText(self.calibration_file)
             self.config['CalibrationFile'] = str(self.calibration_file)
 
@@ -60,7 +60,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         if self.slice_file:
-            self.slice_file.replace(self.working_directory + '/', '')
+            self.slice_file = self.slice_file.replace(self.working_directory + '/', '')
             self.lineSliceFile.setText(self.slice_file)
             self.config['SliceFile'] = str(self.slice_file)
 
@@ -68,6 +68,9 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         pass
 
     def accept(self):
+        """Executes when the OK button is clicked
+        Saves important selection options to the config.json file and closes the window
+        """
         self.config['BuildName'] = str(self.lineBuildName.text())
 
         if self.comboPlatform.currentIndex() == 0:
@@ -110,9 +113,6 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonCapture.clicked.connect(self.capture)
         self.buttonRun.clicked.connect(self.run)
         self.buttonStop.clicked.connect(self.stop)
-
-        # Toggles
-        self.checkApplyCorrection.toggled.connect(self.apply_correction)
 
         # These are flags to check if both the browse and check camera settings are successful
         self.camera_flag = False
@@ -172,7 +172,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def capture(self):
         """Captures and saves a single image to the save location"""
 
-        ## Enable or disable relevant UI elements to prevent concurrent processes
+        # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(False)
         self.buttonCameraSettings.setEnabled(False)
         self.buttonCapture.setEnabled(False)
@@ -260,9 +260,6 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def update_stopwatch(self, time):
         """Updates the stopwatch label at the bottom of the dialog window with the received time"""
         self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
-
-    def apply_correction(self):
-        pass
 
     def update_status(self, string):
         self.labelStatusBar.setText('Status: ' + string)
@@ -371,13 +368,14 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         if self.slice_file:
             self.lineSliceFile.setText(self.slice_file)
             self.buttonStartConversion.setEnabled(True)
-            self.update_status('Waiting to start process.')
+            self.update_status('Waiting to start conversion.')
 
     def start_conversion(self):
         # Disable all buttons to prevent user from doing other tasks
         self.buttonStartConversion.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
         self.buttonDone.setEnabled(False)
+        self.update_status('Conversion in progress...')
 
         # Instantiate and run a SliceConverter instance
         self.SC_instance = slice_converter.SliceConverter(self.slice_file)
@@ -392,9 +390,10 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.buttonStartConversion.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
         self.buttonDone.setEnabled(True)
+        self.update_status('Conversion completed successfully.')
 
     def update_status(self, string):
-        self.labelProgress.setText(string)
+        self.labelStatus.setText(string)
 
     def update_progress(self, percentage):
         self.progressBar.setValue(int(percentage))

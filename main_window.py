@@ -39,6 +39,23 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Get the current working directory
         self.working_directory = os.getcwd()
+        self.working_directory = self.working_directory.replace("\\", '/')
+
+        # Load configuration settings from config.json file
+        # If config.json is empty or missing, config_backup.json is read and dumped as config.json
+        try:
+            with open('config.json') as config:
+                self.config = json.load(config)
+        except:
+            with open('config_backup.json') as config:
+                self.config = json.load(config)
+            with open('config.json', 'w+') as config:
+                json.dump(self.config, config)
+
+        # Save the current working directory to the config.json file so later methods can grab it
+        self.config['WorkingDirectory'] = self.working_directory
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Menubar -> File
@@ -68,6 +85,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonStop.clicked.connect(self.stop)
         self.buttonSet.clicked.connect(self.set_layer)
         self.buttonPhase.clicked.connect(self.toggle_phase)
+        self.buttonTest.clicked.connect(self.test_method)
         self.buttonImageConverter.clicked.connect(self.image_converter)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
         self.buttonImageCapture.clicked.connect(self.image_capture)
@@ -105,22 +123,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.widgetDisplay.blockSignals(True)
         self.widgetDisplay.currentChanged.connect(self.tab_change)
 
-        # Load configuration settings from config.json file
-        # If config.json is empty or missing, config_backup.json is read and dumped as config.json
-        try:
-            with open('config.json') as config:
-                self.config = json.load(config)
-        except:
-            with open('config_backup.json') as config:
-                self.config = json.load(config)
-            with open('config.json', 'w+') as config:
-                json.dump(self.config, config)
-
-        # Store config settings as respective variables
-        self.build_name = self.config['BuildName']
-        self.platform_dimensions = self.config['PlatformDimension']
-        self.boundary_offset = self.config['BoundaryOffset']
-
         # Generate a timestamp for folder labelling purposes
         current_time = datetime.now()
 
@@ -144,11 +146,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         os.mkdir('%s\single' % self.image_folder)
         os.mkdir('%s\processed' % self.image_folder)
 
-        # Set initial current layer
-        self.layer = 1
-
         # TODO Temporary Variables (To investigate what they do)
-        self.item_dictionary = dict()
+        self.part_contours = dict()
         self.initial_flag = True
 
         # Check if resuming from scan or coat phase
@@ -176,6 +175,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             # Store config settings as respective variables and update appropriate UI elements
             self.build_name = self.config['BuildName']
             self.platform_dimensions = self.config['PlatformDimension']
+            self.boundary_offset = self.config['BoundaryOffset']
             self.buttonInitialize.setEnabled(True)
             self.setWindowTitle('Defect Monitor - Build ' + str(self.build_name))
             self.update_status('New build created. Click Initialize to begin processing the images.')
@@ -479,18 +479,21 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             image_raw = cv2.imread('%s' % image_name)
 
             # Apply the image processing techniques in order
-            image_raw = image_processing.ImageCorrection(None, None, None).distortion_fix(image_raw)
+            image_undistort = image_processing.ImageCorrection(None, None, None).distortion_fix(image_raw)
             self.update_progress(20)
-            image_raw = image_processing.ImageCorrection(None, None, None).perspective_fix(image_raw)
+            image_perspective = image_processing.ImageCorrection(None, None, None).perspective_fix(image_undistort)
             self.update_progress(40)
-            image_raw = image_processing.ImageCorrection(None, None, None).crop(image_raw)
+            image_crop = image_processing.ImageCorrection(None, None, None).crop(image_perspective)
             self.update_progress(60)
-            image_processed = image_processing.ImageCorrection(None, None, None).clahe(image_raw)
+            image_clahe = image_processing.ImageCorrection(None, None, None).clahe(image_crop)
             self.update_progress(80)
 
-            # Save the processed image in the same folder after removing .png from the file name
+            # Save the cropped image and CLAHE applied image in the same folder after removing .png from the file name
             image_name.replace('.png', '')
-            cv2.imwrite('%s_processed.png' % image_name, image_processed)
+            cv2.imwrite('%s_undistort.png' % image_name, image_undistort)
+            cv2.imwrite('%s_perspective.png' % image_name, image_perspective)
+            cv2.imwrite('%s_crop.png' % image_name, image_crop)
+            cv2.imwrite('%s_clahe.png' % image_name, image_clahe)
 
             self.update_progress(100)
             self.update_status('Image successfully processed.')
@@ -534,8 +537,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.image_overlay = cv2.cvtColor(self.image_overlay, cv2.COLOR_BGR2RGB)
 
             # Draws the contours
-            for item in self.item_dictionary:
-                cv2.drawContours(self.image_overlay, self.item_dictionary['PartData']['Contours'],
+            for item in self.part_contours:
+                cv2.drawContours(self.image_overlay, self.part_contours['PartData']['Contours'],
                                  -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
 
             self.update_status('Displaying slice outlines.')
@@ -594,80 +597,81 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def convert2contours(self, layer):
         """Convert the vectors from the parsed slice file into contours which can then be drawn"""
 
+        # Initialize some variables
         min_x = None
         min_y = None
+        part_contours = None
+        hierarchy = None
 
         # Save the contours and polyline-indices of the received layer
-        self.layer = int(layer)
-        contours = self.slice_parsed[self.layer]['Contours']
-        polyline = self.slice_parsed[self.layer]['Polyline-Indices']
+        layer = int(layer)
+        contours = self.slice_parsed[layer]['Contours']
+        polyline = self.slice_parsed[layer]['Polyline-Indices']
 
         # if negative values exist (part is set up in quadrant other than top-right and buildplate centre is (0,0))
         # translate part to positive
 
         # Finds minimum x and y values over all contours in given part
-        for p in xrange(len(polyline)):
+        for element in xrange(len(polyline)):
             if min_x is None:
-                min_x = np.array(contours[polyline[p][0]:polyline[p][2]:2]).astype(np.int32).min()
+                min_x = np.array(contours[polyline[element][0]:polyline[element][2]:2]).astype(np.int32).min()
             else:
-                pot_min_x = np.array(contours[polyline[p][0]:polyline[p][2]:2]).astype(np.int32).min()
-                if pot_min_x < min_x:
-                    min_x = pot_min_x
+                min_x_temp = np.array(contours[polyline[element][0]:polyline[element][2]:2]).astype(np.int32).min()
+                if min_x_temp < min_x:
+                    min_x = min_x_temp
             if min_y is None:
-                min_y = np.array(contours[polyline[p][0] + 1:polyline[p][2]:2]).astype(np.int32).min()
+                min_y = np.array(contours[polyline[element][0] + 1:polyline[element][2]:2]).astype(np.int32).min()
             else:
-                pot_min_y = np.array(contours[polyline[p][0] + 1:polyline[p][2]:2]).astype(
-                    np.int32).min()
-                if pot_min_y < min_y:
-                    min_y = pot_min_y
+                min_y_temp = np.array(contours[polyline[element][0] + 1:polyline[element][2]:2]).astype(np.int32).min()
+                if min_y_temp < min_y:
+                    min_y = min_y_temp
 
-        self.adj_dict = self.slice_parsed
+        slice_parsed = self.slice_parsed
 
-        # image resizing factor - relates image pixels and part mm
-        # (assumes image is cropped exactly at top and bottom edge of platform)
-        scale_height = self.image_scan_DPC.shape[0]
-        platform_height = self.platform_dimensions[1]
-        self.scale_factor = scale_height / platform_height
+        # Image resizing scale factor relating image pixels and part mm
+        # Found by dividing the cropped image height by the known platform height
+        self.scale_factor = self.image_scan_DPC.shape[0] / self.platform_dimensions[1]
 
-        self.boundary_offset = self.config['BoundaryOffset']
+        # Create a blank image the same size and type as the cropped image
+        image_blank = np.zeros(self.image_scan_DPC.shape).astype(np.uint8)
+        image_contours = image_blank.copy()
 
-        blank_image = np.zeros(self.image_scan_DPC.shape).astype(np.uint8)
-        output_image = blank_image.copy()
-        # for each vector in the set of vectors, find the area enclosed by the resultant contours
-        # find the hierarchy of each contour, subtract area if it is an internal contour (i.e. a hole)
-        for p in xrange(len(polyline)):
-            # gets contours in scaled coordinates (scale_factor * part mm)
-            self.adj_dict[self.layer]['Contours'][polyline[p][0]:polyline[p][2]:2] = [
-                np.float32(
-                    self.scale_factor * (int(x) / 10000. + self.platform_dimensions[0] / 2) +
-                    self.boundary_offset[
-                        0])
-                for x
-                in
-                self.adj_dict[self.layer]['Contours'][polyline[p][0]:polyline[p][2]:2]]
-            self.adj_dict[self.layer]['Contours'][(polyline[p][0] + 1):polyline[p][2]:2] = [
-                np.float32(
-                    self.scale_factor * (-int(y) / 10000. + self.platform_dimensions[1] / 2) +
-                    self.boundary_offset[
-                        1])
-                for
-                y in
-                self.adj_dict[self.layer]['Contours'][polyline[p][0] + 1:polyline[p][2]:2]]
+        # For each vector in the set of vectors, find the area enclosed by the resultant contours
+        # Find the hierarchy of each contour, subtract area if it is an internal contour (i.e. a hole)
+        for element in xrange(len(polyline)):
 
-            this_contour = np.array(
-                self.adj_dict[self.layer]['Contours'][polyline[p][0]:polyline[p][2]]).reshape(
-                1, (
-                    polyline[p][1]) / 2, 2)
-            this_contour = this_contour.astype(np.int32)
-            poly_image = blank_image.copy()
-            cv2.fillPoly(poly_image, this_contour, (255, 255, 255))  # draw filled poly on blank image
-            # if contour overlaps other poly, it is a hole and is subtracted
-            output_image = cv2.bitwise_xor(output_image, poly_image)
-            # find vectorised contours and put into 2 level hierarchy (-1 for ext, parent-id for int)
-            output_image = cv2.cvtColor(output_image, cv2.COLOR_BGR2GRAY)
-            _, part_contours, hierarchy = cv2.findContours(output_image.copy(), cv2.RETR_CCOMP,
+            # Get contours in scaled coordinates (scale_factor * part mm)
+            slice_parsed[layer]['Contours'][polyline[element][0]:polyline[element][2]:2] = [
+                np.float32(self.scale_factor * (int(x) / 10000. + self.platform_dimensions[0] / 2) + self.boundary_offset[0])
+                for x in slice_parsed[layer]['Contours'][polyline[element][0]:polyline[element][2]:2]]
+
+            slice_parsed[layer]['Contours'][(polyline[element][0] + 1):polyline[element][2]:2] = [
+                np.float32(self.scale_factor * (-int(y) / 10000. + self.platform_dimensions[1] / 2) + self.boundary_offset[1])
+                for y in slice_parsed[layer]['Contours'][polyline[element][0] + 1:polyline[element][2]:2]]
+
+            current_contours = np.array(slice_parsed[layer]['Contours'][polyline[element][0]:polyline[element][2]])\
+                .reshape(1, (polyline[element][1]) / 2, 2)
+
+            # Convert the array to int32
+            current_contours = current_contours.astype(np.int32)
+
+            # Draw filled polygons on a blank image
+            cv2.fillPoly(image_blank, current_contours, (255, 255, 255))
+
+            cv2.imwrite('poly.png', image_blank)
+
+            # If contour overlaps other poly, it is a hole and is subtracted
+            image_contours = cv2.bitwise_xor(image_contours, image_blank)
+            image_contours = cv2.cvtColor(image_contours, cv2.COLOR_BGR2GRAY)
+
+            cv2.imwrite('contours.png', image_contours)
+
+            # Find and output vectorized contours and their respective hierarchies
+            _, part_contours, hierarchy = cv2.findContours(image_contours.copy(), cv2.RETR_CCOMP,
                                                            cv2.CHAIN_APPROX_SIMPLE)
-        self.item_dictionary = {'PartTopleft': (min_x, min_y), 'PartData': {'Contours': part_contours,
+            
+        # Save contours to the dictionary
+        self.part_contours = {'PartTopleft': (min_x, min_y), 'PartData': {'Contours': part_contours,
                                                                             'Hierarchy': hierarchy}}
 
         # Save configuration settings to config.json file
@@ -784,7 +788,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         q_image = QtGui.QImage(image.data, width, height, 3 * width, QtGui.QImage.Format_RGB888)
         q_pixmap = QtGui.QPixmap.fromImage(q_image)
 
-        return q_pixmap.scaled(987, 605, aspectRatioMode=Qt.KeepAspectRatio)
+        return q_pixmap.scaled(self.labelDisplaySE.frameSize().width(), self.labelDisplaySE.frameSize().height(),
+                               aspectRatioMode=Qt.KeepAspectRatio)
 
     def tab_change(self, tab_index):
         """Check which tab is currently being displayed on widgetDisplay to enable a button"""
@@ -804,6 +809,12 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
         self.progressBar.setValue(int(percentage))
 
+    def test_method(self):
+        label_size = self.labelDisplaySE.frameGeometry().width()
+
+        print label_size
+        print label_size.width
+
     # CLEANUP
 
     def closeEvent(self, event):
@@ -816,8 +827,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Reset the following values back to 'default' values
         self.config['BuildName'] = 'Default'
-        self.config['CurrentLayer'] = 1
-        self.config['CurrentPhase'] = 0
+        self.config['CurrentLayer'] = 0.5
+        self.config['CurrentPhase'] = 1
         self.config['CaptureCount'] = 1
 
         # Save configuration settings to config.json file

@@ -73,7 +73,7 @@ class Calibration(QThread):
 
         c_mult = image.shape[1] / 10 / self.ratio
         original_image = image.copy()
-        res = (original_image.shape[1], original_image.shape[0])
+        original_resolution = (original_image.shape[1], original_image.shape[0])
         new_res = (image.shape[1] / self.ratio, image.shape[0] / self.ratio)
 
         image = cv2.resize(image, new_res, interpolation=cv2.INTER_AREA)
@@ -97,19 +97,23 @@ class Calibration(QThread):
 
 
         cv2.cornerSubPix(image, det_corners, (10, 10), (-1, -1), spr_criteria)
+
         det_corners = self.ratio * det_corners.reshape(1, self.width * self.height, 2)
-        ret, intr_c, intr_d, r_vec, t_vec = cv2.calibrateCamera(world_pts, det_corners, res, None, None,
-                                                                flags=cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_FIX_K4
-                                                                | cv2.CALIB_FIX_K5 | cv2.CALIB_FIX_K3)
 
 
-        intr_d[0][1:] = 0
-        intr_d[0][0] *= 0.9
+        return_value, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = \
+            cv2.calibrateCamera(world_pts, det_corners, original_resolution, None, None, flags=cv2.CALIB_FIX_PRINCIPAL_POINT |
+                                cv2.CALIB_FIX_K4| cv2.CALIB_FIX_K5 | cv2.CALIB_FIX_K3)
+
+
+        distortion_coefficients[0][1:] = 0
+        distortion_coefficients[0][0] *= 0.9
 
 
 
-        points_source = cv2.undistortPoints(det_corners, intr_c, intr_d, P=intr_c)
-        flat_image = cv2.undistort(original_image, intr_c, intr_d)
+        points_source = cv2.undistortPoints(det_corners, camera_matrix, distortion_coefficients, P=camera_matrix)
+
+        flat_image = cv2.undistort(original_image, camera_matrix, distortion_coefficients)
 
 
         points_destination = points_destination.reshape(1, self.width * self.height, 3).astype(np.float32)
@@ -122,7 +126,7 @@ class Calibration(QThread):
 
 
         tfm_pts = cv2.perspectiveTransform(
-            np.array([[(0, 0)], [(0, res[1])], [(res[0], res[1])], [(res[0], res[1])]], dtype=float), homography_matrix)
+            np.array([[(0, 0)], [(0, original_resolution[1])], [(original_resolution[0], original_resolution[1])], [(original_resolution[0], original_resolution[1])]], dtype=float), homography_matrix)
         offset = np.array([[1, 0, -tfm_pts[:, 0][:, 0].min()], [0, 1, -tfm_pts[:, 0][:, 1].min()],
                            [0, 0, 1]])  # establish translation offset matrix
         homography_matrix = np.dot(offset, homography_matrix)  # Modify homography with translation matrix
@@ -130,7 +134,7 @@ class Calibration(QThread):
         out_w = int(tfm_pts[:, 0][:, 0].max() - tfm_pts[:, 0][:, 0].min())
         outres = np.array([(out_w, out_h)])
 
-        calibrate_params = [homography_matrix, intr_c, intr_d, outres]
+        calibrate_params = [homography_matrix, camera_matrix, distortion_coefficients, outres]
 
 
 

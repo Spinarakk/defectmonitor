@@ -30,7 +30,7 @@ class Stopwatch(QThread):
             # Convert the counter into hours seconds and minutes
             self.counter += 1
             self.seconds = self.counter % 60
-            self.minutes = int(self.counter / 60)
+            self.minutes = int((self.counter % 3600) / 60)
             self.hours = int(self.counter / 3600)
 
     def stop(self):

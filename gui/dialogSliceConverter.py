@@ -53,10 +53,10 @@ class Ui_dialogSliceConverter(object):
         self.progressBar.setTextVisible(True)
         self.progressBar.setInvertedAppearance(False)
         self.progressBar.setObjectName(_fromUtf8("progressBar"))
-        self.labelProgress = QtGui.QLabel(dialogSliceConverter)
-        self.labelProgress.setGeometry(QtCore.QRect(10, 104, 361, 28))
-        self.labelProgress.setAlignment(QtCore.Qt.AlignCenter)
-        self.labelProgress.setObjectName(_fromUtf8("labelProgress"))
+        self.labelStatus = QtGui.QLabel(dialogSliceConverter)
+        self.labelStatus.setGeometry(QtCore.QRect(10, 104, 361, 28))
+        self.labelStatus.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelStatus.setObjectName(_fromUtf8("labelStatus"))
         self.lineSliceFile = QtGui.QLineEdit(dialogSliceConverter)
         self.lineSliceFile.setGeometry(QtCore.QRect(10, 70, 261, 26))
         self.lineSliceFile.setReadOnly(True)
@@ -72,6 +72,6 @@ class Ui_dialogSliceConverter(object):
         self.buttonBrowse.setText(_translate("dialogSliceConverter", "Browse...", None))
         self.buttonStartConversion.setText(_translate("dialogSliceConverter", "Start Conversion", None))
         self.buttonDone.setText(_translate("dialogSliceConverter", "Done", None))
-        self.labelProgress.setText(_translate("dialogSliceConverter", "Waiting to start process.", None))
+        self.labelStatus.setText(_translate("dialogSliceConverter", "Please select a .cls or .cli file to convert.", None))
 
 import icons_rc

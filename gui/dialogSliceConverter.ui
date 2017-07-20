@@ -112,7 +112,7 @@
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QLabel" name="labelProgress">
+  <widget class="QLabel" name="labelStatus">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -122,7 +122,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Waiting to start process.</string>
+    <string>Please select a .cls or .cli file to convert.</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>

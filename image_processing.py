@@ -129,7 +129,9 @@ class ImageCorrection(QThread):
         """
 
         # Algorithm requires the image to be in grayscale format to function
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # This line checks if the image is already grayscale or in bgr
+        if (len(image.shape)==3):
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         clahe_filter = cv2.createCLAHE(8.0, (64, 64))
         image = clahe_filter.apply(image)
         image_E = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)

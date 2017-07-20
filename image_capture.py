@@ -202,13 +202,13 @@ class ImageCapture(QThread):
         # Save the image to the selected save folder
         cv2.imwrite(image_name, image)
 
-        # Emit the file name back to the dialog, which in turn emits it back to the MainWindow to display the image
-        self.emit(SIGNAL("display_image(QString)"), str(image_name))
-
         # Apply image correction if the Apply Correction checkbox is checked
         if self.correction_flag:
             self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
             self.correction(image, count=self.config['CaptureCount'])
+        else:
+            # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
+            self.emit(SIGNAL("display_image(QString)"), str(image_name))
 
         # Update the capture counter which will be saved to the config.json file
         self.config['CaptureCount'] += 1
@@ -239,13 +239,13 @@ class ImageCapture(QThread):
             # Save the image to the selected save folder in the respective scan or coat folder
             cv2.imwrite(image_name, image)
 
-            # Emit the file name back to the dialog, which in turn emits it back to the MainWindow to display the image
-            self.emit(SIGNAL("display_image(QString)"), image_name)
-
             # Apply image correction if the Apply Correction checkbox is checked
             if self.correction_flag:
                 self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
                 self.correction(image, phase=self.current_phase, layer=self.current_layer)
+            else:
+                # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
+                self.emit(SIGNAL("display_image(QString)"), image_name)
 
             # Loop used to disallow triggering for additional images for however many seconds
             # Also displays remaining timeout on the status bar
@@ -273,10 +273,17 @@ class ImageCapture(QThread):
 
         # Save the processed image in the processed folder with an appended file name
         if bool(count):
-            cv2.imwrite(str(self.save_folder + '/processed/image_capture_' + str(count) + 'processed.png'), image)
+            # Create a file name for the corrected image
+            image_name = str(self.save_folder + '/processed/image_capture_' + str(count) + '_processed.png')
+            cv2.imwrite(image_name, image)
+            self.emit(SIGNAL("display_image(QString)"), image_name)
         else:
-            cv2.imwrite(str(self.save_folder + '/processed/image_' + self.phases[phase] + '_' + str(int(layer)) +
-                        'processed.png'), image)
+            image_name = str(self.save_folder + '/processed/image_' + self.phases[phase] + '_' + str(int(layer)) +
+                        '_processed.png')
+            cv2.imwrite(image_name, image)
+            self.emit(SIGNAL("display_image(QString)"), image_name)
+
+        self.emit(SIGNAL("display_image(QString)"), image_name)
 
     def stop(self):
         """Method that happens if the Stop button is pressed, which terminates the QThread"""

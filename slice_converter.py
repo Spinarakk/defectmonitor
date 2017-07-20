@@ -20,6 +20,7 @@ class SliceConverter(QThread):
 
         # Save the files as local instance variables
         self.slice_file_name = str(file_name)
+        self.slice_file_name_processed = str(file_name)
 
         self.slice_parsed = dict()
 
@@ -28,19 +29,15 @@ class SliceConverter(QThread):
         self.emit(SIGNAL("update_progress(QString)"), '0')
 
         # Change the name of the slice file for checking if it already exists
-        self.slice_file_name = self.slice_file_name.replace('.cls', '_cls_processed.txt')
-        self.slice_file_name = self.slice_file_name.replace('.cli', '_cli_processed.txt')
+        self.slice_file_name_processed = self.slice_file_name_processed.replace('.cls', '_cls_processed.txt')
+        self.slice_file_name_processed = self.slice_file_name_processed.replace('.cli', '_cli_processed.txt')
 
         # Checks if a converted slice file already exists in the form of XXX_processed.txt in the sent folder
         # If so, load from it instead of converting again
-        if os.path.isfile(self.slice_file_name):
-            print 'FILE FOUND'
-            self.load_slice(self.slice_file_name)
+        if os.path.isfile(self.slice_file_name_processed):
+            self.emit(SIGNAL("update_status(QString)"), 'Processed file found. Loading from disk...')
+            self.load_slice(self.slice_file_name_processed)
         else:
-            # Change the name of the slice file back to the original
-            self.slice_file_name.replace('_cls_processed.txt', '.cls')
-            self.slice_file_name.replace('_cli_processed.txt', '.cli')
-
             # Checks if the sent file is of cls or cli format
             if '.cls' in self.slice_file_name:
                 self.parse_cls(self.slice_file_name)
@@ -68,21 +65,21 @@ class SliceConverter(QThread):
 
         # Open the slice file and read it as binary
         with open(cls_file, 'rb') as slice_file:
-            bin_slice = slice_file.read()
+            slice_unicode = slice_file.read()
 
-        # Splits the string bin_slice by the occurrences of the aforelisted patterns into a list
+        # Splits the string slice_unicode by the occurrences of the aforelisted patterns into a list
         # Parentheses around each word means to also return that word in the resulting list
-        bin_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
-                             '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', bin_slice)
+        slice_unicode_split = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
+                             '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', slice_unicode)
 
         # Remove any parts of the list that return a NoneType
-        bin_split = filter(None, bin_split)
+        slice_unicode_split = filter(None, slice_unicode_split)
 
         # Remove the first line of the list
-        bin_split = bin_split[1:]
+        slice_unicode_split = slice_unicode_split[1:]
 
         # Create dictionary subclasses that remember the order entries were added
-        pre_sorting = OrderedDict()
+        slice_binary = OrderedDict()
         slice_output = OrderedDict()
 
         out = []
@@ -103,7 +100,7 @@ class SliceConverter(QThread):
         border_count = 0
 
         # Parsing of the slice file to human-readable format
-        for index, string in enumerate(bin_split):
+        for index, string in enumerate(slice_unicode_split):
             # Initialize a temporary list to use
             temporary_list = []
 
@@ -117,8 +114,8 @@ class SliceConverter(QThread):
                     # zfill(8) adds up to 8 zeros to the left of the string
                     temporary_list.append(bin(ord(element))[2:].zfill(8))
 
-                # Makes a copy of the list and saves it in pre_sorting at Layer X
-                pre_sorting['Layer %s' % str(layer_count).zfill(2)] = temporary_list[:]
+                # Makes a copy of the list and saves it in slice_binary at Layer X
+                slice_binary['Layer %s' % str(layer_count).zfill(2)] = temporary_list[:]
                 layer_flag = False
 
             # If NEW_BORDER string encountered
@@ -127,10 +124,10 @@ class SliceConverter(QThread):
                     temporary_list.append(bin(ord(element))[2:].zfill(8))
 
                 if support_flag:
-                    pre_sorting['Layer %s Support Border' % str(layer_count).zfill(2)] = temporary_list[:]
+                    slice_binary['Layer %s Support Border' % str(layer_count).zfill(2)] = temporary_list[:]
                     support_flag = False
                 else:
-                    pre_sorting['Layer %s Border %s' % (str(layer_count).zfill(2), str(border_count).zfill(2))] \
+                    slice_binary['Layer %s Border %s' % (str(layer_count).zfill(2), str(border_count).zfill(2))] \
                         = temporary_list[:]
 
                 border_flag = False
@@ -176,60 +173,57 @@ class SliceConverter(QThread):
             if 'NEW_CORE' in string:
                 core_flag = True
 
-        for element in pre_sorting:
+        for element in slice_binary:
             # Uses the first border to calculate the number of vectors and the
             if 'Border 01' in element:
                 # Joins together the elements with the spacer represented by '',
                 # [0:4] Returns the first four elements of the list
                 # [::-1] appears to reverse the list
                 # Converts the integer from the given base (2) into base 10
-                test_value = int(''.join(pre_sorting[element][0:4][::-1]), 2)
-                string = pre_sorting[element]
-                test = ['[%s]' % test_value]
+                vector_length = int(''.join(slice_binary[element][0:4][::-1]), 2)
+                string = slice_binary[element]
+                output_string = ['[%s]' % vector_length]
                 try:
-                    number_points = int(''.join(string[5:9][::-1]), 2)
+                    vector_amount = int(''.join(string[5:9][::-1]), 2)
                     index = 9
                     while index < len(string):
-                        endx = index + number_points * 8
-                        test.append('<%s>' % number_points)
+                        endx = index + vector_amount * 8
+                        output_string.append('<%s>' % vector_amount)
                         while index < endx:
                             next_point = ''.join(string[index:index + 4][::-1])
-                            test.append(str(int(next_point, 2) if (int(next_point, 2) <= 2147483647)
+                            output_string.append(str(int(next_point, 2) if (int(next_point, 2) <= 2147483647)
                                             else (int(next_point, 2) - 4294967295)))
                             index += 4
                         index += 1
                         try:
-                            number_points = int(''.join(string[index:index + 4][::-1]), 2)
+                            vector_amount = int(''.join(string[index:index + 4][::-1]), 2)
                         except ValueError:
                             break
 
                         index += 4
-                    out = test[::-1]
+                    output_string = output_string[::-1]
                 except ValueError:
                     pass
 
             else:
-                string = iter(pre_sorting[element][::-1])
-                out1 = iter([c + next(string, '') for c in string])
-                out = [((int(c + next(out1, ''), 2)) - 4294967295 if int(c[0]) == 1
-                        else (int(c + next(out1, ''), 2))) for c in out1]
+                string = iter(slice_binary[element][::-1])
+                output = iter([c + next(string, '') for c in string])
+                output_string = [((int(c + next(output, ''), 2)) - 4294967295 if int(c[0]) == 1
+                        else (int(c + next(output, ''), 2))) for c in output]
 
-            slice_output[element] = out[::-1]
+            slice_output[element] = output_string[::-1]
             self.slice_parsed['Parsed'] = slice_output
 
-        # Change the name of the slice file for export
-        self.slice_file_name.replace('.cls', '_cls_processed.txt')
-
         # Save the converted slice file as a text document
-        with open(self.slice_file_name, 'w+') as output_write:
+        with open(self.slice_file_name_processed, 'w+') as slice_file:
             for element in slice_output:
                 if 'Border 01' in element or 'Border' not in element:
-                    output_write.write(element)
-                    output_write.write(':')
-                    output_list = slice_output[element]
-                    output_list = ','.join(map(str, output_list))
-                    output_write.write(output_list)
-                    output_write.write('\n')
+                    slice_file.write(element)
+                    slice_file.write(':')
+                    slice_file_map = slice_output[element]
+                    slice_file_map = ','.join(map(str, slice_file_map))
+                    slice_file.write(slice_file_map)
+                    slice_file.write('\n')
 
     def deconstruct_cls(self, slice_number):
 

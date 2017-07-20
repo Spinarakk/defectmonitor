@@ -1,3 +1,19 @@
+July 18
+- Tested and tweaked the program on the printing machine
+- Captured a bunch of images to start testing OpenCV code on
+- Left the machine and program running for a couple of hours to see how reliable the program is
+- Fixed a couple issues with replacing strings and saving the current working directory
+- Renamed a lot of variables to make more sense in what they contain
+- Fixed an issue with the clahe if a grayscale image is inputted rather an a bgr image
+- Fixed an issue with the working directory using \\ and replaced it with /
+- Fixed an issue with replace strings not working as intended
+- Fixed an issue with the stopwatch minutes not lopping after 60
+
+July 17
+- Put the desktop back into the printing machine
+- Fixed a lot of the slice converter code to work for only one slice file
+- Went through and comprehended more code
+
 July 14
 - Spent time trying to figure out how the cls converter works
 - Modified it so it takes one input cls file and converts it
