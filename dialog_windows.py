@@ -430,6 +430,8 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         self.spinHeight.setValue(int(self.config['CalibrationHeight']))
         self.spinRatio.setValue(int(self.config['DownscalingRatio']))
 
+
+
     def browse(self):
 
         # Empty the image lists
@@ -450,7 +452,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
             # Search for images containing the word calibration_image in the folder
             for image_name in self.image_list:
-                if 'calibration_image' in str(image_name):
+                if 'image_calibration' in str(image_name):
                     self.image_list_valid.append(str(image_name))
 
             if not self.image_list_valid:
@@ -478,10 +480,20 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
         # Instantiate and run a CameraCalibration instance
         self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
+        self.connect(self.CC_instance, SIGNAL("change_colour(QString, QString)"), self.change_colour)
         self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
         self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
         self.CC_instance.start()
+
+    def change_colour(self, index, valid):
+        """Changes the background colour of the received item in the listImages box
+        Changes to green if image is valid, red if image is invalid for calibration
+        """
+        if int(valid):
+            self.listImages.item(int(index)).setBackground(QtGui.QColor('green'))
+        else:
+            self.listImages.item(int(index)).setBackground(QtGui.QColor('red'))
 
     def calibration_finished(self):
         """Used to re-enable buttons after the calibration process is finished"""

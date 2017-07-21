@@ -7,8 +7,20 @@
     <x>0</x>
     <y>0</y>
     <width>411</width>
-    <height>476</height>
+    <height>510</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>411</width>
+    <height>510</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>411</width>
+    <height>510</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Camera Calibration</string>
@@ -30,7 +42,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>To calibrate the camera, please select the folder containing your checkboard images. To determine the most accurate camera parameters, please provide at least 10 images. Calibration images must contain the word &quot;calibration_image&quot; in the file name, and will be displayed below.</string>
+    <string>To calibrate the camera, please select the folder containing your checkboard images. To determine the most accurate camera parameters, please provide at least 10 images. Calibration images must contain the word &quot;image_calibration&quot; in the file name, and will be displayed below.</string>
    </property>
    <property name="scaledContents">
     <bool>false</bool>
@@ -59,7 +71,7 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>404</y>
+     <y>438</y>
      <width>191</width>
      <height>28</height>
     </rect>
@@ -72,7 +84,7 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>438</y>
+     <y>472</y>
      <width>191</width>
      <height>28</height>
     </rect>
@@ -177,13 +189,12 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>8</pointsize>
      <weight>75</weight>
      <bold>true</bold>
     </font>
    </property>
    <property name="toolTip">
-    <string>Sets the number of squares the width of the checkerboard has.</string>
+    <string>Sets the number of square corners the width of the checkerboard has.</string>
    </property>
    <property name="text">
     <string>Checkerboard Width</string>
@@ -200,13 +211,12 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>8</pointsize>
      <weight>75</weight>
      <bold>true</bold>
     </font>
    </property>
    <property name="toolTip">
-    <string>Sets the number of squares the height of the checkerboard has.</string>
+    <string>Sets the number of square corners the height of the checkerboard has.</string>
    </property>
    <property name="text">
     <string>Checkerboard Height</string>
@@ -223,13 +233,12 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>8</pointsize>
      <weight>75</weight>
      <bold>true</bold>
     </font>
    </property>
    <property name="toolTip">
-    <string>Sets the downscaling ratio to use to speed up calibration but reduce accuracy.</string>
+    <string>Sets the downscaling ratio to use to speed up calibration.</string>
    </property>
    <property name="text">
     <string>Downscaling Ratio</string>
@@ -289,10 +298,10 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string>1 - 4</string>
+    <string>2 - 4</string>
    </property>
    <property name="minimum">
-    <number>1</number>
+    <number>2</number>
    </property>
    <property name="maximum">
     <number>4</number>
@@ -312,6 +321,41 @@
    </property>
    <property name="readOnly">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkApply">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>472</y>
+     <width>191</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Apply to Sample Image</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelRMS">
+   <property name="geometry">
+    <rect>
+     <x>212</x>
+     <y>404</y>
+     <width>191</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>RMS Value:</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
    </property>
   </widget>
  </widget>

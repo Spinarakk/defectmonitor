@@ -1,3 +1,16 @@
+July 21
+- Fixed a KeyError with the maximum number of layers
+- Found some major issues
+	- .cls files larger than 30 mb appears to cause memory errors
+	- Drawing more than one contour doesn't appear to work properly
+- Updated the Readme with an installation guide to run the program on a fresh machine
+- Started implementing the camera calibration code into the main program
+
+July 20
+- Went over the calibration code to see how it works
+- Current calibration doesn't produce a straight edge of the platform
+- Tried various methods and took lots of pictures of a checkboard image to try and get more accurate matrix and coefficients
+
 July 18
 - Tested and tweaked the program on the printing machine
 - Captured a bunch of images to start testing OpenCV code on

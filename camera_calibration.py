@@ -27,28 +27,37 @@ class Calibration(QThread):
         self.ratio = self.config['DownscalingRatio']
         self.width = self.config['CalibrationWidth']
         self.height = self.config['CalibrationHeight']
+        self.working_directory = self.config['WorkingDirectory']
 
-        # Save the received argument as an instance variable
         self.calibration_folder = calibration_folder
 
-        print self.calibration_folder
+        # Initialize a few lists to store pertinent data
+        self.images_calibration = []
+        self.images_valid = []
+        self.image_points = []
+        self.object_points = []
 
-        self.calibration_images = []
+        # Create two folders inside the received calibration folder to store chessboard corner and undistorted images
+        try:
+            os.mkdir('%s/corners' % self.calibration_folder)
+        except WindowsError:
+            pass
 
-        # Load the calibration images
-        for calibration_image in os.listdir(self.calibration_folder):
-            if 'calibration_image' in str(calibration_image):
-                self.calibration_images.append(str(self.calibration_folder + '\\' + calibration_image))
+        try:
+            os.mkdir('%s/undistorted' % self.calibration_folder)
+        except WindowsError:
+            pass
 
-        print self.calibration_images
-
-        #self.calibration_image = cv2.imread('%s/calibration_image.png' % self.calibration_folder, 0)
+        # Load the calibration image names
+        for image_calibration in os.listdir(self.calibration_folder):
+            if 'image_calibration' in str(image_calibration):
+                self.images_calibration.append(str(image_calibration))
 
     def run(self):
         # try:
         #     self.emit(SIGNAL("update_status(QString)"), 'Calibrating from image...')
         #     self.emit(SIGNAL("update_progress(QString)"), '10')
-        #     retval = self.start_calibration(self.calibration_image)
+        #     retval = self.start_calibration(self.image_calibration)
         #     if retval:
         #         self.emit(SIGNAL("update_status(QString)"), 'Calibration successful.')
         #         self.emit(SIGNAL("update_progress(QString)"), '100')
@@ -58,15 +67,62 @@ class Calibration(QThread):
         #         self.emit(SIGNAL("update_status(QString)"), 'Calibration failed.')
         # except:
         #     self.emit(SIGNAL("update_status(QString"), 'Calibration image not found.')
-        self.counter = 1
 
-        for calibration_image in self.calibration_images:
-            self.calibration2(cv2.imread(calibration_image))
 
-        print self.objpoints
-        print self.imgpoints
+        image_homography = cv2.imread('%s/calibration/image_homography.png' % self.working_directory)
+        image_sample = cv2.imread('%s/calibration/image_sample.png' % self.working_directory)
 
-        cv2.waitKey(0)
+        # Termination Criteria
+        self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+        self.multiplier = image_sample.shape[1] / 10 / self.ratio
+
+        self.points_destination = np.zeros((self.height * self.width, 3), np.float32)
+        self.points_destination[:, :2] = self.multiplier * np.mgrid[1: (self.width + 1), 1: (self.height + 1)].T.reshape(
+            self.width * self.height, 2)
+
+        for index, image_calibration in enumerate(self.images_calibration):
+            valid_image = self.find_draw_corners(image_calibration, index)
+            self.images_valid.append(valid_image)
+
+        print self.images_valid
+
+    def find_draw_corners(self, image_name, index):
+
+        # Load the image into memory
+        image = cv2.imread('%s/%s' % (self.calibration_folder, image_name))
+
+        # Determine the resolution of the image and the resolution after downscaling
+        resolution = (image.shape[1], image.shape[0])
+        resolution_scaled = (image.shape[1] / self.ratio, image.shape[0] / self.ratio)
+
+        image_scaled = cv2.resize(image, resolution_scaled, interpolation=cv2.INTER_AREA)
+        image_scaled = cv2.cvtColor(image_scaled, cv2.COLOR_BGR2GRAY)
+
+        retval, corners = cv2.findChessboardCorners(image_scaled, (self.width, self.height))
+
+        # If chessboard corners were found
+        if retval:
+            # Refine the found corner coordinates
+            cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), self.criteria)
+            # Multiply back to the original resolution
+            corners = self.ratio * corners.reshape(1, self.width * self.height, 2)
+            # Draw the chessboard corners onto the original calibration image
+            cv2.drawChessboardCorners(image, (self.width, self.height), corners, 1)
+
+            self.image_points.append(corners)
+            self.object_points.append(self.points_destination)
+
+            # Change the name and folder of the calibration image
+            image_name = image_name.replace('.png', '_corners.png')
+            cv2.imwrite('%s/corners/%s' % (self.calibration_folder, image_name), image)
+
+            self.emit(SIGNAL("change_colour(QString, QString)"), str(index), '1')
+
+            return 1
+        else:
+            self.emit(SIGNAL("change_colour(QString, QString)"), str(index), '0')
+            return 0
 
     def start_calibration(self, image):
         """Perform the OpenCV calibration process"""
@@ -155,29 +211,3 @@ class Calibration(QThread):
         else:
             valid = False
         return valid
-
-    def calibration2(self, image):
-        # termination criteria
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
-        # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-        objp = np.zeros((6 * 7, 3), np.float32)
-        objp[:, :2] = np.mgrid[0:7, 0:6].T.reshape(-1, 2)
-
-        # Arrays to store object points and image points from all the images.
-        self.objpoints = []  # 3d point in real world space
-        self.imgpoints = []  # 2d points in image plane.
-
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        ret, corners = cv2.findChessboardCorners(gray, (7, 6), None)
-
-        if ret == True:
-            self.objpoints.append(objp)
-            corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1), criteria)
-            self.imgpoints.append(corners2)
-
-            image2 = cv2.drawChessboardCorners(image, (7, 6), corners2, ret)
-            cv2.imshow('image %s' % self.counter, image2)
-            self.counter += 1
-

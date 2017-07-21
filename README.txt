@@ -1,6 +1,20 @@
 Defect Monitor (Tentative Name)
 MCAM CLS Printer Software
 
+Installation
+- From the software folder install the following (32-bit Versions)
+	- Python 2.7.13
+	- Basler Pylon 5.0.5.8999
+	- PyQt4 4.11.4 GPL Py2.7 Qt4.8.7
+	- PyCharm Professional 2017.1.2
+- Extract OpenCV 3.2.0
+	- Navigate to build/python/2.7/x86
+	- Copy cv2.pyd into Python/Lib/site-packages
+- Copy numpy-1.11.3+mkl-cp27-cp27m-win32.whl to Python/Scripts
+	- Open a command prompt
+	- Navigate to the python/scripts folder (cd: "Folder Name")
+	- Run: pip2.7.exe install "numpy-1.11.3+mkl-cp27-cp27m-win32.whl"
+
 Operation
 - Run main_window.py
 

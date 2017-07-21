@@ -358,8 +358,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.slice_parsed = self.SC_instance.slice_parsed
 
         # Set the maximum of the Layer spinBox to the length of the parsed slice file
-        self.spinLayer.setMaximum(self.slice_parsed['Parsed'].__len__())
-        self.spinLayer.setToolTip('1 - %s' % self.slice_parsed['Parsed'].__len__())
+        self.spinLayer.setMaximum(self.slice_parsed['Max Layer'])
+        self.spinLayer.setToolTip('1 - %s' % self.slice_parsed['Max Layer'])
 
         # Instantiate an ImageCapture instance
         self.ICA_instance = image_capture.ImageCapture(self.image_folder,
@@ -688,6 +688,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.labelLayerNumber.setText('%s' % str(layer).zfill(4))
 
         self.convert2contours(layer)
+        self.toggle_overlay()
 
     def update_display(self):
         """Updates the MainWindow widgetDisplay to show images on their respective labels as per toggles
