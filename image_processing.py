@@ -28,15 +28,19 @@ class ImageCorrection(QThread):
         # Get the name of the calibration file as specified in the New Build dialog
         self.calibration_file_name = self.config['WorkingDirectory'] + '/' + self.config['CalibrationFile']
 
+        # Initiate a list to store all the camera parameters
+        self.camera_parameters = []
+
         # Load camera parameters from specified calibration file
         with open('%s' % self.calibration_file_name) as camera_parameters:
-            self.camera_parameters = np.fromstring(camera_parameters.read(), dtype=float, sep=',')
+            for line in camera_parameters.readlines():
+                self.camera_parameters.append(line.split(' '))
 
-        # Save respective values to be used in OpenCV functions
-        self.perspective = self.camera_parameters[0:9].reshape(3, 3)
-        self.intrinsic_c = self.camera_parameters[9:18].reshape(3, 3)
-        self.intrinsic_d = self.camera_parameters[18:23].reshape(1, 5)
-        self.output_resolution = self.camera_parameters[23:].reshape(1, 2).astype(np.int32)
+        # Split camera parameters into their own respective values to be used in OpenCV functions
+        self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float64')
+        self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float64')
+        self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
+        self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
 
         # Define lists containing the 2 image arrays, 2 phase strings, 3 processing tag strings and 3 status messages
         if bool(image_folder):
@@ -83,13 +87,13 @@ class ImageCorrection(QThread):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
 
         # Store the camera's intrinsic values as a 2x2 matrix
-        camera_matrix = self.intrinsic_c
+        camera_matrix = self.camera_matrix
         camera_matrix[0, 2] = image.shape[1] / 2.0  # Half image width
         camera_matrix[1, 2] = image.shape[0] / 2.0  # Half image height
 
         # OpenCV distortion fix function
         try:
-            image_D = cv2.undistort(image, camera_matrix, self.intrinsic_d)
+            image_D = cv2.undistort(image, camera_matrix, self.distortion_coefficients)
             return image_D
         except:
             print 'Image Distortion fix failed.'
@@ -99,7 +103,7 @@ class ImageCorrection(QThread):
         """Fixes the perspective warp due to the off-centre position of the camera"""
 
         try:
-            image_P = cv2.warpPerspective(image, self.perspective, tuple(self.output_resolution[0]))
+            image_P = cv2.warpPerspective(image, self.homography_matrix, tuple(self.output_resolution))
             return image_P
         except:
             print 'Image Perspective Fix failed.'

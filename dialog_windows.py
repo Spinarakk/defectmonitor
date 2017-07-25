@@ -1,5 +1,7 @@
 # Import external libraries
 import os
+import cv2
+import numpy as np
 import json
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt
@@ -7,11 +9,13 @@ from PyQt4.QtCore import SIGNAL, Qt
 # Import related modules
 import slice_converter
 import image_capture
+import image_processing
 import extra_functions
 import camera_calibration
 
 # Import PyQt GUIs
-from gui import dialogNewBuild, dialogCameraCalibration, dialogSliceConverter, dialogImageCapture, dialogCameraSettings
+from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
+    dialogSliceConverter, dialogImageCapture, dialogCameraSettings
 
 
 class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -105,7 +109,6 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.lineImageFolder.setText(self.image_folder)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        # Buttons
         self.buttonBrowse.clicked.connect(self.browse)
         self.buttonCameraSettings.clicked.connect(self.camera_settings)
         self.buttonCheckCamera.clicked.connect(self.check_camera)
@@ -268,9 +271,13 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         """Executes when the top-right X is clicked"""
 
         # Stop any running QThreads cleanly before closing the dialog window
-        if self.ICR_instance.isRunning:
-            self.stopwatch_instance.stop()
-            self.ICR_instance.stop()
+        # Try statement in case the ICR_instance doesn't exist
+        try:
+            if self.ICR_instance.isRunning:
+                self.stopwatch_instance.stop()
+                self.ICR_instance.stop()
+        except AttributeError:
+            pass
 
 
 class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
@@ -420,6 +427,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowse.clicked.connect(self.browse)
         self.buttonStartCalibration.clicked.connect(self.calibration_start)
+        self.buttonResults.clicked.connect(self.view_results)
 
         # Load configuration settings from config.json file
         with open('config.json') as config:
@@ -429,8 +437,6 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         self.spinWidth.setValue(int(self.config['CalibrationWidth']))
         self.spinHeight.setValue(int(self.config['CalibrationHeight']))
         self.spinRatio.setValue(int(self.config['DownscalingRatio']))
-
-
 
     def browse(self):
 
@@ -464,6 +470,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
                 self.buttonStartCalibration.setEnabled(True)
                 self.update_status('Waiting to start process.')
+                self.update_progress(0)
 
     def calibration_start(self):
         """Executes when the Start Calibration button is clicked
@@ -478,8 +485,17 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         # Save calibration settings
         self.save_settings()
 
+        # Reset the colours of the items in the list widget
+        # Try exception causes this function to be skipped the first time when
+        try:
+            for index in xrange(self.listImages.count()):
+                self.listImages.item(index).setBackground(QtGui.QColor('white'))
+        except AttributeError:
+            pass
+
         # Instantiate and run a CameraCalibration instance
-        self.CC_instance = camera_calibration.Calibration(self.calibration_folder)
+        self.CC_instance = camera_calibration.Calibration(self.calibration_folder, self.checkSaveC.isChecked(),
+                                                          self.checkSaveU.isChecked())
         self.connect(self.CC_instance, SIGNAL("change_colour(QString, QString)"), self.change_colour)
         self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
@@ -496,11 +512,44 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             self.listImages.item(int(index)).setBackground(QtGui.QColor('red'))
 
     def calibration_finished(self):
-        """Used to re-enable buttons after the calibration process is finished"""
+        """Executes when the CameraCalibration instance has finished"""
 
+        # Opens a Dialog Window to view Calibration Results
+        self.view_results()
+
+        # If the Apply to Sample Image checkbox is checked
+        # Applies the image processing techniques using the updated camera parameters
+        if self.checkApply.isChecked():
+            self.update_status('Processing image...')
+            self.update_progress(0)
+            image = cv2.imread('%s/calibration/image_sample.png' % self.config['WorkingDirectory'])
+            image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
+            self.update_progress(25)
+            image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
+            self.update_progress(50)
+            image = image_processing.ImageCorrection(None, None, None).crop(image)
+            self.update_progress(75)
+            cv2.imwrite('%s/calibration/image_sample_DPC.png' % self.config['WorkingDirectory'], image)
+            self.update_status('Image successfully processed.')
+            self.update_progress(100)
+
+        # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(True)
         self.buttonStartCalibration.setEnabled(True)
         self.buttonDone.setEnabled(True)
+
+    def view_results(self):
+        """Opens a Dialog Window when the CameraCalibration instance has finished
+        Or when the View Results button is clicked
+        Displays the results of the camera calibration to the user"""
+
+        camera_parameters_file_name = '%s/camera_parameters.txt' % self.config['WorkingDirectory']
+
+        if os.path.isfile(camera_parameters_file_name):
+            calibration_results_dialog = CalibrationResults(self, camera_parameters_file_name)
+            calibration_results_dialog.show()
+        else:
+            self.update_status('Camera Parameters text file not found.')
 
     def save_settings(self):
         """Save the spinxbox values to config.json file"""
@@ -526,4 +575,50 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         """
 
         self.save_settings()
+        self.done(1)
+
+
+class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
+    """Opens a Dialog Window when the CameraCalibration instance has finished
+    Allows user to look at pertinent calibration parameters and information
+    Setup as a Modeless window, opereating independently of other windows
+    """
+
+    def __init__(self, parent=None, camera_parameters_file_name=None):
+
+        # Setup Dialog UI with CameraCalibration as parent
+        super(CalibrationResults, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        self.camera_parameters = []
+
+        # Load camera parameters from specified calibration file
+        with open(camera_parameters_file_name, 'r') as camera_parameters:
+            for line in camera_parameters.readlines():
+                self.camera_parameters.append(line.split(' '))
+
+        # Split camera parameters into their own respective values to be used in OpenCV functions
+        self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float64')
+        self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float64')
+        self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
+        self.rms = np.array(self.camera_parameters[13]).astype('float64')
+
+        for row in xrange(3):
+            for column in xrange(3):
+                self.tableCameraMatrix.setItem(row, column, QtGui.QTableWidgetItem(format(self.camera_matrix[row][column], '.10g')))
+                self.tableHomographyMatrix.setItem(row, column, QtGui.QTableWidgetItem(
+                    format(self.homography_matrix[row][column], '.10g')))
+
+        for column in xrange(3):
+            self.tableDistortionCoefficients.setItem(0, column, QtGui.QTableWidgetItem(format(self.distortion_coefficients[column], '.10g')))
+
+        for column in xrange(2):
+            self.tableDistortionCoefficients.setItem(1, column,
+                                                     QtGui.QTableWidgetItem(format(self.distortion_coefficients[column + 3], '.10g')))
+
+        self.labelRMS.setText('Re-projection Error: ' + format(self.rms[0], '.10g'))
+
+    def accept(self):
+        """Executes when the Done button is clicked"""
         self.done(1)

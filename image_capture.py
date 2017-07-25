@@ -10,6 +10,7 @@ from PyQt4.QtCore import QThread, SIGNAL
 # Import related modules
 import image_processing
 
+
 class ImageCapture(QThread):
     """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached
     Images are acquired through one of three methods depending on the raised flags
@@ -193,26 +194,32 @@ class ImageCapture(QThread):
     def acquire_image_single(self):
         """Acquire a single image from the camera"""
 
-        # Grab the image from the camera
-        image = next(self.camera.grab_images(1))
+        # Grab the image from the camera, error checking in case image capture fails
+        try:
+            image = next(self.camera.grab_images(1))
 
-        # Create a file name for the image
-        image_name = str(self.save_folder) + '/single/image_capture_' + str(self.config['CaptureCount']) + '.png'
+            # Create a file name for the image
+            image_name = '%s/single/image_capture_%s.png' % (self.save_folder,
+                                                             str(self.config['CaptureCount']).zfill(2))
 
-        # Save the image to the selected save folder
-        cv2.imwrite(image_name, image)
+            # Save the image to the selected save folder
+            cv2.imwrite(image_name, image)
 
-        # Apply image correction if the Apply Correction checkbox is checked
-        if self.correction_flag:
-            self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
-            self.correction(image, count=self.config['CaptureCount'])
-        else:
-            # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
-            self.emit(SIGNAL("display_image(QString)"), str(image_name))
+            # Apply image correction if the Apply Correction checkbox is checked
+            if self.correction_flag:
+                self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
+                self.correction(image, count=self.config['CaptureCount'])
+            else:
+                # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
+                self.emit(SIGNAL("display_image(QString)"), str(image_name))
 
-        # Update the capture counter which will be saved to the config.json file
-        self.config['CaptureCount'] += 1
-        self.emit(SIGNAL("update_status(QString)"), 'Image saved.')
+            # Update the capture counter which will be saved to the config.json file
+            self.config['CaptureCount'] += 1
+            self.emit(SIGNAL("update_status(QString)"), 'Image saved.')
+
+        except RuntimeError:
+            self.emit(SIGNAL("update_status(QString)"), 'Error grabbing image. Try again.')
+            self.camera.close()
 
     def acquire_image_run(self):
         """Acquire multiple images from the camera when trigger is detected"""
@@ -225,16 +232,17 @@ class ImageCapture(QThread):
 
             self.emit(SIGNAL("update_status(QString)"), 'Trigger Detected. Capturing image...')
 
-            # Grab the image from the camera, error checking in case something fails
+            # Grab the image from the camera, error checking in case image capture fails
             try:
                 image = next(self.camera.grab_images(1))
             except RuntimeError:
-                time.sleep(2)
+                time.sleep(1)
                 image = next(self.camera.grab_images(1))
 
             # Create a file name for the image
-            image_name = str(self.save_folder) + '/' + self.phases[self.current_phase] + '/image_' + \
-                         self.phases[self.current_phase] + '_' + str(int(self.current_layer)) + '.png'
+            image_name = '%s/%s/image_%s_%s.png' % \
+                         (self.save_folder, self.phases[self.current_phase], self.phases[self.current_phase],
+                          str(int(self.current_layer)).zfill(2))
 
             # Save the image to the selected save folder in the respective scan or coat folder
             cv2.imwrite(image_name, image)
@@ -274,12 +282,12 @@ class ImageCapture(QThread):
         # Save the processed image in the processed folder with an appended file name
         if bool(count):
             # Create a file name for the corrected image
-            image_name = str(self.save_folder + '/processed/image_capture_' + str(count) + '_processed.png')
+            image_name = '%s/processed/image_capture_%s_processed.png' % (self.save_folder, str(int(count)).zfill(2))
             cv2.imwrite(image_name, image)
             self.emit(SIGNAL("display_image(QString)"), image_name)
         else:
-            image_name = str(self.save_folder + '/processed/image_' + self.phases[phase] + '_' + str(int(layer)) +
-                        '_processed.png')
+            image_name = '%s/processed/image_%s_%s_processed.png' % (self.save_folder, self.phases[phase],
+                                                                     str(int(layer)).zfill(2))
             cv2.imwrite(image_name, image)
             self.emit(SIGNAL("display_image(QString)"), image_name)
 

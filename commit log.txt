@@ -1,3 +1,11 @@
+July 25
+- Modified all the string image name structures
+- Separated calibration results to its own window that pops up after calibration is done
+- Continued implementing the camera calibration code into the main program
+- Included checkboxes for saving chessboard and undistorted images
+- Saved the calibration parameters in a different way that is more readable
+- Added some QOL features
+
 July 21
 - Fixed a KeyError with the maximum number of layers
 - Found some major issues

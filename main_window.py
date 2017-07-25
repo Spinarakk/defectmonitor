@@ -541,6 +541,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 cv2.drawContours(self.image_overlay, self.part_contours['PartData']['Contours'],
                                  -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
 
+            cv2.imwrite('overlay.png', self.image_overlay)
+
             self.update_status('Displaying slice outlines.')
 
         else:
