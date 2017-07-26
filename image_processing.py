@@ -11,6 +11,7 @@ class ImageCorrection(QThread):
     Applies the following OpenCV processes in order:
     Distortion Correction (D)
     Perspective Warp (P)
+    Rotate (R)
     Crop (C)
     CLAHE (E)
     Respective capital letters suffixed to the image array name indicate which processes have been applied
@@ -93,8 +94,8 @@ class ImageCorrection(QThread):
 
         # OpenCV distortion fix function
         try:
-            image_D = cv2.undistort(image, camera_matrix, self.distortion_coefficients)
-            return image_D
+            image = cv2.undistort(image, camera_matrix, self.distortion_coefficients)
+            return image
         except:
             print 'Image Distortion fix failed.'
             return False
@@ -103,8 +104,8 @@ class ImageCorrection(QThread):
         """Fixes the perspective warp due to the off-centre position of the camera"""
 
         try:
-            image_P = cv2.warpPerspective(image, self.homography_matrix, tuple(self.output_resolution))
-            return image_P
+            image = cv2.warpPerspective(image, self.homography_matrix, tuple(self.output_resolution))
+            return image
         except:
             print 'Image Perspective Fix failed.'
             return False
@@ -112,18 +113,25 @@ class ImageCorrection(QThread):
     def crop(self, image):
         """Crops the image to a more desirable region of interest"""
 
-        # Save respective values to be used to determine region of interest
-        rotation_angle = self.config['RotationAmt']
+        # Save value to be used to determine region of interest
         crop_boundary = self.config['CropBoundary']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
         image = image[crop_boundary[0]: crop_boundary[1], crop_boundary[2]: crop_boundary[3]]
 
+        return image
+
+    def rotate(self, image):
+        """Rotate the image"""
+
+        # Save value to be used to determine rotation amount
+        rotation_angle = self.config['RotationAngle']
+
         # Rotate the image by creating and using a 2x3 rotation matrix
         rotation_matrix = cv2.getRotationMatrix2D((image.shape[1] / 2, image.shape[0] / 2), rotation_angle, 1.0)
-        image_C = cv2.warpAffine(image, rotation_matrix, (image.shape[1], image.shape[0]))
+        image = cv2.warpAffine(image, rotation_matrix, (image.shape[1], image.shape[0]))
 
-        return image_C
+        return image
 
     @staticmethod
     def clahe(image):

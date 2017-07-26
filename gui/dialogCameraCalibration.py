@@ -140,7 +140,6 @@ class Ui_dialogCameraCalibration(object):
         self.checkSaveU.setObjectName(_fromUtf8("checkSaveU"))
         self.buttonResults = QtGui.QPushButton(dialogCameraCalibration)
         self.buttonResults.setGeometry(QtCore.QRect(160, 540, 141, 28))
-        self.buttonResults.setFocusPolicy(QtCore.Qt.NoFocus)
         self.buttonResults.setObjectName(_fromUtf8("buttonResults"))
 
         self.retranslateUi(dialogCameraCalibration)

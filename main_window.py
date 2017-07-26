@@ -85,7 +85,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonStop.clicked.connect(self.stop)
         self.buttonSet.clicked.connect(self.set_layer)
         self.buttonPhase.clicked.connect(self.toggle_phase)
-        self.buttonTest.clicked.connect(self.test_method)
         self.buttonImageConverter.clicked.connect(self.image_converter)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
         self.buttonImageCapture.clicked.connect(self.image_capture)
@@ -483,7 +482,8 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.update_progress(20)
             image_perspective = image_processing.ImageCorrection(None, None, None).perspective_fix(image_undistort)
             self.update_progress(40)
-            image_crop = image_processing.ImageCorrection(None, None, None).crop(image_perspective)
+            image_rotate = image_processing.ImageCorrection(None, None, None).rotate(image_perspective)
+            image_crop = image_processing.ImageCorrection(None, None, None).crop(image_rotate)
             self.update_progress(60)
             image_clahe = image_processing.ImageCorrection(None, None, None).clahe(image_crop)
             self.update_progress(80)
@@ -492,6 +492,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             image_name.replace('.png', '')
             cv2.imwrite('%s_undistort.png' % image_name, image_undistort)
             cv2.imwrite('%s_perspective.png' % image_name, image_perspective)
+            cv2.imwrite('%s_rotate.png' % image_name, image_rotate)
             cv2.imwrite('%s_crop.png' % image_name, image_crop)
             cv2.imwrite('%s_clahe.png' % image_name, image_clahe)
 
@@ -812,16 +813,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
         self.progressBar.setValue(int(percentage))
 
-    def test_method(self):
-        label_size = self.labelDisplaySE.frameGeometry().width()
-
-        print label_size
-        print label_size.width
-
     # CLEANUP
 
     def closeEvent(self, event):
-        """Menu -> Exit or the top-right X is clicked"""
+        """Executes when Menu -> Exit is clicked or the top-right X is clicked"""
 
         # For some reason it isn't possible to load and dump within the same open function so they're split
         # Load configuration settings from config.json file

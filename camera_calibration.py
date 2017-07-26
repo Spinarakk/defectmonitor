@@ -7,9 +7,6 @@ import cv2
 import numpy as np
 from PyQt4.QtCore import QThread, SIGNAL
 
-# Import related modules
-import image_processing
-
 
 class Calibration(QThread):
     """Module used to calibrate the connected Basler Ace acA3800-10gm GigE camera if attached
@@ -41,8 +38,13 @@ class Calibration(QThread):
         # Initialize a few lists to store pertinent data
         self.images_calibration = []
         self.images_valid = []
-        self.image_points = []
-        self.object_points = []
+
+        # Image points are points in the 2D image plane
+        # They are represented by the corners of the squares on the chessboard as found by findChessboardCorners
+        self.image_points_list = []
+        # Object Points are the points in the 3D real world space
+        # They are represented as a series of points as relative to each other, and are created like (0,0), (1,0)...
+        self.object_points_list = []
 
         # Create two folders inside the received calibration folder to store chessboard corner and undistorted images
         if self.save_chess_flag:
@@ -71,7 +73,7 @@ class Calibration(QThread):
         # Load required images into memory
         # First image used to calculate homography in the chamber
         # Second image used to test calibration and homography results
-        image_homography = cv2.imread('%s/calibration/image_homography.png' % self.working_directory)
+        image_homography = cv2.imread('%s/calibration/image_homography.png' % self.working_directory, 0)
         image_sample = cv2.imread('%s/calibration/image_sample.png' % self.working_directory)
 
         # Determine resolution of working images
@@ -80,11 +82,9 @@ class Calibration(QThread):
         # Termination Criteria
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-        self.multiplier = image_sample.shape[1] / 10 / self.ratio
-
-        self.points_destination = np.zeros((self.height * self.width, 3), np.float32)
-        self.points_destination[:, :2] = self.multiplier * np.mgrid[1:(self.width + 1), 1:(self.height + 1)].T.reshape(
-            self.width * self.height, 2)
+        # Initiate object points, like (0,0,0), (1,0,0), (2,0,0)...
+        self.object_points = np.zeros((self.height * self.width, 3), np.float32)
+        self.object_points[:, :2] = np.mgrid[0:self.width, 0:self.height].T.reshape(-1, 2)
 
         # Reset the progress bar
         self.emit(SIGNAL("update_progress(QString)"), '0')
@@ -101,19 +101,13 @@ class Calibration(QThread):
 
             # Calibrate the camera and output the camera matrix and distortion coefficients
             # RMS is the root mean square re-projection error
+            self.emit(SIGNAL("update_status(QString)"), 'Calculating camera parameters...')
             rms, self.camera_matrix, self.distortion_coefficients, _, _ = \
-                cv2.calibrateCamera(self.object_points, self.image_points, resolution, None, None, flags=
-                cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_FIX_K4 | cv2.CALIB_FIX_K5 | cv2.CALIB_FIX_K3)
+                cv2.calibrateCamera(self.object_points_list, self.image_points_list, resolution, None, None, flags=
+                cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
 
             # Convert the rms into a numpy array so it can be saved
             self.rms = np.array([(rms)]).astype('float')
-
-            # Refine the camera matrix based on a free scaling parameter, enable as necessary
-            # camera_matrix, _ = cv2.getOptimalNewCameraMatrix(camera_matrix, distortion_coefficients, resolution, 1, resolution)
-
-            # Modify the distortion coefficients as necessary if distortion effect is too great
-            # self.distortion_coefficients[0][1:] = 0
-            # self.distortion_coefficients[0][0] *= 0.9
 
             # If the Save Undistorted Images checkbox is checked
             if self.save_undistort_flag:
@@ -173,10 +167,11 @@ class Calibration(QThread):
             cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), self.criteria)
 
             # Multiply back to the original resolution
-            corners = self.ratio * corners.reshape(1, self.width * self.height, 2)
+            corners *= self.ratio
 
-            self.image_points.append(corners)
-            self.object_points.append(self.points_destination)
+            # Store the found image points (corners) and their corresponding object points in a list
+            self.image_points_list.append(corners)
+            self.object_points_list.append(self.object_points)
 
             # If the Save Chessboard Image checkbox is checked
             if self.save_chess_flag:
@@ -210,7 +205,7 @@ class Calibration(QThread):
         # Change the name and folder of the calibration image and save it to that folder
         image_name = image_name.replace('.png', '_undistorted.png')
         self.emit(SIGNAL("update_status(QString)"), 'Saving %s...' % image_name)
-        cv2.imwrite('%s/corners/%s' % (self.calibration_folder, image_name), image)
+        cv2.imwrite('%s/undistorted/%s' % (self.calibration_folder, image_name), image)
 
     def find_homography(self, image):
 
@@ -223,9 +218,8 @@ class Calibration(QThread):
         # Determine the resolution of the image after downscaling
         resolution_scaled = (image.shape[1] / self.ratio, image.shape[0] / self.ratio)
 
-        # Downscale and convert the image to grayscale
+        # Downscale the image
         image_scaled = cv2.resize(image, resolution_scaled, interpolation=cv2.INTER_AREA)
-        image_scaled = cv2.cvtColor(image_scaled, cv2.COLOR_BGR2GRAY)
 
         # Detect the corners of the chessboard
         retval, corners = cv2.findChessboardCorners(image_scaled, (width, height))
@@ -236,24 +230,22 @@ class Calibration(QThread):
             cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), self.criteria)
 
             # Multiply back to the original resolution
-            corners = self.ratio * corners.reshape(1, width * height, 2)
+            corners *= self.ratio
 
             # Undistort the found corners to be used for homography
-            points_source = cv2.undistortPoints(corners, self.camera_matrix, self.distortion_coefficients,
+            image_points = cv2.undistortPoints(corners, self.camera_matrix, self.distortion_coefficients,
                                                 P=self.camera_matrix)
 
             # Create a matrix of points on the original image to match homography with
-            points_destination = np.zeros((height * width, 3), np.float32)
-            points_destination[:, :2] = self.multiplier * np.mgrid[1: (width + 1), 1: (height + 1)].T.reshape(
-                width * height, 2)
-            points_destination = points_destination.reshape(1, width * height, 3).astype(np.float32)
+            object_points = np.zeros((height * width, 3), np.float32)
+            object_points[:, :2] = image.shape[1] / 20 * np.mgrid[0:width, 0:height].T.reshape(-1, 2)
 
-            # Calculate the homography matrix using the source and destination points
-            homography_matrix, _ = cv2.findHomography(points_source, points_destination)
+            # Calculate the homography matrix using the image and object points
+            homography_matrix, _ = cv2.findHomography(image_points, object_points, cv2.RANSAC, 5.0)
 
             # Perform a perspective transform on the original image
-            points_corners = np.array([[(0, 0)], [(0, image.shape[0])], [(image.shape[1], image.shape[0])],
-                                       [(image.shape[1], image.shape[0])]], dtype=float)
+            points_corners = np.float32([[(0, 0)], [(0, image.shape[0])], [(image.shape[1], image.shape[0])],
+                                       [(image.shape[1], 0)]]).reshape(-1, 1, 2)
             points_transform = cv2.perspectiveTransform(points_corners, homography_matrix)
 
             # Create a translation offset to move the perspective warped image to the centre

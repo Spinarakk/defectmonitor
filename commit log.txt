@@ -1,3 +1,12 @@
+July 26
+- Cleaned up the calibration results window
+- Pressing the button closes the existing window and opens a new one
+- The window remembers it's last position
+- Took 30 calibration images to get new calibration parameters
+- Tested on sample image to try and get the best settings
+- Separated the rotate image process from the crop process into its own method
+- Tested various combinations of calibration images and settings to find the best result
+
 July 25
 - Modified all the string image name structures
 - Separated calibration results to its own window that pops up after calibration is done

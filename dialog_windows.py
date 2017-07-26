@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import json
 from PyQt4 import QtGui
-from PyQt4.QtCore import SIGNAL, Qt
+from PyQt4.QtCore import SIGNAL, Qt, QSettings
 
 # Import related modules
 import slice_converter
@@ -526,9 +526,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
             self.update_progress(25)
             image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
-            self.update_progress(50)
-            image = image_processing.ImageCorrection(None, None, None).crop(image)
-            self.update_progress(75)
+            # self.update_progress(50)
+            # image = image_processing.ImageCorrection(None, None, None).crop(image)
+            # self.update_progress(75)
             cv2.imwrite('%s/calibration/image_sample_DPC.png' % self.config['WorkingDirectory'], image)
             self.update_status('Image successfully processed.')
             self.update_progress(100)
@@ -543,11 +543,16 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         Or when the View Results button is clicked
         Displays the results of the camera calibration to the user"""
 
-        camera_parameters_file_name = '%s/camera_parameters.txt' % self.config['WorkingDirectory']
+        # Check if a camera_parameters.txt file exists
+        if os.path.isfile('%s/camera_parameters.txt' % self.config['WorkingDirectory']):
+            # Check if the window is already open, if so, reopens the window with any updated parameters
+            try:
+                self.calibration_results_dialog.close()
+            except:
+                pass
 
-        if os.path.isfile(camera_parameters_file_name):
-            calibration_results_dialog = CalibrationResults(self, camera_parameters_file_name)
-            calibration_results_dialog.show()
+            self.calibration_results_dialog = CalibrationResults(self)
+            self.calibration_results_dialog.show()
         else:
             self.update_status('Camera Parameters text file not found.')
 
@@ -584,41 +589,64 @@ class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibr
     Setup as a Modeless window, opereating independently of other windows
     """
 
-    def __init__(self, parent=None, camera_parameters_file_name=None):
+    def __init__(self, parent=None):
 
         # Setup Dialog UI with CameraCalibration as parent
         super(CalibrationResults, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
+        # Restore the last window position when the window is closed and reopened by saving it using QSettings
+        self.window_position = QSettings('MCAM', 'Defect Monitor')
+        self.restoreGeometry(self.window_position.value('geometry', '').toByteArray())
+
+        # Initialize a list to store camera parameters
         self.camera_parameters = []
 
+        # Load configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         # Load camera parameters from specified calibration file
-        with open(camera_parameters_file_name, 'r') as camera_parameters:
+        with open('%s/camera_parameters.txt' % self.config['WorkingDirectory'], 'r') as camera_parameters:
             for line in camera_parameters.readlines():
                 self.camera_parameters.append(line.split(' '))
 
         # Split camera parameters into their own respective values to be used in OpenCV functions
-        self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float64')
-        self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float64')
-        self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
-        self.rms = np.array(self.camera_parameters[13]).astype('float64')
+        self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float')
+        self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float')
+        self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float')
+        self.rms = np.array(self.camera_parameters[13]).astype('float')
 
+        # Nested for loops to access each of the table boxes in order
         for row in xrange(3):
             for column in xrange(3):
-                self.tableCameraMatrix.setItem(row, column, QtGui.QTableWidgetItem(format(self.camera_matrix[row][column], '.10g')))
+
+                # Setting the item using the corresponding index of the matrix arrays
+                self.tableCameraMatrix.setItem(row, column, QtGui.QTableWidgetItem(
+                    format(self.camera_matrix[row][column], '.10g')))
                 self.tableHomographyMatrix.setItem(row, column, QtGui.QTableWidgetItem(
                     format(self.homography_matrix[row][column], '.10g')))
 
-        for column in xrange(3):
-            self.tableDistortionCoefficients.setItem(0, column, QtGui.QTableWidgetItem(format(self.distortion_coefficients[column], '.10g')))
+                # Because the distortion coefficients matrix is a 1x5, a slight modification needs to be made
+                # Exception used to ignore the 2x3 box and 3rd row of the matrix
+                if row >= 1: column += 3
+                try:
+                    self.tableDistortionCoefficients.setItem(row, column % 3, QtGui.QTableWidgetItem(
+                        format(self.distortion_coefficients[column], '.10g')))
+                except IndexError:
+                    pass
 
-        for column in xrange(2):
-            self.tableDistortionCoefficients.setItem(1, column,
-                                                     QtGui.QTableWidgetItem(format(self.distortion_coefficients[column + 3], '.10g')))
-
-        self.labelRMS.setText('Re-projection Error: ' + format(self.rms[0], '.10g'))
+        # Displaying the re-projection error on the appropriate text label
+        self.labelRMS.setText('Re-Projection Error: ' + format(self.rms[0], '.10g'))
 
     def accept(self):
         """Executes when the Done button is clicked"""
         self.done(1)
+
+    def closeEvent(self, event):
+        """Executes when the window is closed"""
+
+        # Save the current position of the dialog window
+        self.window_position.setValue('geometry', self.saveGeometry())
+
