@@ -15,7 +15,7 @@ import camera_calibration
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogImageCapture, dialogCameraSettings
+    dialogSliceConverter, dialogImageCapture, dialogCameraSettings, dialogNotificationSettings
 
 
 class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -90,6 +90,59 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         self.done(1)
 
+
+class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNotificationSettings):
+    """Opens a Dialog Window when Setup > Report Settings > Notification Settings is clicked
+    Allows user to enter and change the email address and what notifications to be notified of
+    Setup as a Modal window, blocking input to other visible windows until this window is closed
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup Dialog UI with MainWindow as parent
+        super(NotificationSettings, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        # Load configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Set and display the default saved username and email address as stated in the config.json file
+        self.lineUsername.setText(self.config['Username'])
+        self.lineEmailAddress.setText(self.config['EmailAddress'])
+
+        # Setup event listeners for all the relevent UI components, and connect them to specific functions
+        self.buttonSendTestEmail.clicked.connect(self.send_test_email)
+        self.checkAll.toggled.connect(self.toggle_all)
+        self.lineEmailAddress.textChanged.connect(self.enable_button)
+
+    def send_test_email(self):
+
+
+        self.buttonSendTestEmail.setEnabled(False)
+        pass
+
+    def toggle_all(self):
+        """Toggling the All checkbox causes all the subsequent checkboxes to toggle being check"""
+        self.checkMinor.setChecked(self.checkAll.isChecked())
+        self.checkMajor.setChecked(self.checkAll.isChecked())
+        self.checkFailure.setChecked(self.checkAll.isChecked())
+        self.checkError.setChecked(self.checkAll.isChecked())
+
+    def verify_email(self):
+        pass
+
+    def enable_button(self):
+        """Re-enables the Send Test Email button if someone changes the email address text"""
+        self.buttonSendTestEmail.setEnabled(True)
+
+    def accept(self):
+        """Executes when the OK button is clicked
+        Saves important input and selection options to the config.json file and closes the window
+        """
+        self.config['Username'] = str(self.lineUsername.text())
+        self.config['EmailAddress'] = str(self.lineEmailAddress.text())
 
 class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     """Opens a Dialog Window when Image Capture button is clicked
@@ -220,6 +273,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         # Instantiate and run a new Stopwatch instance to have a running timer
         self.stopwatch_instance = extra_functions.Stopwatch()
         self.connect(self.stopwatch_instance, SIGNAL("update_stopwatch(QString)"), self.update_stopwatch)
+        self.connect(self.stopwatch_instance, SIGNAL("send_notification()"), self.send_notification)
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
@@ -227,6 +281,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
                                                        correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.ICR_instance, SIGNAL("display_image(QString)"), self.display_image)
+        self.connect(self.ICR_instance, SIGNAL("reset_countdown()"), self.reset_countdown)
         self.connect(self.ICR_instance, SIGNAL("finished()"), self.run_finished)
         self.ICR_instance.start()
 
@@ -244,6 +299,21 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonStop.setEnabled(False)
 
         self.update_status('Stopped.')
+
+    def reset_countdown(self):
+        """Resets the internal countdown that checks if a new image has been captured within a preset period of time"""
+        self.stopwatch_instance.reset_countdown()
+
+    def send_notification(self):
+        """Sends a notification to a user if a certain criteria is met
+        In this case, this method executes if a picture hasn't been taken in a preset period of time
+        Depends if the Notification checkbox is checked or not
+        """
+
+        if self.checkNotifications.isChecked():
+            self.update_status('Sending notification to user.')
+            self.notifications_instance = extra_functions.Notifications()
+            self.notifications_instance.start()
 
     def stop(self):
         """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances"""
@@ -526,9 +596,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
             self.update_progress(25)
             image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
-            # self.update_progress(50)
-            # image = image_processing.ImageCorrection(None, None, None).crop(image)
-            # self.update_progress(75)
+            self.update_progress(50)
+            image = image_processing.ImageCorrection(None, None, None).crop(image)
+            self.update_progress(75)
             cv2.imwrite('%s/calibration/image_sample_DPC.png' % self.config['WorkingDirectory'], image)
             self.update_status('Image successfully processed.')
             self.update_progress(100)

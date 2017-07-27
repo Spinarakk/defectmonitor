@@ -27,6 +27,8 @@ class Ui_dialogNewBuild(object):
         dialogNewBuild.setObjectName(_fromUtf8("dialogNewBuild"))
         dialogNewBuild.setWindowModality(QtCore.Qt.NonModal)
         dialogNewBuild.resize(430, 218)
+        dialogNewBuild.setMinimumSize(QtCore.QSize(430, 218))
+        dialogNewBuild.setMaximumSize(QtCore.QSize(430, 218))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogNewBuild.setWindowIcon(icon)

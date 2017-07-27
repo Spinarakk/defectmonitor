@@ -7,8 +7,20 @@
     <x>0</x>
     <y>0</y>
     <width>491</width>
-    <height>308</height>
+    <height>310</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>491</width>
+    <height>310</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>491</width>
+    <height>310</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Image Capture</string>
@@ -285,7 +297,7 @@
   <widget class="QCheckBox" name="checkApplyCorrection">
    <property name="geometry">
     <rect>
-     <x>27</x>
+     <x>30</x>
      <y>236</y>
      <width>131</width>
      <height>28</height>
@@ -345,7 +357,7 @@
   <widget class="QCheckBox" name="checkDisplayImage">
    <property name="geometry">
     <rect>
-     <x>195</x>
+     <x>190</x>
      <y>236</y>
      <width>131</width>
      <height>28</height>

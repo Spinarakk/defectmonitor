@@ -25,7 +25,9 @@ except AttributeError:
 class Ui_dialogImageCapture(object):
     def setupUi(self, dialogImageCapture):
         dialogImageCapture.setObjectName(_fromUtf8("dialogImageCapture"))
-        dialogImageCapture.resize(491, 308)
+        dialogImageCapture.resize(491, 310)
+        dialogImageCapture.setMinimumSize(QtCore.QSize(491, 310))
+        dialogImageCapture.setMaximumSize(QtCore.QSize(491, 310))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogImageCapture.setWindowIcon(icon)
@@ -108,7 +110,7 @@ class Ui_dialogImageCapture(object):
         self.labelStatusBar.setFont(font)
         self.labelStatusBar.setObjectName(_fromUtf8("labelStatusBar"))
         self.checkApplyCorrection = QtGui.QCheckBox(dialogImageCapture)
-        self.checkApplyCorrection.setGeometry(QtCore.QRect(27, 236, 131, 28))
+        self.checkApplyCorrection.setGeometry(QtCore.QRect(30, 236, 131, 28))
         self.checkApplyCorrection.setObjectName(_fromUtf8("checkApplyCorrection"))
         self.labelTriggerStatus = QtGui.QLabel(dialogImageCapture)
         self.labelTriggerStatus.setGeometry(QtCore.QRect(330, 168, 151, 28))
@@ -124,7 +126,7 @@ class Ui_dialogImageCapture(object):
         self.buttonCheckTrigger.setFocusPolicy(QtCore.Qt.NoFocus)
         self.buttonCheckTrigger.setObjectName(_fromUtf8("buttonCheckTrigger"))
         self.checkDisplayImage = QtGui.QCheckBox(dialogImageCapture)
-        self.checkDisplayImage.setGeometry(QtCore.QRect(195, 236, 131, 28))
+        self.checkDisplayImage.setGeometry(QtCore.QRect(190, 236, 131, 28))
         self.checkDisplayImage.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.checkDisplayImage.setChecked(True)
         self.checkDisplayImage.setObjectName(_fromUtf8("checkDisplayImage"))

@@ -538,9 +538,9 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="QPushButton" name="buttonTest">
+       <widget class="QPushButton" name="buttonNotificationSettings">
         <property name="text">
-         <string>Test</string>
+         <string>Notification Settings</string>
         </property>
        </widget>
       </item>
@@ -1144,7 +1144,7 @@
       <string>Report Settings</string>
      </property>
      <addaction name="actionDefectActions"/>
-     <addaction name="actionNotificationSetup"/>
+     <addaction name="actionNotificationSettings"/>
     </widget>
     <addaction name="actionConfigurationSettings"/>
     <addaction name="actionCameraSettings"/>
@@ -1230,7 +1230,7 @@
     <string>Defect Actions</string>
    </property>
   </action>
-  <action name="actionNotificationSetup">
+  <action name="actionNotificationSettings">
    <property name="text">
     <string>Notification Setup</string>
    </property>

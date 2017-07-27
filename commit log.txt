@@ -1,3 +1,12 @@
+July 27
+- Set up another local machine to run the program on
+- Installed TeamViewer to remotely access the computer which will be in the laser printer
+- Created a batch file that will run the program without needing an IDE
+- Implemented notification sending into the main program
+- Function that sends a notification if an image isn't captured within a time period
+- Took more calibration pictures to use for the homography matrix
+- Finialized the camera parameters to be used for the meantime to calibrate the taken images
+
 July 26
 - Cleaned up the calibration results window
 - Pressing the button closes the existing window and opens a new one

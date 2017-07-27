@@ -255,6 +255,9 @@ class ImageCapture(QThread):
                 # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
                 self.emit(SIGNAL("display_image(QString)"), image_name)
 
+            # Emit a signal that resets the internal countdown saying that an image has been successfully captured
+            self.emit(SIGNAL("reset_countdown()"))
+
             # Loop used to disallow triggering for additional images for however many seconds
             # Also displays remaining timeout on the status bar
             for seconds in range(self.config['TriggerTimeout'], 0, -1):

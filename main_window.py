@@ -70,7 +70,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionDefectActions.triggered.connect(self.defect_actions)
-        self.actionNotificationSetup.triggered.connect(self.notification_setup)
+        self.actionNotificationSettings.triggered.connect(self.notification_settings)
 
         # Menubar -> Run
         self.actionInitializeBuild.triggered.connect(self.initialize_1)
@@ -85,6 +85,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonStop.clicked.connect(self.stop)
         self.buttonSet.clicked.connect(self.set_layer)
         self.buttonPhase.clicked.connect(self.toggle_phase)
+        self.buttonNotificationSettings.clicked.connect(self.notification_settings)
         self.buttonImageConverter.clicked.connect(self.image_converter)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
         self.buttonImageCapture.clicked.connect(self.image_capture)
@@ -302,8 +303,17 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def defect_actions(self):
         pass
 
-    def notification_setup(self):
-        pass
+    def notification_settings(self):
+        """Opens a Dialog Window when Setup > Report Settings > Notification Settings is clicked
+        Allows user to enter and change the email address and what notifications to be notified of
+        Setup as a Modal window, blocking input to other visible windows until this window is closed
+        """
+
+        self.update_status('')
+
+        # Create the dialog variable and execute it as a modal window
+        notification_settings_dialog = dialog_windows.NotificationSettings(self)
+        notification_settings_dialog.exec_()
 
     # BUTTONS
 
@@ -482,8 +492,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.update_progress(20)
             image_perspective = image_processing.ImageCorrection(None, None, None).perspective_fix(image_undistort)
             self.update_progress(40)
-            image_rotate = image_processing.ImageCorrection(None, None, None).rotate(image_perspective)
-            image_crop = image_processing.ImageCorrection(None, None, None).crop(image_rotate)
+            image_crop = image_processing.ImageCorrection(None, None, None).crop(image_perspective)
             self.update_progress(60)
             image_clahe = image_processing.ImageCorrection(None, None, None).clahe(image_crop)
             self.update_progress(80)
@@ -492,7 +501,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             image_name.replace('.png', '')
             cv2.imwrite('%s_undistort.png' % image_name, image_undistort)
             cv2.imwrite('%s_perspective.png' % image_name, image_perspective)
-            cv2.imwrite('%s_rotate.png' % image_name, image_rotate)
             cv2.imwrite('%s_crop.png' % image_name, image_crop)
             cv2.imwrite('%s_clahe.png' % image_name, image_clahe)
 

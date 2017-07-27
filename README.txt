@@ -12,7 +12,7 @@ Installation
 	- Copy cv2.pyd into Python/Lib/site-packages
 - Copy numpy-1.11.3+mkl-cp27-cp27m-win32.whl to Python/Scripts
 	- Open a command prompt
-	- Navigate to the python/scripts folder (cd: "Folder Name")
+	- Navigate to the python/scripts folder (cd "Folder Name")
 	- Run: pip2.7.exe install "numpy-1.11.3+mkl-cp27-cp27m-win32.whl"
 
 Operation
