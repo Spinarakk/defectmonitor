@@ -1,3 +1,7 @@
+July 28
+- Finally obtained a bunch of scan and coat images from a real build
+- Problem is there was a problem with the build and had to be stopped
+
 July 27
 - Set up another local machine to run the program on
 - Installed TeamViewer to remotely access the computer which will be in the laser printer

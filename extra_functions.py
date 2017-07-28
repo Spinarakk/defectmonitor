@@ -1,5 +1,7 @@
 # Import external libraries
+import os
 import time
+import json
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -56,26 +58,33 @@ class Stopwatch(QThread):
 
 
 class Notifications(QThread):
+    """Module used to send email notifications to a specified email address"""
 
-    def __init__(self):
+    def __init__(self, subject):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
-
+        # Load configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
 
         self.sender = 'donotreply.amaero@gmail.com'
-        self.message = MIMEMultipart()
-        self.message['From'] = self.sender
-        self.message['To'] = 'nicholascklee@gmail.com'
-        self.message['Subject'] = 'Image capture failed'
-        self.message['X-Priority'] = '3'
 
-        head = ''
-        body = 'The program has failed to capture an image for the last 10 minutes. Please check status.'
-        end = ''
+        # Create the email here
+        self.email = MIMEMultipart()
+        self.email['From'] = self.sender
+        self.email['To'] = self.config['EmailAddress']
+        self.email['Subject'] = str(subject)
+        self.email['X-Priority'] = '3'
 
-        self.message.attach(MIMEText(head + body + end, 'plain'))
+        # Create the message here individually
+        head = 'Dear %s,' % self.config['Username']
+        body = 'This is a test email to see whether the email address is valid.'
+        foot = ''
+
+        # Create the full message by combining parts
+        self.email.attach(MIMEText(head + '\n\n' + body + '\n\n' + foot, 'plain'))
 
     def run(self):
         self.send_notification()
@@ -85,8 +94,59 @@ class Notifications(QThread):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(self.sender, 'Amaero2017')
-        server.sendmail(self.sender, 'nicholascklee@gmail.com', self.message.as_string())
+        server.sendmail(self.sender, self.config['EmailAddress'], self.email.as_string())
         server.quit()
 
     def add_attachment(self):
         pass
+
+
+class MonitorDirectory(QThread):
+    """Module used to constantly poll a given directory(s) and signal back if a change in number of items is detected"""
+
+    def __init__(self, directory_1, directory_2, frequency=1):
+
+        # Defines the class as a thread
+        QThread.__init__(self)
+
+        self.directory_1 = directory_1
+        self.directory_2 = directory_2
+        self.frequency = frequency
+
+        # Flag to start and terminate the while loop
+        self.run_flag = True
+
+    def run(self):
+
+        directory_1_length = None
+        directory_2_length = None
+
+        while self.run_flag:
+
+            print 'running'
+            directory_1_length_new = self.poll_directory(self.directory_1)
+            directory_2_length_new = self.poll_directory(self.directory_2)
+
+            print directory_1_length_new
+
+            if not directory_1_length_new == directory_1_length:
+                self.emit(SIGNAL("update_scrollbar_range(QString, QString)"),
+                          str(directory_1_length_new + 1), '1')
+                directory_1_length = directory_1_length_new
+                print directory_1_length
+
+            if not directory_2_length_new == directory_2_length:
+                self.emit(SIGNAL("update_scrollbar_range(QString, QString)"),
+                          str(directory_2_length_new + 1), '2')
+                directory_2_length = directory_2_length_new
+                print directory_2_length
+
+            time.sleep(self.frequency)
+
+    def poll_directory(self, directory):
+        """Checks the given directory and returns the nunmber of files in that directory"""
+        return len(os.walk(directory).next()[2])
+
+    def stop(self):
+        self.run_flag = False
+

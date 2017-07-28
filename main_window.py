@@ -16,6 +16,7 @@ from gui import mainWindow
 
 # Import related modules
 import dialog_windows
+import extra_functions
 import slice_converter
 import image_capture
 import image_processing
@@ -84,7 +85,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonPause.clicked.connect(self.pause)
         self.buttonStop.clicked.connect(self.stop)
         self.buttonSet.clicked.connect(self.set_layer)
-        self.buttonPhase.clicked.connect(self.toggle_phase)
+        self.buttonDisplayImages.clicked.connect(self.display_images)
         self.buttonNotificationSettings.clicked.connect(self.notification_settings)
         self.buttonImageConverter.clicked.connect(self.image_converter)
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
@@ -120,8 +121,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonRotateCW.clicked.connect(self.rotate_cw)
 
         # Display Widget Tabs
-        self.widgetDisplay.blockSignals(True)
         self.widgetDisplay.currentChanged.connect(self.tab_change)
+
+        # ScrollBars
+        self.scrollSE.valueChanged.connect(self.scrollbar_change)
 
         # Generate a timestamp for folder labelling purposes
         current_time = datetime.now()
@@ -150,9 +153,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.part_contours = dict()
         self.initial_flag = True
 
-        # Check if resuming from scan or coat phase
-        self.phase_flag = False
-        self.current_phase = self.toggle_phase()
+        # Instantiate and run a MonitorDirectory instance
+        self.MD_instance = extra_functions.MonitorDirectory('%s\scan' % self.image_folder, '%s\coat' % self.image_folder)
+        self.connect(self.MD_instance, SIGNAL("update_scrollbar_range(QString, QString)"), self.update_scrollbar_range)
+        self.MD_instance.start()
 
     # MENUBAR
 
@@ -303,6 +307,40 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     def defect_actions(self):
         pass
 
+    def display_images(self):
+        """Takes the images from the coat and scan folder of the created image folder and displays them
+        On their appropriate tabs
+        Reads and loads 11 images, the current image plus the previous and next five images into memory
+        Allows the user to scroll through the images and jump to specific ones
+        Note: The order of the images will be the order that the images are in the folder itself
+        The images will need to have proper numbering to ensure that the layer numbers are accurate
+        The names of the images themselves are irrelevant to their order within this program
+        However they are important within the folder itself for their order
+        """
+
+        image_scan_list = os.listdir('%s/scan' % self.image_folder)
+
+        image_coat_list = os.listdir('%s/coat' % self.image_folder)
+
+        if image_scan_list:
+            image_scan = cv2.imread('%s/scan/%s' % (self.image_folder, image_scan_list[self.scrollSE.value() - 1]))
+            self.labelDisplaySE.setPixmap(self.convert2pixmap(image_scan))
+        else:
+            self.update_status('Scan image folder empty.')
+
+        if image_coat_list:
+            image_coat = cv2.imread('%s/coat/%s' % (self.image_folder, image_coat_list[self.scrollCE.value() - 1]))
+            self.labelDisplayCE.setPixmap(self.convert2pixmap(image_coat))
+        else:
+            if not image_coat_list:
+                self.update_status('Scan and Coat image folders empty.')
+            else:
+                self.update_status('Coat image folder empty.')
+
+    def change_display_image(self):
+        """Changes the image being displayed on the Main Window"""
+        pass
+
     def notification_settings(self):
         """Opens a Dialog Window when Setup > Report Settings > Notification Settings is clicked
         Allows user to enter and change the email address and what notifications to be notified of
@@ -331,7 +369,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonDefectProcessing.setEnabled(False)
         self.groupDisplayOptions.setEnabled(False)
         self.actionExportImage.setEnabled(False)
-        self.widgetDisplay.blockSignals(True)
         self.update_progress(0)
         self.update_display()
 
@@ -367,8 +404,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.slice_parsed = self.SC_instance.slice_parsed
 
         # Set the maximum of the Layer spinBox to the length of the parsed slice file
-        self.spinLayer.setMaximum(self.slice_parsed['Max Layer'])
-        self.spinLayer.setToolTip('1 - %s' % self.slice_parsed['Max Layer'])
+        # self.update_layer_range(self.slice_parsed['Max Layer'])
 
         # Instantiate an ImageCapture instance
         self.ICA_instance = image_capture.ImageCapture(self.image_folder,
@@ -424,7 +460,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonDefectProcessing.setEnabled(True)
         self.checkToggleOverlay.setEnabled(True)
         self.groupDisplayOptions.setEnabled(True)
-        self.widgetDisplay.blockSignals(False)
         self.actionExportImage.setEnabled(True)
         self.update_progress(100)
         if not self.simulation_flag:
@@ -434,7 +469,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.initial_flag = False
 
         self.convert2contours(1)
-
 
         # Update the widgetDisplay to display the processed images
         self.update_display()
@@ -568,21 +602,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.simulation_flag = False
             self.update_status("Program in Camera Mode.")
-
-    def toggle_phase(self):
-        """Toggles the current 3D printing machine phase to either the scan or coat phase"""
-
-        # Toggles the phase flag
-        self.phase_flag = not self.phase_flag
-
-        # True = Scan, False = Coat
-        if self.phase_flag:
-            self.buttonPhase.setText('SCAN')
-            current_phase = 'scan'
-        else:
-            self.buttonPhase.setText('COAT')
-            current_phase = 'coat'
-        return current_phase
 
     # MISCELLANEOUS METHODS
 
@@ -804,12 +823,48 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                                aspectRatioMode=Qt.KeepAspectRatio)
 
     def tab_change(self, tab_index):
-        """Check which tab is currently being displayed on widgetDisplay to enable a button"""
+        """Executes when the focused tab changes to enable a button and change layer values"""
 
-        if tab_index == 2:
-            self.buttonDefectProcessing.setEnabled(False)
-        else:
-            self.buttonDefectProcessing.setEnabled(True)
+        if tab_index == 0:
+            self.labelLayerNumber.setText(str(self.scrollSE.value()))
+        elif tab_index == 1:
+            self.labelLayerNumber.setText(str(self.scrollCE.value()))
+
+        if not self.initial_flag:
+            if tab_index >= 2:
+                self.buttonDefectProcessing.setEnabled(False)
+            else:
+                self.buttonDefectProcessing.setEnabled(True)
+
+    def scrollbar_change(self, value):
+        """Executes when the value of the scrollbar changes to then update the tooltip with the new value
+        Also updates the relevant layer numbers of specific UI elements and other internal functions
+        """
+        self.scrollSE.setToolTip('%s' % value)
+        self.labelLayerNumber.setText(str(value).zfill(4))
+        self.labelLayerNumber.setText(str(value).zfill(4))
+
+    def update_scrollbar_range(self, value, scrollbar):
+        """Updates the scrollbar on the right of each of the tabs with a new maximum value"""
+
+        if value is not '1':
+            value = int(value) - 1
+
+        # Scan directory
+        if scrollbar == '1':
+            self.image_scan_range = value
+            self.scrollSE.setMaximum(self.image_scan_range)
+            if self.widgetDisplay.currentIndex() == 0:
+                self.update_layer_range(self.image_scan_range)
+
+        if scrollbar == '2':
+            self.image_coat_range = value
+            self.scrollCE.setMaximum(self.image_coat_range)
+
+    def update_layer_range(self, value):
+        """Updates the Layer spinBox with new range of acceptable values"""
+        self.spinLayer.setMaximum(int(value))
+        self.spinLayer.setToolTip('1 - %s' % value)
 
     def update_status(self, string, duration=0):
         """Updates the status bar at the bottom of the Main Window with the received string argument

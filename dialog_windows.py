@@ -113,15 +113,48 @@ class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNo
         self.lineEmailAddress.setText(self.config['EmailAddress'])
 
         # Setup event listeners for all the relevent UI components, and connect them to specific functions
-        self.buttonSendTestEmail.clicked.connect(self.send_test_email)
+        self.buttonSendTestEmail.clicked.connect(self.send_test)
         self.checkAll.toggled.connect(self.toggle_all)
         self.lineEmailAddress.textChanged.connect(self.enable_button)
 
-    def send_test_email(self):
+    def send_test(self):
+        """Sends a test notification email to the inputted email address"""
 
+        # Open a message box with a send test email confirmation message so accidental emails don't get sent
+        self.send_confirmation = QtGui.QMessageBox()
+        self.send_confirmation.setIcon(QtGui.QMessageBox.Question)
+        self.send_confirmation.setText('Are you sure you want to send a test email notification to %s?' %
+                                       self.lineEmailAddress.text())
+        self.send_confirmation.setWindowTitle('Send Test Email')
+        self.send_confirmation.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
-        self.buttonSendTestEmail.setEnabled(False)
-        pass
+        confirmation = self.send_confirmation.exec_()
+
+        # If the user clicked Yes
+        if confirmation == 16384:
+            valid_email = self.verify_email()
+
+            if valid_email:
+                # Disable the Send Test Email button to prevent SPAM
+                self.buttonSendTestEmail.setEnabled(False)
+                
+                # Instantiate and run a Notifications instance
+                self.N_instance = extra_functions.Notifications('Test Email Notification')
+                self.N_instance.start()
+                self.connect(self.N_instance, SIGNAL("finished()"), self.send_test_finished)
+
+        else:
+            # Do nothing
+            pass
+
+    def send_test_finished(self):
+        """Open a message box with a send test confirmation message"""
+        self.send_test_confirmation = QtGui.QMessageBox()
+        self.send_test_confirmation.setIcon(QtGui.QMessageBox.Information)
+        self.send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
+                                            (self.lineEmailAddress.text(), self.lineUsername.text()))
+        self.send_test_confirmation.setWindowTitle('Send Test Email')
+        self.send_test_confirmation.exec_()
 
     def toggle_all(self):
         """Toggling the All checkbox causes all the subsequent checkboxes to toggle being check"""
@@ -131,7 +164,17 @@ class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNo
         self.checkError.setChecked(self.checkAll.isChecked())
 
     def verify_email(self):
-        pass
+        """Checks if the entered email address is valid or not"""
+        if '@' in self.lineEmailAddress.text():
+            return True
+        else:
+            # Opens a message box indicating that the entered email address is invalid
+            self.invalid_email_error = QtGui.QMessageBox()
+            self.invalid_email_error.setIcon(QtGui.QMessageBox.Critical)
+            self.invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
+            self.invalid_email_error.setWindowTitle('Error')
+            self.invalid_email_error.exec_()
+            return False
 
     def enable_button(self):
         """Re-enables the Send Test Email button if someone changes the email address text"""
@@ -311,9 +354,11 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         """
 
         if self.checkNotifications.isChecked():
-            self.update_status('Sending notification to user.')
-            self.notifications_instance = extra_functions.Notifications()
-            self.notifications_instance.start()
+            self.update_status('Sending email notification.')
+            
+            # Instantiate and run a Notifications instance
+            self.N_instance = extra_functions.Notifications()
+            self.N_instance.start()
 
     def stop(self):
         """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances"""
