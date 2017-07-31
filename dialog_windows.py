@@ -4,11 +4,10 @@ import cv2
 import numpy as np
 import json
 from PyQt4 import QtGui
-from PyQt4.QtCore import SIGNAL, Qt, QSettings
+from PyQt4.QtCore import SIGNAL, Qt, QSettings, QString
 
 # Import related modules
 import slice_converter
-import image_capture
 import image_processing
 import extra_functions
 import camera_calibration
@@ -35,41 +34,50 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        self.working_directory = self.config['WorkingDirectory']
-
         # Setup event listeners for all the relevent UI components, and connect them to specific functions
         # Buttons
         self.buttonBrowseCF.clicked.connect(self.browse_calibration)
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
-        self.buttonChangeWD.clicked.connect(self.change_working_directory)
+        self.buttonChangeIF.clicked.connect(self.change_image_folder)
 
-        # Set and display the default calibration file and slice file as stated in the config.json file
-        self.lineCalibrationFile.setText(self.config['CalibrationFile'])
-        self.lineSliceFile.setText(self.config['SliceFile'])
-        self.lineWorkingDirectory.setText(self.working_directory)
+        # Set and display the default image folder, calibration file and slice file as stated in the config.json file
+        self.lineCalibrationFile.setText(QString(self.config['CalibrationFile']).section('/', -1))
+        self.lineSliceFile.setText(QString(self.config['SliceFile']).section('/', -1))
+        self.lineImageFolder.setText(self.config['ImageFolder'])
 
     def browse_calibration(self):
 
         # Opens a file select dialog, allowing user to select a calibration file
-        self.calibration_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Calibration Files (*.txt)')
+        calibration_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Calibration Files (*.txt)')
 
-        if self.calibration_file:
-            self.calibration_file = self.calibration_file.replace(self.working_directory + '/', '')
-            self.lineCalibrationFile.setText(self.calibration_file)
-            self.config['CalibrationFile'] = str(self.calibration_file)
+        if calibration_file:
+            # Save the file path to the configuration file
+            self.config['CalibrationFile'] = str(calibration_file)
+            # Display just the file name on the line box
+            self.lineCalibrationFile.setText(calibration_file.section('/', -1))
 
     def browse_slice(self):
 
         # Opens a file select dialog, allowing user to select a slice file
-        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        if self.slice_file:
-            self.slice_file = self.slice_file.replace(self.working_directory + '/', '')
-            self.lineSliceFile.setText(self.slice_file)
-            self.config['SliceFile'] = str(self.slice_file)
+        if slice_file:
+            # Save the file path to the configuration file
+            self.config['SliceFile'] = str(slice_file)
+            # Display just the file name on the line box
+            self.lineSliceFile.setText(slice_file.section('/', -1))
 
-    def change_working_directory(self):
-        pass
+    def change_image_folder(self):
+
+        # Opens a folder select dialog, allowing the user to select a folder
+        calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Change Image Folder...', '')
+
+        if calibration_folder:
+            # Save the folder path to the configuration file
+            calibration_folder = calibration_folder.replace('\\', '/')
+            self.config['ImageFolder'] = str(calibration_folder)
+            # Display just the file name on the line box
+            self.lineImageFolder.setText(calibration_folder)
 
     def accept(self):
         """Executes when the OK button is clicked
@@ -195,27 +203,46 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
     def __init__(self, parent=None, image_folder=None):
 
-        # Setup Dialog UI with MainWindow as parent
-        super(ImageCapture, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
+        # Reason why this is here is so that the rest of the program can run without this module which requires pypylon
+        # Pypylon requires the Basler Pylon software to be installed
+        try:
+            # Import related module
+            import image_capture
+        except ImportError:
+            # Open a message box with an error stating that this tool cannot be run
+            self.export_confirmation = QtGui.QMessageBox()
+            self.export_confirmation.setIcon(QtGui.QMessageBox.Critical)
+            self.export_confirmation.setText('Basler Pylon Software not installed. This tool cannot be run.')
+            self.export_confirmation.setWindowTitle('Image Capture')
+            self.export_confirmation.exec_()
+            return None
+            #self.closeEvent(1)
+        else:
+            # If the Basler Pylon software is installed, run the window as per normal
 
-        # Set and display the default image folder name to be used to store all acquired images
-        self.image_folder = image_folder
-        self.lineImageFolder.setText(self.image_folder)
+            # Setup Dialog UI with MainWindow as parent
+            super(ImageCapture, self).__init__(parent)
+            self.setAttribute(Qt.WA_DeleteOnClose)
+            self.setupUi(self)
 
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonCameraSettings.clicked.connect(self.camera_settings)
-        self.buttonCheckCamera.clicked.connect(self.check_camera)
-        self.buttonCheckTrigger.clicked.connect(self.check_trigger)
-        self.buttonCapture.clicked.connect(self.capture)
-        self.buttonRun.clicked.connect(self.run)
-        self.buttonStop.clicked.connect(self.stop)
+            self.image_capture = image_capture
 
-        # These are flags to check if both the browse and check camera settings are successful
-        self.camera_flag = False
-        self.trigger_flag = False
+            # Set and display the default image folder name to be used to store all acquired images
+            self.image_folder = image_folder
+            self.lineImageFolder.setText(self.image_folder)
+
+            # Setup event listeners for all the relevant UI components, and connect them to specific functions
+            self.buttonBrowse.clicked.connect(self.browse)
+            self.buttonCameraSettings.clicked.connect(self.camera_settings)
+            self.buttonCheckCamera.clicked.connect(self.check_camera)
+            self.buttonCheckTrigger.clicked.connect(self.check_trigger)
+            self.buttonCapture.clicked.connect(self.capture)
+            self.buttonRun.clicked.connect(self.run)
+            self.buttonStop.clicked.connect(self.stop)
+
+            # These are flags to check if both the browse and check camera settings are successful
+            self.camera_flag = False
+            self.trigger_flag = False
 
     def browse(self):
 
@@ -243,7 +270,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def check_camera(self):
         """Checks that a camera is found and available"""
 
-        self.camera_flag = image_capture.ImageCapture(self.image_folder).acquire_camera()
+        self.camera_flag = self.image_capture.ImageCapture(self.image_folder).acquire_camera()
 
         if bool(self.camera_flag):
             self.labelCameraStatus.setText('FOUND')
@@ -258,7 +285,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
     def check_trigger(self):
         """Checks that a triggering device is found and available"""
-        self.trigger_flag = image_capture.ImageCapture(None).acquire_trigger()
+        self.trigger_flag = self.image_capture.ImageCapture(None).acquire_trigger()
 
         if bool(self.trigger_flag):
             self.labelTriggerStatus.setText(str(self.trigger_flag))
@@ -280,7 +307,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonDone.setEnabled(False)
 
         # Instantiate and run an ImageCapture instance that will only take one image
-        self.ICS_instance = image_capture.ImageCapture(self.image_folder, single_flag=True,
+        self.ICS_instance = self.image_capture.ImageCapture(self.image_folder, single_flag=True,
                                                        correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.ICS_instance, SIGNAL("display_image(QString)"), self.display_image)
@@ -320,7 +347,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.ICR_instance = image_capture.ImageCapture(self.image_folder, run_flag=True,
+        self.ICR_instance = self.image_capture.ImageCapture(self.image_folder, run_flag=True,
                                                        correction_flag=self.checkApplyCorrection.isChecked())
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.ICR_instance, SIGNAL("display_image(QString)"), self.display_image)
@@ -393,6 +420,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
                 self.ICR_instance.stop()
         except AttributeError:
             pass
+
+        self.emit(SIGNAL("accepted()"))
 
 
 class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
@@ -558,7 +587,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         # Empty the image lists
         self.image_list_valid = []
 
-        # Opens a folder select dialog, allowing the user to choose a folder
+        # Opens a folder select dialog, allowing the user to select a folder
         self.calibration_folder = None
         self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
 

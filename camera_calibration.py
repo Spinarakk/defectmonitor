@@ -11,7 +11,6 @@ from PyQt4.QtCore import QThread, SIGNAL
 class Calibration(QThread):
     """Module used to calibrate the connected Basler Ace acA3800-10gm GigE camera if attached
     User specifies a folder of checkboard images taken using the camera and outputs the camera parameters to a text file
-    If no camera is found, or simulation flag is raised, default calibration settings will be used
     Default calibration settings stored in camera_parameters.txt
     """
 

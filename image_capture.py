@@ -13,14 +13,13 @@ import image_processing
 
 class ImageCapture(QThread):
     """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached
-    Images are acquired through one of three methods depending on the raised flags
-    If simulation_flag, images are acquired from a set samples folder and emitted back to the function caller
+    Images are acquired through either method depending on the raised flags
     If single, only one image is acquired, saved and emitted back to the function caller
     If run, the while loop waits indefinitely till a serial trigger is detected
     It then acquires and saves the image, then sleeps for a predefined time until the next trigger is allowed
     """
 
-    def __init__(self, save_folder, simulation_flag=False, single_flag=False, run_flag=False, correction_flag=False):
+    def __init__(self, save_folder, single_flag=False, run_flag=False, correction_flag=False):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -30,7 +29,6 @@ class ImageCapture(QThread):
 
         # Store config settings as respective variables
         self.save_folder = save_folder
-        self.simulation_flag = simulation_flag
         self.single_flag = single_flag
         self.run_flag = run_flag
         self.correction_flag = correction_flag
@@ -61,46 +59,42 @@ class ImageCapture(QThread):
 
     def run(self):
 
-        # Simulation Flag
-        if self.simulation_flag:
-            self.acquire_image_simulation()
+        self.emit(SIGNAL("update_status(QString)"), 'Capturing Image(s)...')
+        self.acquire_settings()
+        self.acquire_camera()
+
+        # Opens up the camera and sends it the stored settings to be used for capturing images
+        # Put in a try loop in case the camera cannot be opened for some reason (like another program using it)
+        try:
+            self.camera.open()
+            self.apply_settings()
+        except:
+            # If camera can't be opened, send a status update and initiate the stop method
+            self.emit(SIGNAL("update_status(QString)"), 'Camera in use by other application.')
+            self.stop()
+
+        # Single Flag
+        if self.single_flag:
+            self.emit(SIGNAL("update_status(QString)"), 'Capturing single image...')
+            self.acquire_image_single()
         else:
-            self.emit(SIGNAL("update_status(QString)"), 'Capturing Image(s)...')
-            self.acquire_settings()
-            self.acquire_camera()
+            self.acquire_trigger()
 
-            # Opens up the camera and sends it the stored settings to be used for capturing images
-            # Put in a try loop in case the camera cannot be opened for some reason (like another program using it)
-            try:
-                self.camera.open()
-                self.apply_settings()
-            except:
-                # If camera can't be opened, send a status update and initiate the stop method
-                self.emit(SIGNAL("update_status(QString)"), 'Camera in use by other application.')
-                self.stop()
+        # Run Flag
+        while self.run_flag:
+            self.emit(SIGNAL("update_status(QString)"), 'Waiting for trigger.')
+            self.acquire_image_run()
 
-            # Single Flag
-            if self.single_flag:
-                self.emit(SIGNAL("update_status(QString)"), 'Capturing single image...')
-                self.acquire_image_single()
-            else:
-                self.acquire_trigger()
+        # Close the camera when done to allow other applications to use it
+        self.camera.close()
 
-            # Run Flag
-            while self.run_flag:
-                self.emit(SIGNAL("update_status(QString)"), 'Waiting for trigger.')
-                self.acquire_image_run()
+        # Set the following values as the current values to be able to restore same state if run again
+        self.config['CurrentLayer'] = self.current_layer
+        self.config['CurrentPhase'] = self.current_phase
 
-            # Close the camera when done to allow other applications to use it
-            self.camera.close()
-
-            # Set the following values as the current values to be able to restore same state if run again
-            self.config['CurrentLayer'] = self.current_layer
-            self.config['CurrentPhase'] = self.current_phase
-
-            # Save configuration settings to config.json file
-            with open('config.json', 'w+') as config:
-                json.dump(self.config, config)
+        # Save configuration settings to config.json file
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config)
 
     def acquire_camera(self):
         """Accesses the pypylon wrapper and checks the ethernet ports for a connected camera
@@ -173,34 +167,19 @@ class ImageCapture(QThread):
         self.camera.properties['AcquisitionFrameRateEnable'] = 'False'
         self.camera.properties['AcquisitionFrameCount'] = 1
 
-    def acquire_image_simulation(self):
-        """Acquire image(s) from a specified folder (samples)"""
-
-        self.emit(SIGNAL("update_status(QString)"), 'Acquiring Images...')
-
-        # Load the sample scan and coat images
-        self.raw_image_scan = cv2.imread('samples/sample_scan.png')
-        self.emit(SIGNAL("update_status(QString)"), 'Acquired scan image.')
-        self.emit(SIGNAL("update_progress(QString)"), '50')
-
-        self.raw_image_coat = cv2.imread('samples/sample_coat.png')
-        self.emit(SIGNAL("update_status(QString)"), 'Acquired coat image.')
-        self.emit(SIGNAL("update_progress(QString)"), '100')
-
-        # Emit the read images back to main_window.py for processing
-        self.emit(SIGNAL("initialize_3(PyQt_PyObject, PyQt_PyObject)"), self.raw_image_scan, self.raw_image_coat)
-        self.emit(SIGNAL("convert2contours(QString)"), '1')
-
     def acquire_image_single(self):
         """Acquire a single image from the camera"""
 
         # Grab the image from the camera, error checking in case image capture fails
         try:
             image = next(self.camera.grab_images(1))
-
+        except RuntimeError:
+            self.emit(SIGNAL("update_status(QString)"), 'Error grabbing image. Try again.')
+            self.camera.close()
+        else:
             # Create a file name for the image
             image_name = '%s/single/image_capture_%s.png' % (self.save_folder,
-                                                             str(self.config['CaptureCount']).zfill(2))
+                                                             str(self.config['CaptureCount']).zfill(4))
 
             # Save the image to the selected save folder
             cv2.imwrite(image_name, image)
@@ -216,10 +195,6 @@ class ImageCapture(QThread):
             # Update the capture counter which will be saved to the config.json file
             self.config['CaptureCount'] += 1
             self.emit(SIGNAL("update_status(QString)"), 'Image saved.')
-
-        except RuntimeError:
-            self.emit(SIGNAL("update_status(QString)"), 'Error grabbing image. Try again.')
-            self.camera.close()
 
     def acquire_image_run(self):
         """Acquire multiple images from the camera when trigger is detected"""
@@ -242,7 +217,7 @@ class ImageCapture(QThread):
             # Create a file name for the image
             image_name = '%s/%s/image_%s_%s.png' % \
                          (self.save_folder, self.phases[self.current_phase], self.phases[self.current_phase],
-                          str(int(self.current_layer)).zfill(2))
+                          str(int(self.current_layer)).zfill(4))
 
             # Save the image to the selected save folder in the respective scan or coat folder
             cv2.imwrite(image_name, image)
@@ -285,12 +260,12 @@ class ImageCapture(QThread):
         # Save the processed image in the processed folder with an appended file name
         if bool(count):
             # Create a file name for the corrected image
-            image_name = '%s/processed/image_capture_%s_processed.png' % (self.save_folder, str(int(count)).zfill(2))
+            image_name = '%s/processed/image_capture_%s_processed.png' % (self.save_folder, str(int(count)).zfill(4))
             cv2.imwrite(image_name, image)
             self.emit(SIGNAL("display_image(QString)"), image_name)
         else:
             image_name = '%s/processed/image_%s_%s_processed.png' % (self.save_folder, self.phases[phase],
-                                                                     str(int(layer)).zfill(2))
+                                                                     str(int(layer)).zfill(4))
             cv2.imwrite(image_name, image)
             self.emit(SIGNAL("display_image(QString)"), image_name)
 

@@ -18,12 +18,16 @@ Installation
 Operation
 - Run main_window.py
 
-Software
-- Python 2.7.13 (PyCharm 2017.1.2)
+Required Software (32-bit Required)
+- Python 2.7.13
 - OpenCV 3.2.0
 - PyQt 4.11.4
 - Qt 4.8.7
-- Basler Pylon 5.0.5.8999
+- Numpy 1.11.3
+
+Optional Software
+- Pycharm 2017.1.2
+- Basler Pylon 5.0.5.8999 (Required to use Image Capture Tool)
 
 Hardware
 - Basler Ace acA3800-10gm GigE

@@ -101,16 +101,19 @@ class Notifications(QThread):
         pass
 
 
-class MonitorDirectory(QThread):
-    """Module used to constantly poll a given directory(s) and signal back if a change in number of items is detected"""
+class FolderMonitor(QThread):
+    """Module used to constantly poll the given folders and signal back if a change in number of items is detected"""
 
-    def __init__(self, directory_1, directory_2, frequency=1):
+    def __init__(self, folder_coat, folder_scan, folder_slice, frequency=1):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
-        self.directory_1 = directory_1
-        self.directory_2 = directory_2
+        self.folder_coat = folder_coat
+        self.folder_scan = folder_scan
+        self.folder_slice = folder_slice
+
+        # How often (in seconds) to poll the folder
         self.frequency = frequency
 
         # Flag to start and terminate the while loop
@@ -118,35 +121,42 @@ class MonitorDirectory(QThread):
 
     def run(self):
 
-        directory_1_length = None
-        directory_2_length = None
+        # Initialize a length of nothing to store the number of files in their respective folders
+        coat_length = None
+        scan_length = None
+        slice_length = None
 
         while self.run_flag:
 
-            print 'running'
-            directory_1_length_new = self.poll_directory(self.directory_1)
-            directory_2_length_new = self.poll_directory(self.directory_2)
+            coat_length_new = self.poll_folder(self.folder_coat)
+            scan_length_new = self.poll_folder(self.folder_scan)
+            slice_length_new = self.poll_folder(self.folder_slice)
 
-            print directory_1_length_new
+            # 1 is added to the length as an empty folder will cause the sliders to be set at 0, causing the new
+            # minimum to be set as 0 as well
+            # 0 -> Coat, 1 -> Scan, 2 -> Slice
+            # Return current length of coat folder if changed
+            if not coat_length_new == coat_length:
+                self.emit(SIGNAL("update_layer_range(QString, QString)"), str(coat_length_new + 1), '0')
+                coat_length = coat_length_new
 
-            if not directory_1_length_new == directory_1_length:
-                self.emit(SIGNAL("update_scrollbar_range(QString, QString)"),
-                          str(directory_1_length_new + 1), '1')
-                directory_1_length = directory_1_length_new
-                print directory_1_length
+            # Return current length of scan folder if changed
+            if not scan_length_new == scan_length:
+                self.emit(SIGNAL("update_layer_range(QString, QString)"), str(scan_length_new + 1), '1')
+                scan_length = scan_length_new
 
-            if not directory_2_length_new == directory_2_length:
-                self.emit(SIGNAL("update_scrollbar_range(QString, QString)"),
-                          str(directory_2_length_new + 1), '2')
-                directory_2_length = directory_2_length_new
-                print directory_2_length
+            # Return current length of slice folder if changed
+            if not slice_length_new == slice_length:
+                self.emit(SIGNAL("update_layer_range(QString, QString)"), str(slice_length_new + 1), '2')
+                slice_length = slice_length_new
 
             time.sleep(self.frequency)
 
-    def poll_directory(self, directory):
-        """Checks the given directory and returns the nunmber of files in that directory"""
-        return len(os.walk(directory).next()[2])
+    def poll_folder(self, folder):
+        """Checks the given folder and returns the number of files in that directory"""
+        return len(os.walk(folder).next()[2])
 
     def stop(self):
+        """Method that happens when the MainWindow is closed"""
         self.run_flag = False
 

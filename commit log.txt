@@ -1,6 +1,27 @@
+July 31
+- Semi-completely revamped the MainWindow layout to allow a larger window to display the images
+- Replaced the scrollbars with sliderbars with up down buttons as scrollbars inverted controls don't work as expected
+- Removed a couple of display options as they are unncessary for end-users
+- Recoded a lot of the MainWindow code to account for the new changes and removed buttons
+- Reorganized a lot of the MainWindow code to make it clearer
+- Removed the saving of the undistorted and perspective corrected images to save time
+- Removed the Initialize button and its functionality as it doesn't actually do anything substantial anymore
+- Moved the import pypylon statement into the dialog_windows ImageCapture class so that the program can be run on machines without the Basler Pylon software installed and be used for its other functions
+- Image Capture tool cannot be used unless Basler Pylon is installed
+- Fixed aspect ratio scaling of the displaay window
+- Readded the Image Viewer tab to show images as they are captured
+- Split the update_display1 method into 5 individual methods for each of the 5 tabs so that the one method doesn't update 5 images everytime one of the tab images needs to change
+- Removed the simulation checkbox and simulation flags
+- Changed when the image folders are created to when a new build is created
+- Moved image folder to a build folder
+- A new build needs to be created in order to use certain features
+- Changed the working directory button into an image folder save location button
+
 July 28
 - Finally obtained a bunch of scan and coat images from a real build
 - Problem is there was a problem with the build and had to be stopped
+- Started recoding the main display to change in accordance to the scrollbar value and the set layer value
+- Scrollbar range and layer range also changes in accordance to the number of images in the scan and coat image folder
 
 July 27
 - Set up another local machine to run the program on
