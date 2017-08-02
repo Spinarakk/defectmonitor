@@ -294,22 +294,6 @@
     <string>Status:</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkApplyCorrection">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>236</y>
-     <width>131</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Check to apply image correction techniques to the captured image. The processed image will be saved separately to the processed folder.</string>
-   </property>
-   <property name="text">
-    <string>Apply Correction</string>
-   </property>
-  </widget>
   <widget class="QLabel" name="labelTriggerStatus">
    <property name="geometry">
     <rect>
@@ -357,7 +341,7 @@
   <widget class="QCheckBox" name="checkDisplayImage">
    <property name="geometry">
     <rect>
-     <x>190</x>
+     <x>30</x>
      <y>236</y>
      <width>131</width>
      <height>28</height>
@@ -387,6 +371,22 @@
    </property>
    <property name="readOnly">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelTimeIdle">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>236</y>
+     <width>151</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Time Idle: 00:00:00</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>

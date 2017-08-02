@@ -19,7 +19,7 @@ class ImageCapture(QThread):
     It then acquires and saves the image, then sleeps for a predefined time until the next trigger is allowed
     """
 
-    def __init__(self, save_folder, single_flag=False, run_flag=False, correction_flag=False):
+    def __init__(self, single_flag=False, run_flag=False):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -28,25 +28,8 @@ class ImageCapture(QThread):
         self.acquire_settings()
 
         # Store config settings as respective variables
-        self.save_folder = save_folder
         self.single_flag = single_flag
         self.run_flag = run_flag
-        self.correction_flag = correction_flag
-
-        # Checks if the save folder location has a scan, coat and single folder, if not, create them
-        try:
-            os.mkdir('%s\coat' % self.save_folder)
-        except WindowsError:
-            try:
-                os.mkdir('%s\scan' % self.save_folder)
-            except WindowsError:
-                try:
-                    os.mkdir('%s\single' % self.save_folder)
-                except WindowsError:
-                    try:
-                        os.mkdir('%s\processed' % self.save_folder)
-                    except WindowsError:
-                        pass
 
         # For CurrentPhase, 0 corresponds to Coat, 1 corresponds to Scan
         self.current_layer = self.config['CurrentLayer']
@@ -62,6 +45,8 @@ class ImageCapture(QThread):
         self.emit(SIGNAL("update_status(QString)"), 'Capturing Image(s)...')
         self.acquire_settings()
         self.acquire_camera()
+
+        self.save_folder = self.config['ImageFolder']
 
         # Opens up the camera and sends it the stored settings to be used for capturing images
         # Put in a try loop in case the camera cannot be opened for some reason (like another program using it)
@@ -181,20 +166,14 @@ class ImageCapture(QThread):
             image_name = '%s/single/image_capture_%s.png' % (self.save_folder,
                                                              str(self.config['CaptureCount']).zfill(4))
 
+            # Send an index, the image itself, and the image name back to the ImageCapture dialog window
+            self.emit(SIGNAL("image_correction(QString, PyQt_PyObject, QString)"), '4', image, image_name)
             # Save the image to the selected save folder
             cv2.imwrite(image_name, image)
 
-            # Apply image correction if the Apply Correction checkbox is checked
-            if self.correction_flag:
-                self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
-                self.correction(image, count=self.config['CaptureCount'])
-            else:
-                # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
-                self.emit(SIGNAL("display_image(QString)"), str(image_name))
-
             # Update the capture counter which will be saved to the config.json file
             self.config['CaptureCount'] += 1
-            self.emit(SIGNAL("update_status(QString)"), 'Image saved.')
+            self.emit(SIGNAL("update_status(QString)"), 'Image captured.')
 
     def acquire_image_run(self):
         """Acquire multiple images from the camera when trigger is detected"""

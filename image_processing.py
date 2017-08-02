@@ -26,14 +26,11 @@ class ImageCorrection(QThread):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Get the name of the calibration file as specified in the New Build dialog
-        self.calibration_file_name = self.config['WorkingDirectory'] + '/' + self.config['CalibrationFile']
-
         # Initiate a list to store all the camera parameters
         self.camera_parameters = []
 
         # Load camera parameters from specified calibration file
-        with open('%s' % self.calibration_file_name) as camera_parameters:
+        with open('%s' % self.config['CalibrationFile']) as camera_parameters:
             for line in camera_parameters.readlines():
                 self.camera_parameters.append(line.split(' '))
 
@@ -79,7 +76,6 @@ class ImageCorrection(QThread):
 
                 # Write the current processed image to disk named using appropriate tags, and send back to main function
                 cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder, phase, tag), self.image)
-                self.emit(SIGNAL("assign_images(PyQt_PyObject, QString, QString)"), self.image, phase, tag)
 
                 self.progress_counter += 8.333
                 self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
@@ -140,15 +136,20 @@ class ImageCorrection(QThread):
         Used to improve the contrast of the image to make it clearer/visible
         """
 
-        # Algorithm requires the image to be in grayscale format to function
-        # This line checks if the image is already grayscale or in bgr
-        if (len(image.shape)==3):
+        # Algorithm requires the image to be in grayscale colorspace to function
+        # This line checks if the image is already grayscale or in RGB (BGR)
+        rgb_flag = len(image.shape)
+        if (rgb_flag == 3):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # CLAHE filter functions
         clahe_filter = cv2.createCLAHE(8.0, (64, 64))
         image = clahe_filter.apply(image)
-        image_E = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
-        return image_E
+        # Convert the image back to RGB (BGR) as when converting to a pixmap, grayscale images don't work
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+        return image
 
 
 class DefectDetection(QThread):

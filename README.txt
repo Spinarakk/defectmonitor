@@ -2,14 +2,15 @@ Defect Monitor (Tentative Name)
 MCAM CLS Printer Software
 
 Installation
-- From the software folder install the following (32-bit Versions)
-	- Python 2.7.13
+- From the software folder install the following (64-bit Versions)
+	- Python 2.7.13 (Remember to select add python.exe to PATH)
 	- Basler Pylon 5.0.5.8999
 	- PyQt4 4.11.4 GPL Py2.7 Qt4.8.7
 	- PyCharm Professional 2017.1.2
 - Extract OpenCV 3.2.0
 	- Navigate to build/python/2.7/x86
 	- Copy cv2.pyd into Python/Lib/site-packages
+
 - Copy numpy-1.11.3+mkl-cp27-cp27m-win32.whl to Python/Scripts
 	- Open a command prompt
 	- Navigate to the python/scripts folder (cd "Folder Name")
@@ -108,6 +109,7 @@ Nomenclature Notes
 - All CLASS names use CamelCaps
 - All METHOD & VARIABLE names use full words in all lower caps with underscore spacing
 - All INSTANCE (QThread) names use capital abbreviation of the called method + _instance
+- All DICTIONARY keys use CamelCaps
 - All PyQt GUI Object names use camelCaps with the first word being what the object is
 - Similar code grouped in boxes with comment describing what that block does
 

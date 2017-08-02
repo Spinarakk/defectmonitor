@@ -99,7 +99,7 @@
     <string>Build Platform</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonChangeIF">
+  <widget class="QPushButton" name="buttonChangeBF">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -108,8 +108,11 @@
      <height>28</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Change where the captured images for the current build will be stored.</string>
+   </property>
    <property name="text">
-    <string>Change Image Folder</string>
+    <string>Change Build Folder</string>
    </property>
   </widget>
   <widget class="QLabel" name="labelBuildName">
@@ -255,7 +258,7 @@
     <string>Browse</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="lineImageFolder">
+  <widget class="QLineEdit" name="lineBuildFolder">
    <property name="geometry">
     <rect>
      <x>10</x>

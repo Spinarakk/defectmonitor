@@ -104,16 +104,14 @@ class Notifications(QThread):
 class FolderMonitor(QThread):
     """Module used to constantly poll the given folders and signal back if a change in number of items is detected"""
 
-    def __init__(self, folder_coat, folder_scan, folder_slice, frequency=1):
+    def __init__(self, folders, frequency=1):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
-        self.folder_coat = folder_coat
-        self.folder_scan = folder_scan
-        self.folder_slice = folder_slice
+        self.folders = folders
 
-        # How often (in seconds) to poll the folder
+        # The frequency (in seconds) in which to poll the folder
         self.frequency = frequency
 
         # Flag to start and terminate the while loop
@@ -122,35 +120,23 @@ class FolderMonitor(QThread):
     def run(self):
 
         # Initialize a length of nothing to store the number of files in their respective folders
-        coat_length = None
-        scan_length = None
-        slice_length = None
+        length_old = [None, None, None, None, None]
+        length_new = [None, None, None, None, None]
 
         while self.run_flag:
+            # Loop through all five folders
+            for index, folder in enumerate(self.folders):
+                # Acquire the new length of the folder in question
+                length_new[index] = self.poll_folder(folder)
 
-            coat_length_new = self.poll_folder(self.folder_coat)
-            scan_length_new = self.poll_folder(self.folder_scan)
-            slice_length_new = self.poll_folder(self.folder_slice)
+                # Emit a signal with the new length and the folder's index back to the MainWindow if different
+                if not length_new[index] == length_old[index]:
+                    # Length is incremented by one to prevent a maximum range of 0
+                    self.emit(SIGNAL("folder_change(QString)"), str(index))
+                    length_old[index] = length_new[index]
 
-            # 1 is added to the length as an empty folder will cause the sliders to be set at 0, causing the new
-            # minimum to be set as 0 as well
-            # 0 -> Coat, 1 -> Scan, 2 -> Slice
-            # Return current length of coat folder if changed
-            if not coat_length_new == coat_length:
-                self.emit(SIGNAL("update_layer_range(QString, QString)"), str(coat_length_new + 1), '0')
-                coat_length = coat_length_new
-
-            # Return current length of scan folder if changed
-            if not scan_length_new == scan_length:
-                self.emit(SIGNAL("update_layer_range(QString, QString)"), str(scan_length_new + 1), '1')
-                scan_length = scan_length_new
-
-            # Return current length of slice folder if changed
-            if not slice_length_new == slice_length:
-                self.emit(SIGNAL("update_layer_range(QString, QString)"), str(slice_length_new + 1), '2')
-                slice_length = slice_length_new
-
-            time.sleep(self.frequency)
+            # Timeout for a very short period to slightly reduce memory usage
+            #time.sleep(self.frequency)
 
     def poll_folder(self, folder):
         """Checks the given folder and returns the number of files in that directory"""

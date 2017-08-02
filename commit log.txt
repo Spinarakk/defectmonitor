@@ -1,3 +1,20 @@
+August 2
+- Ported everything to their 64bit version counterparts
+- Managed to somehow run and compile the pypylon under 64bit to work with python 64bit
+- Implemented scrolling through image feature
+- Implemented Go button to jump directly to layer
+- Changed the list of images, layer ranges, label names etc. into an easily accessible dictionary
+- Rewritten the FolderMonitor code to run in a for loop for all five folders
+- Added a separate config item specifically for the build folder
+- Moved the image folder correction to the NewBuild method in dialog_windows
+- Restructed a lot of code to use the new dictionary
+- Error checking if the image folder is suddenly empty
+- Split a few functions into their own method to be reused and for clarity
+- Added checking for images
+- Fixed a lot of bugs with functionality
+- Recoded the Image Capture window to work with the new folder structure
+- Removed the Apply Correction checkbox from the Image Capture window and replaced it with a Time Idle stopwatch, which displays the time if an image isn't captured (not programmed yet)
+
 July 31
 - Semi-completely revamped the MainWindow layout to allow a larger window to display the images
 - Replaced the scrollbars with sliderbars with up down buttons as scrollbars inverted controls don't work as expected

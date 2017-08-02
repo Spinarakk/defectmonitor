@@ -1,5 +1,6 @@
 # Import external libraries
 import os
+from datetime import datetime
 import cv2
 import numpy as np
 import json
@@ -38,12 +39,12 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         # Buttons
         self.buttonBrowseCF.clicked.connect(self.browse_calibration)
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
-        self.buttonChangeIF.clicked.connect(self.change_image_folder)
+        self.buttonChangeBF.clicked.connect(self.change_build_folder)
 
         # Set and display the default image folder, calibration file and slice file as stated in the config.json file
         self.lineCalibrationFile.setText(QString(self.config['CalibrationFile']).section('/', -1))
         self.lineSliceFile.setText(QString(self.config['SliceFile']).section('/', -1))
-        self.lineImageFolder.setText(self.config['ImageFolder'])
+        self.lineBuildFolder.setText(self.config['BuildFolder'])
 
     def browse_calibration(self):
 
@@ -67,35 +68,70 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
             # Display just the file name on the line box
             self.lineSliceFile.setText(slice_file.section('/', -1))
 
-    def change_image_folder(self):
+    def change_build_folder(self):
 
         # Opens a folder select dialog, allowing the user to select a folder
-        calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Change Image Folder...', '')
+        build_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Change Build Folder...', '')
 
-        if calibration_folder:
+        if build_folder:
             # Save the folder path to the configuration file
-            calibration_folder = calibration_folder.replace('\\', '/')
-            self.config['ImageFolder'] = str(calibration_folder)
+            build_folder = build_folder.replace('\\', '/')
+            self.config['BuildFolder'] = str(build_folder)
             # Display just the file name on the line box
-            self.lineImageFolder.setText(calibration_folder)
+            self.lineImageFolder.setText(build_folder)
 
     def accept(self):
         """Executes when the OK button is clicked
         Saves important selection options to the config.json file and closes the window
         """
+
         self.config['BuildName'] = str(self.lineBuildName.text())
 
+        # Save the selected platform dimensions to the config.json file
         if self.comboPlatform.currentIndex() == 0:
-            self.config['PlatformDimension'] = [636.0, 406.0]
+            self.config['PlatformDimensions'] = [636.0, 406.0]
         elif self.comboPlatform.currentIndex() == 1:
-            self.config['PlatformDimension'] = [800.0, 400.0]
+            self.config['PlatformDimensions'] = [800.0, 400.0]
         elif self.comboPlatform.currentIndex() == 2:
-            self.config['PlatformDimension'] = [250.0, 250.0]
+            self.config['PlatformDimensions'] = [250.0, 250.0]
+
+        # Generate a timestamp for folder labelling purposes
+        time = datetime.now()
+
+        # Set the full name of the main storage folder for all acquired images
+        image_folder = """%s/%s-%s-%s [%s''%s'%s] %s""" % \
+                            (self.config['BuildFolder'], time.year, str(time.month).zfill(2),
+                             str(time.day).zfill(2), str(time.hour).zfill(2),
+                             str(time.minute).zfill(2), str(time.second).zfill(2), self.config['BuildName'])
+
+        # Save the created image folder's name to the config.json file
+        self.config['ImageFolder'] = image_folder
+
+        # Create new directories to store camera images and processing outputs
+        # Includes error checking in case the folder already exist (shouldn't due to the seconds output)
+        try:
+            os.mkdir('%s' % image_folder)
+        except WindowsError:
+            image_folder = image_folder + "_2"
+            os.mkdir('%s' % image_folder)
+
+        # Create respective sub-directories for images
+        os.mkdir('%s/raw' % image_folder)
+        os.mkdir('%s/raw/coat' % image_folder)
+        os.mkdir('%s/raw/scan' % image_folder)
+        os.mkdir('%s/raw/single' % image_folder)
+        os.mkdir('%s/slice' % image_folder)
+        os.mkdir('%s/defects' % image_folder)
+        os.mkdir('%s/processed' % image_folder)
+        os.mkdir('%s/processed/coat' % image_folder)
+        os.mkdir('%s/processed/scan' % image_folder)
+        os.mkdir('%s/processed/single' % image_folder)
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config)
 
+        # Close the dialog window
         self.done(1)
 
 
@@ -192,8 +228,16 @@ class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNo
         """Executes when the OK button is clicked
         Saves important input and selection options to the config.json file and closes the window
         """
+
         self.config['Username'] = str(self.lineUsername.text())
         self.config['EmailAddress'] = str(self.lineEmailAddress.text())
+
+        # Save configuration settings to config.json file
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config)
+
+        # Close the dialog window
+        self.done(1)
 
 class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     """Opens a Dialog Window when Image Capture button is clicked
@@ -212,19 +256,20 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
             # Open a message box with an error stating that this tool cannot be run
             self.export_confirmation = QtGui.QMessageBox()
             self.export_confirmation.setIcon(QtGui.QMessageBox.Critical)
-            self.export_confirmation.setText('Basler Pylon Software not installed. This tool cannot be run.')
+            self.export_confirmation.setText("Unable to open tool.<br><br>Either the Basler Pylon Software is not installed, "
+                                             "the software wasn't installed as a developer, or PyPylon is either "
+                                             "missing or not installed properly")
             self.export_confirmation.setWindowTitle('Image Capture')
             self.export_confirmation.exec_()
-            return None
-            #self.closeEvent(1)
-        else:
-            # If the Basler Pylon software is installed, run the window as per normal
 
+        else:
+            # If the Basler Pylon software and pypylon is installed, run the window as per normal
             # Setup Dialog UI with MainWindow as parent
             super(ImageCapture, self).__init__(parent)
             self.setAttribute(Qt.WA_DeleteOnClose)
             self.setupUi(self)
 
+            # Set the imported module as an instance variable
             self.image_capture = image_capture
 
             # Set and display the default image folder name to be used to store all acquired images
@@ -240,7 +285,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
             self.buttonRun.clicked.connect(self.run)
             self.buttonStop.clicked.connect(self.stop)
 
-            # These are flags to check if both the browse and check camera settings are successful
+            # These are flags to check if the camera and/or trigger are detected
             self.camera_flag = False
             self.trigger_flag = False
 
@@ -266,6 +311,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         camera_settings_dialog = CameraSettings(self)
         camera_settings_dialog.show()
+        camera_settings_dialog.activateWindow()
 
     def check_camera(self):
         """Checks that a camera is found and available"""
@@ -307,10 +353,9 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonDone.setEnabled(False)
 
         # Instantiate and run an ImageCapture instance that will only take one image
-        self.ICS_instance = self.image_capture.ImageCapture(self.image_folder, single_flag=True,
-                                                       correction_flag=self.checkApplyCorrection.isChecked())
+        self.ICS_instance = self.image_capture.ImageCapture(single_flag=True)
         self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICS_instance, SIGNAL("display_image(QString)"), self.display_image)
+        self.connect(self.ICS_instance, SIGNAL("image_correction(QString, PyQt_PyObject, QString)"), self.image_correction)
         self.connect(self.ICS_instance, SIGNAL("finished()"), self.capture_finished)
         self.ICS_instance.start()
 
@@ -347,8 +392,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.ICR_instance = self.image_capture.ImageCapture(self.image_folder, run_flag=True,
-                                                       correction_flag=self.checkApplyCorrection.isChecked())
+        self.ICR_instance = self.image_capture.ImageCapture(run_flag=True)
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.ICR_instance, SIGNAL("display_image(QString)"), self.display_image)
         self.connect(self.ICR_instance, SIGNAL("reset_countdown()"), self.reset_countdown)
@@ -369,6 +413,18 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.buttonStop.setEnabled(False)
 
         self.update_status('Stopped.')
+
+    def image_correction(self, index, image, image_name):
+        """Apply distortion fix, perspective fix and crop to the captured image and save it to the processed folder
+        Then send it back to the MainWindow to be displayed if Display Image checkbox is checked
+        """
+
+        image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
+        image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
+        image = image_processing.ImageCorrection(None, None, None).crop(image)
+
+        if self.checkDisplayImage.isChecked():
+            self.emit(SIGNAL("update_image(QString, PyQt_PyObject, QString)"), index, image, '1')
 
     def reset_countdown(self):
         """Resets the internal countdown that checks if a new image has been captured within a preset period of time"""
@@ -394,14 +450,6 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.stop()
         self.ICR_instance.stop()
 
-    def display_image(self, image_name):
-        """Sends the image name as received from the ImageCapture back to the Main Window to be displayed
-        Depends if the Display Image checkbox is checked or not
-        """
-
-        if self.checkDisplayImage.isChecked():
-            self.emit(SIGNAL("update_display_iv(QString)"), image_name)
-
     def update_stopwatch(self, time):
         """Updates the stopwatch label at the bottom of the dialog window with the received time"""
         self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
@@ -418,7 +466,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
             if self.ICR_instance.isRunning:
                 self.stopwatch_instance.stop()
                 self.ICR_instance.stop()
-        except AttributeError:
+        except (AttributeError, RuntimeError):
             pass
 
         self.emit(SIGNAL("accepted()"))

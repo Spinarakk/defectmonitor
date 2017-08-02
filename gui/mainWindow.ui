@@ -46,7 +46,7 @@
   </property>
   <widget class="QWidget" name="mainWidget">
    <layout class="QGridLayout" name="gridLayout_4">
-    <item row="0" column="4" rowspan="10">
+    <item row="0" column="5" rowspan="10">
      <widget class="QFrame" name="frameTools">
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
@@ -227,6 +227,9 @@
           </item>
           <item>
            <widget class="QPushButton" name="buttonDisplayImages">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Display Images</string>
             </property>
@@ -253,7 +256,7 @@
           <item row="2" column="1">
            <widget class="QPushButton" name="buttonGo">
             <property name="enabled">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
             <property name="minimumSize">
              <size>
@@ -281,25 +284,28 @@
           </item>
           <item row="2" column="0">
            <widget class="QSpinBox" name="spinLayer">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="font">
              <font>
               <pointsize>9</pointsize>
              </font>
             </property>
+            <property name="inputMethodHints">
+             <set>Qt::ImhDigitsOnly</set>
+            </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
             <property name="buttonSymbols">
-             <enum>QAbstractSpinBox::NoButtons</enum>
-            </property>
-            <property name="specialValueText">
-             <string/>
+             <enum>QAbstractSpinBox::PlusMinus</enum>
             </property>
             <property name="minimum">
              <number>1</number>
             </property>
             <property name="maximum">
-             <number>99</number>
+             <number>50</number>
             </property>
             <property name="value">
              <number>1</number>
@@ -742,7 +748,20 @@
       </layout>
      </widget>
     </item>
-    <item row="9" column="2">
+    <item row="9" column="1">
+     <widget class="QProgressBar" name="progressBar">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="value">
+       <number>0</number>
+      </property>
+      <property name="textVisible">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="9" column="3">
      <widget class="QCheckBox" name="checkCleanup">
       <property name="font">
        <font>
@@ -762,20 +781,7 @@
       </property>
      </widget>
     </item>
-    <item row="9" column="1">
-     <widget class="QProgressBar" name="progressBar">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="value">
-       <number>0</number>
-      </property>
-      <property name="textVisible">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0" rowspan="9" colspan="4">
+    <item row="0" column="0" rowspan="9" colspan="5">
      <widget class="QTabWidget" name="widgetDisplay">
       <property name="enabled">
        <bool>true</bool>
@@ -794,50 +800,6 @@
         <string>Coat Explorer</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="1" column="1">
-         <widget class="QSlider" name="sliderCE">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>100</number>
-          </property>
-          <property name="pageStep">
-           <number>1</number>
-          </property>
-          <property name="tickPosition">
-           <enum>QSlider::TicksBelow</enum>
-          </property>
-          <property name="tickInterval">
-           <number>10</number>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QPushButton" name="buttonSliderDownCE">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>28</width>
-            <height>28</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>27</width>
-            <height>26</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>▼</string>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="1">
          <widget class="QPushButton" name="buttonSliderUpCE">
           <property name="enabled">
@@ -876,10 +838,60 @@
            </font>
           </property>
           <property name="text">
-           <string>File -&gt; New Build -&gt; OK -&gt; Initialize</string>
+           <string>File -&gt; New Build -&gt; Display Images</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QPushButton" name="buttonSliderDownCE">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>28</width>
+            <height>28</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>27</width>
+            <height>26</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>▼</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSlider" name="sliderCE">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>1</string>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1</number>
+          </property>
+          <property name="pageStep">
+           <number>10</number>
+          </property>
+          <property name="tracking">
+           <bool>false</bool>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksBelow</enum>
+          </property>
+          <property name="tickInterval">
+           <number>10</number>
           </property>
          </widget>
         </item>
@@ -917,20 +929,49 @@
           <property name="enabled">
            <bool>false</bool>
           </property>
+          <property name="toolTip">
+           <string>1</string>
+          </property>
           <property name="minimum">
            <number>1</number>
           </property>
           <property name="maximum">
-           <number>100</number>
+           <number>1</number>
           </property>
           <property name="pageStep">
-           <number>1</number>
+           <number>10</number>
+          </property>
+          <property name="tracking">
+           <bool>false</bool>
           </property>
           <property name="tickPosition">
            <enum>QSlider::TicksBelow</enum>
           </property>
           <property name="tickInterval">
            <number>10</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" rowspan="4">
+         <widget class="QLabel" name="labelDisplaySE">
+          <property name="minimumSize">
+           <size>
+            <width>1186</width>
+            <height>824</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>19</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>File -&gt; New Build -&gt; Display Images</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -953,29 +994,6 @@
           </property>
           <property name="text">
            <string>▲</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1" rowspan="4">
-         <widget class="QLabel" name="labelDisplaySE">
-          <property name="minimumSize">
-           <size>
-            <width>1186</width>
-            <height>824</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>19</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>File -&gt; New Build -&gt; OK -&gt; Initialize</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -1020,7 +1038,10 @@
            <number>100</number>
           </property>
           <property name="pageStep">
-           <number>1</number>
+           <number>10</number>
+          </property>
+          <property name="tracking">
+           <bool>false</bool>
           </property>
           <property name="tickPosition">
            <enum>QSlider::TicksBelow</enum>
@@ -1068,7 +1089,7 @@
            </font>
           </property>
           <property name="text">
-           <string>Image Capture &gt; Run</string>
+           <string>File -&gt; New Build -&gt; Display Images</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -1087,6 +1108,9 @@
        <layout class="QGridLayout" name="gridLayout_5">
         <item row="3" column="1">
          <widget class="QPushButton" name="buttonSliderDownDA">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="minimumSize">
            <size>
             <width>28</width>
@@ -1120,7 +1144,7 @@
            </font>
           </property>
           <property name="text">
-           <string>File -&gt; New Build -&gt; OK -&gt; Initialize -&gt; On Scan or Coat Tab -&gt; Analyze for Defects</string>
+           <string>File -&gt; New Build -&gt; Display Images</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -1132,6 +1156,9 @@
         </item>
         <item row="0" column="1">
          <widget class="QPushButton" name="buttonSliderUpDA">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="minimumSize">
            <size>
             <width>27</width>
@@ -1151,14 +1178,23 @@
         </item>
         <item row="1" column="1" rowspan="2">
          <widget class="QSlider" name="sliderDA">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>1</string>
+          </property>
           <property name="minimum">
            <number>1</number>
           </property>
           <property name="maximum">
-           <number>100</number>
+           <number>1</number>
           </property>
           <property name="pageStep">
-           <number>1</number>
+           <number>10</number>
+          </property>
+          <property name="tracking">
+           <bool>false</bool>
           </property>
           <property name="tickPosition">
            <enum>QSlider::TicksBelow</enum>
@@ -1191,7 +1227,7 @@
            </font>
           </property>
           <property name="text">
-           <string>Image Capture &gt; Run or Capture + Display Image</string>
+           <string>File -&gt; New Build -&gt; Display Images</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -1228,6 +1264,9 @@
           <property name="enabled">
            <bool>false</bool>
           </property>
+          <property name="toolTip">
+           <string>1</string>
+          </property>
           <property name="minimum">
            <number>1</number>
           </property>
@@ -1235,7 +1274,10 @@
            <number>100</number>
           </property>
           <property name="pageStep">
-           <number>1</number>
+           <number>10</number>
+          </property>
+          <property name="tracking">
+           <bool>false</bool>
           </property>
           <property name="tickPosition">
            <enum>QSlider::TicksBelow</enum>
@@ -1269,6 +1311,23 @@
         </item>
        </layout>
       </widget>
+     </widget>
+    </item>
+    <item row="9" column="2">
+     <widget class="QCheckBox" name="checkTestFolders">
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Use Test Folders</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
    </layout>
