@@ -27,7 +27,7 @@ class ImageCapture(QThread):
         # Load configuration settings from config.json file
         self.acquire_settings()
 
-        # Store config settings as respective variables
+        # Store received arguments as instance variables
         self.single_flag = single_flag
         self.run_flag = run_flag
 
@@ -46,7 +46,7 @@ class ImageCapture(QThread):
         self.acquire_settings()
         self.acquire_camera()
 
-        self.save_folder = self.config['ImageFolder']
+        self.image_folder = self.config['ImageFolder']
 
         # Opens up the camera and sends it the stored settings to be used for capturing images
         # Put in a try loop in case the camera cannot be opened for some reason (like another program using it)
@@ -162,14 +162,9 @@ class ImageCapture(QThread):
             self.emit(SIGNAL("update_status(QString)"), 'Error grabbing image. Try again.')
             self.camera.close()
         else:
-            # Create a file name for the image
-            image_name = '%s/single/image_capture_%s.png' % (self.save_folder,
-                                                             str(self.config['CaptureCount']).zfill(4))
-
-            # Send an index, the image itself, and the image name back to the ImageCapture dialog window
-            self.emit(SIGNAL("image_correction(QString, PyQt_PyObject, QString)"), '4', image, image_name)
-            # Save the image to the selected save folder
-            cv2.imwrite(image_name, image)
+            # Send the image, the current layer and the phase back to the ImageCapture dialog window
+            self.emit(SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
+                      image, str(self.config['CaptureCount']), 'single')
 
             # Update the capture counter which will be saved to the config.json file
             self.config['CaptureCount'] += 1
@@ -193,24 +188,12 @@ class ImageCapture(QThread):
                 time.sleep(1)
                 image = next(self.camera.grab_images(1))
 
-            # Create a file name for the image
-            image_name = '%s/%s/image_%s_%s.png' % \
-                         (self.save_folder, self.phases[self.current_phase], self.phases[self.current_phase],
-                          str(int(self.current_layer)).zfill(4))
-
-            # Save the image to the selected save folder in the respective scan or coat folder
-            cv2.imwrite(image_name, image)
-
-            # Apply image correction if the Apply Correction checkbox is checked
-            if self.correction_flag:
-                self.emit(SIGNAL("update_status(QString)"), 'Applying image correction...')
-                self.correction(image, phase=self.current_phase, layer=self.current_layer)
-            else:
-                # Emit the file name back to the dialog, which in turn emits it back to the MainWindow
-                self.emit(SIGNAL("display_image(QString)"), image_name)
+            # Send the image, the current layer and the phase back to the ImageCapture dialog window
+            self.emit(SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
+                      image, str(int(self.current_layer)), self.phases[self.current_phase])
 
             # Emit a signal that resets the internal countdown saying that an image has been successfully captured
-            self.emit(SIGNAL("reset_countdown()"))
+            self.emit(SIGNAL("reset_time_idle()"))
 
             # Loop used to disallow triggering for additional images for however many seconds
             # Also displays remaining timeout on the status bar
@@ -239,11 +222,11 @@ class ImageCapture(QThread):
         # Save the processed image in the processed folder with an appended file name
         if bool(count):
             # Create a file name for the corrected image
-            image_name = '%s/processed/image_capture_%s_processed.png' % (self.save_folder, str(int(count)).zfill(4))
+            image_name = '%s/processed/image_capture_%s_processed.png' % (self.image_folder, str(int(count)).zfill(4))
             cv2.imwrite(image_name, image)
             self.emit(SIGNAL("display_image(QString)"), image_name)
         else:
-            image_name = '%s/processed/image_%s_%s_processed.png' % (self.save_folder, self.phases[phase],
+            image_name = '%s/processed/image_%s_%s_processed.png' % (self.image_folder, self.phases[phase],
                                                                      str(int(layer)).zfill(4))
             cv2.imwrite(image_name, image)
             self.emit(SIGNAL("display_image(QString)"), image_name)

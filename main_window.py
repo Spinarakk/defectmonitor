@@ -2,14 +2,10 @@
 import os
 import sys
 import shutil
-import math
-import imghdr
 import json
-from datetime import datetime
 import cv2
-import numpy as np
 from PyQt4 import QtGui
-from PyQt4.QtCore import SIGNAL, Qt, QEvent, QObject
+from PyQt4.QtCore import SIGNAL, Qt, QEvent
 
 # Compile and import PyQt GUIs
 os.system('build_gui.bat')
@@ -18,8 +14,6 @@ from gui import mainWindow
 # Import related modules
 import dialog_windows
 import extra_functions
-#import slice_converter
-#import image_capture
 import image_processing
 
 
@@ -131,18 +125,16 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonSliderUpIC.clicked.connect(self.slider_up)
         self.buttonSliderDownIC.clicked.connect(self.slider_down)
 
-        # TODO Temporary Variables (To investigate what they do)
-        self.part_contours = dict()
-
         # Flags for various conditions
         self.display_flag = False
 
+        # Instantiate any instances that cannot be run simultaneously
         self.FM_instance = None
 
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
-        # Easier to store each of these in a dictionary under a specific key
-        # To call on one of the five sets rather than writing five individual methods for each of them
+        # Easier to store each of these in a dictionary under a specific key to call on one of the five sets
+        # The current tab's index will be used to grab the corresponding list or name
         self.display = {'Image': [0, 0, 0, 0, 0], 'ImageList': [[], [], [], [], []],
                         'LayerRange': [1, 1, 1, 1, 1], 'SliderValue': [1, 1, 1, 1, 1],
                         'FolderNames': ['Coat/', 'Scan/', 'Slice/', 'Defect/', 'Single/'],
@@ -169,8 +161,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.config = json.load(config)
 
             # Store config settings as respective variables and update appropriate UI elements
-            self.platform_dimensions = self.config['PlatformDimensions']
-            self.boundary_offset = self.config['BoundaryOffset']
             self.setWindowTitle('Defect Monitor - Build ' + str(self.config['BuildName']))
             self.update_status('New build created. Click Image Capture to begin capturing images.')
 
@@ -178,11 +168,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.buttonImageCapture.setEnabled(True)
             self.buttonDisplayImages.setEnabled(True)
 
-            # Create a dialog variable for existence validation purposes
+            # Instantiate a dialog variable for existence validation purposes
             self.image_capture_dialog = None
 
             if self.checkTestFolders.isChecked():
-                #TODO Temporary list of folders to use in the meantime
+                # TODO Temporary list of folders to use in the meantime
                 self.display['ImageFolder'] = ['%s/samples/folder1' % self.config['WorkingDirectory'],
                                                '%s/samples/folder2' % self.config['WorkingDirectory'],
                                                '%s/samples/folder3' % self.config['WorkingDirectory'],
@@ -196,12 +186,12 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                                                '%s/defects' % self.config['ImageFolder'],
                                                '%s/processed/single' % self.config['ImageFolder']]
 
-            # If they exist, stop any previous iterations of the Folder Monitor instance
+            # If a previous Folder Monitor instance exists, stop it
             if self.FM_instance:
                 self.FM_instance.stop()
 
             # Instantiate and run a FolderMonitor instance
-            self.FM_instance = extra_functions.FolderMonitor(self.display['ImageFolder'], frequency=1)
+            self.FM_instance = extra_functions.FolderMonitor(self.display['ImageFolder'])
             self.connect(self.FM_instance, SIGNAL("folder_change(QString)"), self.folder_change)
             self.FM_instance.start()
 
@@ -267,8 +257,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.image_capture_dialog = dialog_windows.ImageCapture(self, self.config['ImageFolder'])
             try:
                 self.connect(self.image_capture_dialog, SIGNAL("accepted()"), self.image_capture_close)
-                self.connect(self.image_capture_dialog, SIGNAL("update_image(QString, PyQt_PyObject, QString)"),
-                             self.update_image)
+                self.connect(self.image_capture_dialog, SIGNAL("tab_focus(QString, QString)"), self.tab_focus)
             except RuntimeError:
                 self.image_capture_close
         try:
@@ -382,13 +371,13 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             image_raw = cv2.imread('%s' % image_name)
 
             # Apply the image processing techniques in order
-            image_undistort = image_processing.ImageCorrection(None, None, None).distortion_fix(image_raw)
+            image_undistort = image_processing.ImageCorrection(None).distortion_fix(image_raw)
             self.update_progress(20)
-            image_perspective = image_processing.ImageCorrection(None, None, None).perspective_fix(image_undistort)
+            image_perspective = image_processing.ImageCorrection(None).perspective_fix(image_undistort)
             self.update_progress(40)
-            image_crop = image_processing.ImageCorrection(None, None, None).crop(image_perspective)
+            image_crop = image_processing.ImageCorrection(None).crop(image_perspective)
             self.update_progress(60)
-            image_clahe = image_processing.ImageCorrection(None, None, None).clahe(image_crop)
+            image_clahe = image_processing.ImageCorrection(None).clahe(image_crop)
             self.update_progress(80)
 
             # Save the cropped image and CLAHE applied image in the same folder after removing .png from the file name
@@ -503,112 +492,16 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     # TOGGLES AND CHECKBOXES
 
     def toggle_overlay(self):
-        """Draws the part contour of the current selected layer and displays it on top of the displayed scan image"""
+        """Overlay process is done in the update_display method
+        This method is mostly to show the appropriate status message"""
 
         if self.checkToggleOverlay.isChecked():
-            # Creates an empty array to draw contours on
-            self.image_overlay = np.zeros(self.image_display_scan.shape).astype(np.uint8)
-            self.image_overlay = cv2.cvtColor(self.image_overlay, cv2.COLOR_BGR2RGB)
-
-            # Draws the contours
-            for item in self.part_contours:
-                cv2.drawContours(self.image_overlay, self.part_contours['PartData']['Contours'],
-                                 -1, (255, 0, 0), int(math.ceil(self.scale_factor)))
-
-            cv2.imwrite('overlay.png', self.image_overlay)
-
-            self.update_status('Displaying slice outlines.')
-
+            # Display the message for 5 seconds
+            self.update_status('Displaying part contours.', 5000)
         else:
-            self.update_status('Hiding slice outlines.')
+            self.update_status('Hiding part contours.', 5000)
 
         self.update_display()
-
-    # MISCELLANEOUS METHODS
-
-    def convert2contours(self, layer):
-        """Convert the vectors from the parsed slice file into contours which can then be drawn"""
-
-        # Initialize some variables
-        min_x = None
-        min_y = None
-        part_contours = None
-        hierarchy = None
-
-        # Save the contours and polyline-indices of the received layer
-        layer = int(layer)
-        contours = self.slice_parsed[layer]['Contours']
-        polyline = self.slice_parsed[layer]['Polyline-Indices']
-
-        # if negative values exist (part is set up in quadrant other than top-right and buildplate centre is (0,0))
-        # translate part to positive
-
-        # Finds minimum x and y values over all contours in given part
-        for element in xrange(len(polyline)):
-            if min_x is None:
-                min_x = np.array(contours[polyline[element][0]:polyline[element][2]:2]).astype(np.int32).min()
-            else:
-                min_x_temp = np.array(contours[polyline[element][0]:polyline[element][2]:2]).astype(np.int32).min()
-                if min_x_temp < min_x:
-                    min_x = min_x_temp
-            if min_y is None:
-                min_y = np.array(contours[polyline[element][0] + 1:polyline[element][2]:2]).astype(np.int32).min()
-            else:
-                min_y_temp = np.array(contours[polyline[element][0] + 1:polyline[element][2]:2]).astype(np.int32).min()
-                if min_y_temp < min_y:
-                    min_y = min_y_temp
-
-        slice_parsed = self.slice_parsed
-
-        # Image resizing scale factor relating image pixels and part mm
-        # Found by dividing the cropped image height by the known platform height
-        self.scale_factor = self.image_scan_DPC.shape[0] / self.platform_dimensions[1]
-
-        # Create a blank image the same size and type as the cropped image
-        image_blank = np.zeros(self.image_scan_DPC.shape).astype(np.uint8)
-        image_contours = image_blank.copy()
-
-        # For each vector in the set of vectors, find the area enclosed by the resultant contours
-        # Find the hierarchy of each contour, subtract area if it is an internal contour (i.e. a hole)
-        for element in xrange(len(polyline)):
-
-            # Get contours in scaled coordinates (scale_factor * part mm)
-            slice_parsed[layer]['Contours'][polyline[element][0]:polyline[element][2]:2] = [
-                np.float32(self.scale_factor * (int(x) / 10000. + self.platform_dimensions[0] / 2) + self.boundary_offset[0])
-                for x in slice_parsed[layer]['Contours'][polyline[element][0]:polyline[element][2]:2]]
-
-            slice_parsed[layer]['Contours'][(polyline[element][0] + 1):polyline[element][2]:2] = [
-                np.float32(self.scale_factor * (-int(y) / 10000. + self.platform_dimensions[1] / 2) + self.boundary_offset[1])
-                for y in slice_parsed[layer]['Contours'][polyline[element][0] + 1:polyline[element][2]:2]]
-
-            current_contours = np.array(slice_parsed[layer]['Contours'][polyline[element][0]:polyline[element][2]])\
-                .reshape(1, (polyline[element][1]) / 2, 2)
-
-            # Convert the array to int32
-            current_contours = current_contours.astype(np.int32)
-
-            # Draw filled polygons on a blank image
-            cv2.fillPoly(image_blank, current_contours, (255, 255, 255))
-
-            cv2.imwrite('poly.png', image_blank)
-
-            # If contour overlaps other poly, it is a hole and is subtracted
-            image_contours = cv2.bitwise_xor(image_contours, image_blank)
-            image_contours = cv2.cvtColor(image_contours, cv2.COLOR_BGR2GRAY)
-
-            cv2.imwrite('contours.png', image_contours)
-
-            # Find and output vectorized contours and their respective hierarchies
-            _, part_contours, hierarchy = cv2.findContours(image_contours.copy(), cv2.RETR_CCOMP,
-                                                           cv2.CHAIN_APPROX_SIMPLE)
-
-        # Save contours to the dictionary
-        self.part_contours = {'PartTopleft': (min_x, min_y), 'PartData': {'Contours': part_contours,
-                                                                            'Hierarchy': hierarchy}}
-
-        # Save configuration settings to config.json file
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
 
     # DISPLAY
 
@@ -626,14 +519,17 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         if not self.display['ImageList'][index]:
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
         else:
-            if self.groupDisplayOptions.isEnabled():
-                if self.radioOriginal.isChecked():
-                    label.setPixmap(self.convert2pixmap(image, label))
-                if self.radioCLAHE.isChecked():
-                    label.setPixmap(self.convert2pixmap(image_processing.ImageCorrection.clahe(image), label))
+            if self.checkToggleOverlay.isChecked():
+                self.update_image(2)
+                overlay = self.display['Image'][2]
+                if overlay.shape[:2] != image.shape[:2]:
+                    overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC )
+                image = cv2.add(image, overlay)
+
+            if self.radioCLAHE.isChecked():
+                label.setPixmap(self.convert2pixmap(image_processing.ImageCorrection.clahe(image), label))
             else:
                 label.setPixmap(self.convert2pixmap(image, label))
-
 
         # This block updates the Defect Analyzer tab
         if self.groupOpenCV.isEnabled():
@@ -683,8 +579,19 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.groupDisplayOptions.setEnabled(True)
                 if index > 1 and index < 4:
                     self.buttonDefectProcessing.setEnabled(False)
+                    self.checkToggleOverlay.setEnabled(False)
+                    self.checkToggleOverlay.setChecked(False)
                 else:
                     self.buttonDefectProcessing.setEnabled(True)
+                    self.checkToggleOverlay.setEnabled(True)
+
+    def tab_focus(self, index, value):
+        """Changes the tab focus to the received index's tab and sets the slider value to the received value
+        Used for when an image has been captured and focus is given to the new image
+        """
+        if self.display_flag:
+            self.widgetDisplay.setCurrentIndex(int(index))
+            self.display['SliderNames'][int(index)].setValue(int(value))
 
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value
@@ -752,25 +659,26 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             # Save the ranges in a list whose index corresponds with the tabs
             self.display['LayerRange'][index] = len(self.display['ImageList'][index])
 
-    def update_image(self, index, image=None, flag=0):
+    def update_image(self, index):
         """Updates the Image dictionary with the loaded images"""
 
         # Check if list isn't empty, otherwise set the corresponding image to 0 (nothing)
-        if not int(flag):
-            if self.display['ImageList'][index]:
+        if self.display['ImageList'][index]:
+            # Check if the Toggle Overlay checkbox is checked
+            # If so, use the current tab's slider value to choose which overlay image to load
+            index_overlay = index
+            if self.checkToggleOverlay.isChecked():
+                index_overlay = self.widgetDisplay.currentIndex()
+            try:
                 # Load the image into memory and store it in the dictionary
                 # Decrement by 1 because code starts at 0
-                self.display['Image'][index] = cv2.imread('%s/%s' % (self.display['ImageFolder'][index],
-                                                                     self.display['ImageList'][index]
-                                                                     [self.display['SliderNames'][index].value() - 1]))
-            else:
-                self.display['Image'][index] = 0
-        # If the flag is raised, it means that the Image Capture window has instead sent an image to be saved
+                self.display['Image'][index] = \
+                    cv2.imread('%s/%s' % (self.display['ImageFolder'][index], self.display['ImageList'][index]
+                    [self.display['SliderNames'][index_overlay].value() - 1]))
+            except IndexError:
+                self.update_status('Part contours not found.', 5000)
         else:
-            self.display['Image'][int(index)] = image
-            self.widgetDisplay.setCurrentIndex(int(index))
-            self.update_display()
-
+            self.display['Image'][index] = 0
 
     def update_layer_range(self, index):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the sliders"""

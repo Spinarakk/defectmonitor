@@ -10,18 +10,6 @@
     <height>310</height>
    </rect>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>491</width>
-    <height>310</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>491</width>
-    <height>310</height>
-   </size>
-  </property>
   <property name="windowTitle">
    <string>Image Capture</string>
   </property>
@@ -338,28 +326,6 @@
     <string>Check Trigger</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkDisplayImage">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>236</y>
-     <width>131</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Check to display the captured image (processed or not) on the Main Window under the Image Viewer tab.</string>
-   </property>
-   <property name="layoutDirection">
-    <enum>Qt::LeftToRight</enum>
-   </property>
-   <property name="text">
-    <string>Display Image</string>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-  </widget>
   <widget class="QLineEdit" name="lineImageFolder">
    <property name="geometry">
     <rect>
@@ -384,6 +350,22 @@
    </property>
    <property name="text">
     <string>Time Idle: 00:00:00</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="progressBar">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>236</y>
+     <width>151</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>0</number>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>

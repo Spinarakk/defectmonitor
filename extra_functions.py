@@ -19,11 +19,8 @@ class Stopwatch(QThread):
         QThread.__init__(self)
 
         # Resets the stopwatch
-        self.stopwatch = 0
-        self.countdown = 0
-        self.seconds = 0
-        self.minutes = 0
-        self.hours = 0
+        self.stopwatch_elapsed = 0
+        self.stopwatch_idle = 0
 
         # Flag to start and terminate the while loop
         self.run_flag = True
@@ -31,27 +28,31 @@ class Stopwatch(QThread):
     def run(self):
         while self.run_flag:
             # Send a formatted time string to the main function
-            self.time = '%s:%s:%s' % (str(self.hours).zfill(2), str(self.minutes).zfill(2), str(self.seconds).zfill(2))
-            self.emit(SIGNAL("update_stopwatch(QString)"), str(self.time))
+            time_elapsed = self.convert2time(self.stopwatch_elapsed)
+            time_idle = self.convert2time(self.stopwatch_idle)
+            self.emit(SIGNAL("update_time(QString, QString)"), time_elapsed, time_idle)
+
+            # Sleep for one second
             time.sleep(1)
 
-            # Convert the counter into hours seconds and minutes
-            self.stopwatch += 1
-            self.seconds = self.stopwatch % 60
-            self.minutes = int((self.stopwatch % 3600) / 60)
-            self.hours = int(self.stopwatch / 3600)
-
-            # Increment the countdown timer
-            self.countdown += 1
+            # Increment the stopwatch timers
+            self.stopwatch_elapsed += 1
+            self.stopwatch_idle += 1
 
             # Check if the countdown reaches 5 minutes, if so, send a signal back to the main program
-            if self.countdown == 300:
-                self.emit(SIGNAL("send_notification()"))
+            # if self.countdown == 300:
+            #     self.emit(SIGNAL("send_notification()"))
 
-    def reset_countdown(self):
+    def convert2time(self, time):
+        seconds = time % 60
+        minutes = (time % 3600) / 60
+        hours = time / 3600
+        return '%s:%s:%s' % (str(hours).zfill(2), str(minutes).zfill(2), str(seconds).zfill(2))
+
+    def reset_time_idle(self):
         """Resets the countdown timer whenever this function is called"""
 
-        self.countdown = 0
+        self.stopwatch_idle = 0
 
     def stop(self):
         self.run_flag = False
@@ -104,15 +105,13 @@ class Notifications(QThread):
 class FolderMonitor(QThread):
     """Module used to constantly poll the given folders and signal back if a change in number of items is detected"""
 
-    def __init__(self, folders, frequency=1):
+    def __init__(self, folders):
 
         # Defines the class as a thread
         QThread.__init__(self)
 
+        # Store received argument as instance variable
         self.folders = folders
-
-        # The frequency (in seconds) in which to poll the folder
-        self.frequency = frequency
 
         # Flag to start and terminate the while loop
         self.run_flag = True
@@ -134,9 +133,6 @@ class FolderMonitor(QThread):
                     # Length is incremented by one to prevent a maximum range of 0
                     self.emit(SIGNAL("folder_change(QString)"), str(index))
                     length_old[index] = length_new[index]
-
-            # Timeout for a very short period to slightly reduce memory usage
-            #time.sleep(self.frequency)
 
     def poll_folder(self, folder):
         """Checks the given folder and returns the number of files in that directory"""

@@ -6,18 +6,18 @@ from PyQt4.QtCore import QThread, SIGNAL
 
 
 class ImageCorrection(QThread):
-    """Module used to correct the raw images taken by the camera for various optical related issues
+    """Module used to correct the raw (or any sent) images taken by the camera for various optical related issues
     Processed images to then be scanned for any particular defects using the DefectDetection module
     Applies the following OpenCV processes in order:
     Distortion Correction (D)
     Perspective Warp (P)
-    Rotate (R)
     Crop (C)
+    Following methods also available if required:
+    Rotate (R)
     CLAHE (E)
-    Respective capital letters suffixed to the image array name indicate which processes have been applied
     """
 
-    def __init__(self, image_folder, image_coat, image_scan):
+    def __init__(self, image):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -25,6 +25,9 @@ class ImageCorrection(QThread):
         # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
+
+        # Store received arguments as instance variables
+        self.image = image
 
         # Initiate a list to store all the camera parameters
         self.camera_parameters = []
@@ -41,44 +44,20 @@ class ImageCorrection(QThread):
         self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
 
         # Define lists containing the 2 image arrays, 2 phase strings, 3 processing tag strings and 3 status messages
-        if bool(image_folder):
-            self.image_folder = image_folder + '/processed'
-            self.images = (image_coat, image_scan)
-            self.phases = ('coat', 'scan')
-            self.tags = ('DP', 'DPC', 'DPCE')
-            self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
-                                    'Applying CLAHE algorithm...')
-            self.progress_counter = 0.0
+        # if bool(image_folder):
+        #     self.image_folder = image_folder + '/processed'
+        #     self.images = (image_coat, image_scan)
+        #     self.phases = ('coat', 'scan')
+        #     self.tags = ('DP', 'DPC', 'DPCE')
+        #     self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
+        #                             'Applying CLAHE algorithm...')
+        #     self.progress_counter = 0.0
 
     def run(self):
-        """This for loop loops through the three tags and two phases to produce six processed images
-        For each image, depending on the tag, it'll be subjected to certain processes
-        After which the image will be saved to disk and emitted back to the main function
-        Progress and status updates found here as well
-        """
-
-        for tag_index, tag in enumerate(self.tags):
-            for phase_index, phase in enumerate(self.phases):
-
-                self.emit(SIGNAL("update_status(QString)"), self.status_messages[tag_index])
-
-                self.image = self.distortion_fix(self.images[phase_index])
-                self.image = self.perspective_fix(self.image)
-                if tag is not 'DP':
-                    self.image = self.crop(self.image)
-                    if tag is not 'DPC':
-                        self.image = self.clahe(self.image)
-
-                self.progress_counter += 8.333
-                self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
-                self.emit(SIGNAL("update_status(QString)"), self.status_messages[tag_index] +
-                          ' Saving sample_%s_%s.png...' % (phase, tag))
-
-                # Write the current processed image to disk named using appropriate tags, and send back to main function
-                cv2.imwrite('%s/sample_%s_%s.png' % (self.image_folder, phase, tag), self.image)
-
-                self.progress_counter += 8.333
-                self.emit(SIGNAL("update_progress(QString)"), str(int(round(self.progress_counter))))
+        self.image_D = self.distortion_fix(self.image)
+        self.image_DP = self.perspective_fix(self.image_D)
+        self.image_DPC = self.crop(self.image_DP)
+        self.image_DPCE = self.clahe(self.image_DPC)
 
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""

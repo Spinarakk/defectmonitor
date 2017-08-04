@@ -1,11 +1,13 @@
 # Import external libraries
 import os
+import time
 from datetime import datetime
 import cv2
 import numpy as np
 import json
+import gc
 from PyQt4 import QtGui
-from PyQt4.QtCore import SIGNAL, Qt, QSettings, QString
+from PyQt4.QtCore import SIGNAL, Qt, QSettings, QString, SLOT
 
 # Import related modules
 import slice_converter
@@ -78,7 +80,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
             build_folder = build_folder.replace('\\', '/')
             self.config['BuildFolder'] = str(build_folder)
             # Display just the file name on the line box
-            self.lineImageFolder.setText(build_folder)
+            self.lineBuildFolder.setText(build_folder)
 
     def accept(self):
         """Executes when the OK button is clicked
@@ -239,6 +241,7 @@ class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNo
         # Close the dialog window
         self.done(1)
 
+
 class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     """Opens a Dialog Window when Image Capture button is clicked
     Allows user to capture images using a connected camera
@@ -355,7 +358,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         # Instantiate and run an ImageCapture instance that will only take one image
         self.ICS_instance = self.image_capture.ImageCapture(single_flag=True)
         self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICS_instance, SIGNAL("image_correction(QString, PyQt_PyObject, QString)"), self.image_correction)
+        self.connect(self.ICS_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"), self.image_correction)
         self.connect(self.ICS_instance, SIGNAL("finished()"), self.capture_finished)
         self.ICS_instance.start()
 
@@ -387,15 +390,15 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         # Instantiate and run a new Stopwatch instance to have a running timer
         self.stopwatch_instance = extra_functions.Stopwatch()
-        self.connect(self.stopwatch_instance, SIGNAL("update_stopwatch(QString)"), self.update_stopwatch)
-        self.connect(self.stopwatch_instance, SIGNAL("send_notification()"), self.send_notification)
+        self.connect(self.stopwatch_instance, SIGNAL("update_time(QString, QString)"), self.update_time)
+        #self.connect(self.stopwatch_instance, SIGNAL("send_notification()"), self.send_notification)
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
         self.ICR_instance = self.image_capture.ImageCapture(run_flag=True)
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICR_instance, SIGNAL("display_image(QString)"), self.display_image)
-        self.connect(self.ICR_instance, SIGNAL("reset_countdown()"), self.reset_countdown)
+        self.connect(self.ICR_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"), self.image_correction)
+        self.connect(self.ICR_instance, SIGNAL("reset_time_idle()"), self.reset_time_idle)
         self.connect(self.ICR_instance, SIGNAL("finished()"), self.run_finished)
         self.ICR_instance.start()
 
@@ -414,21 +417,52 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         self.update_status('Stopped.')
 
-    def image_correction(self, index, image, image_name):
+    def image_correction(self, image, layer, phase):
         """Apply distortion fix, perspective fix and crop to the captured image and save it to the processed folder
         Then send it back to the MainWindow to be displayed if Display Image checkbox is checked
         """
 
-        image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
-        image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
-        image = image_processing.ImageCorrection(None, None, None).crop(image)
+        # Store the received arguments as instance variables
+        self.layer = str(layer)
+        self.phase = str(phase)
 
-        if self.checkDisplayImage.isChecked():
-            self.emit(SIGNAL("update_image(QString, PyQt_PyObject, QString)"), index, image, '1')
+        self.update_status('Saving raw image.')
 
-    def reset_countdown(self):
+        # Save the raw image to the stated folder
+        cv2.imwrite('%s/raw/%s/image_%s_%s.png' %
+                    (self.image_folder, self.phase, self.phase, self.layer.zfill(4)), image)
+
+        # Instantiate and run an ImageCorrection instance
+        self.IC_instance = image_processing.ImageCorrection(image)
+        self.connect(self.IC_instance, SIGNAL("finished()"), self.image_correction_finished)
+        self.IC_instance.start()
+
+    def image_correction_finished(self):
+        """Executes when the ImageCorrection instance has finished"""
+
+        self.update_status('Image correction applied. Saving image')
+
+        # Grab the corrected image from the instance variable
+        image = self.IC_instance.image_DPC
+
+        # Save the corrected image to the stated folder
+        cv2.imwrite('%s/processed/%s/imageC_%s_%s.png' %
+                    (self.image_folder, self.phase, self.phase, self.layer.zfill(4)), image)
+
+        # Setting the appropriate tab index to send depending on which phase the image is
+        if self.phase == 'coat': index = '0'
+        elif self.phase == 'scan': index = '1'
+        else: index = '4'
+
+        time.sleep(1)
+
+        self.emit(SIGNAL("tab_focus(QString, QString)"), index, self.layer)
+
+        self.update_status('Image saved.')
+
+    def reset_time_idle(self):
         """Resets the internal countdown that checks if a new image has been captured within a preset period of time"""
-        self.stopwatch_instance.reset_countdown()
+        self.stopwatch_instance.reset_time_idle()
 
     def send_notification(self):
         """Sends a notification to a user if a certain criteria is met
@@ -450,12 +484,16 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.stopwatch_instance.stop()
         self.ICR_instance.stop()
 
-    def update_stopwatch(self, time):
+    def update_time(self, time_elapsed, time_idle):
         """Updates the stopwatch label at the bottom of the dialog window with the received time"""
-        self.labelTimeElapsed.setText('Time Elapsed: %s' % time)
+        self.labelTimeElapsed.setText('Time Elapsed: %s' % time_elapsed)
+        self.labelTimeIdle.setText('Time Idle: %s' % time_idle)
 
     def update_status(self, string):
         self.labelStatusBar.setText('Status: ' + string)
+
+    def update_progress(self, percentage):
+        self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
         """Executes when the top-right X is clicked"""
@@ -585,6 +623,10 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
 
     def start_conversion_finished(self):
         """Executes when the SliceConverter instance has finished"""
+
+        # Deletes the SliceConverter instance and releases the memory that it was using
+        self.SC_instance = []
+        gc.collect()
 
         self.buttonStartConversion.setEnabled(True)
         self.buttonBrowse.setEnabled(True)

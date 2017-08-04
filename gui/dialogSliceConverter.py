@@ -50,6 +50,7 @@ class Ui_dialogSliceConverter(object):
         self.progressBar = QtGui.QProgressBar(dialogSliceConverter)
         self.progressBar.setGeometry(QtCore.QRect(10, 138, 361, 28))
         self.progressBar.setProperty("value", 0)
+        self.progressBar.setAlignment(QtCore.Qt.AlignCenter)
         self.progressBar.setTextVisible(True)
         self.progressBar.setInvertedAppearance(False)
         self.progressBar.setObjectName(_fromUtf8("progressBar"))

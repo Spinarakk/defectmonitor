@@ -756,8 +756,8 @@
       <property name="value">
        <number>0</number>
       </property>
-      <property name="textVisible">
-       <bool>true</bool>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
     </item>
@@ -775,6 +775,23 @@
       </property>
       <property name="text">
        <string>Cleanup</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="9" column="2">
+     <widget class="QCheckBox" name="checkTestFolders">
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Use Test Folders</string>
       </property>
       <property name="checked">
        <bool>true</bool>
@@ -1311,23 +1328,6 @@
         </item>
        </layout>
       </widget>
-     </widget>
-    </item>
-    <item row="9" column="2">
-     <widget class="QCheckBox" name="checkTestFolders">
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Use Test Folders</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
      </widget>
     </item>
    </layout>

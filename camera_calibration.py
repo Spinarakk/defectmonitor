@@ -75,9 +75,6 @@ class Calibration(QThread):
         image_homography = cv2.imread('%s/calibration/image_homography.png' % self.working_directory, 0)
         image_sample = cv2.imread('%s/calibration/image_sample.png' % self.working_directory)
 
-        # Determine resolution of working images
-        resolution = (image_sample.shape[1], image_sample.shape[0])
-
         # Termination Criteria
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
@@ -102,7 +99,7 @@ class Calibration(QThread):
             # RMS is the root mean square re-projection error
             self.emit(SIGNAL("update_status(QString)"), 'Calculating camera parameters...')
             rms, self.camera_matrix, self.distortion_coefficients, _, _ = \
-                cv2.calibrateCamera(self.object_points_list, self.image_points_list, resolution, None, None, flags=
+                cv2.calibrateCamera(self.object_points_list, self.image_points_list, self.resolution, None, None, flags=
                 cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
 
             # Convert the rms into a numpy array so it can be saved
@@ -149,6 +146,8 @@ class Calibration(QThread):
 
         # Load the image into memory
         image = cv2.imread('%s/%s' % (self.calibration_folder, image_name))
+
+        self.resolution = (image.shape[1], image.shape[0])
 
         # Determine the resolution of the image after downscaling
         resolution_scaled = (image.shape[1] / self.ratio, image.shape[0] / self.ratio)

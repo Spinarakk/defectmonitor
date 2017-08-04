@@ -26,8 +26,6 @@ class Ui_dialogImageCapture(object):
     def setupUi(self, dialogImageCapture):
         dialogImageCapture.setObjectName(_fromUtf8("dialogImageCapture"))
         dialogImageCapture.resize(491, 310)
-        dialogImageCapture.setMinimumSize(QtCore.QSize(491, 310))
-        dialogImageCapture.setMaximumSize(QtCore.QSize(491, 310))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogImageCapture.setWindowIcon(icon)
@@ -122,11 +120,6 @@ class Ui_dialogImageCapture(object):
         self.buttonCheckTrigger.setGeometry(QtCore.QRect(170, 168, 151, 28))
         self.buttonCheckTrigger.setFocusPolicy(QtCore.Qt.NoFocus)
         self.buttonCheckTrigger.setObjectName(_fromUtf8("buttonCheckTrigger"))
-        self.checkDisplayImage = QtGui.QCheckBox(dialogImageCapture)
-        self.checkDisplayImage.setGeometry(QtCore.QRect(30, 236, 131, 28))
-        self.checkDisplayImage.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.checkDisplayImage.setChecked(True)
-        self.checkDisplayImage.setObjectName(_fromUtf8("checkDisplayImage"))
         self.lineImageFolder = QtGui.QLineEdit(dialogImageCapture)
         self.lineImageFolder.setGeometry(QtCore.QRect(10, 100, 311, 26))
         self.lineImageFolder.setReadOnly(True)
@@ -135,6 +128,11 @@ class Ui_dialogImageCapture(object):
         self.labelTimeIdle.setGeometry(QtCore.QRect(170, 236, 151, 28))
         self.labelTimeIdle.setAlignment(QtCore.Qt.AlignCenter)
         self.labelTimeIdle.setObjectName(_fromUtf8("labelTimeIdle"))
+        self.progressBar = QtGui.QProgressBar(dialogImageCapture)
+        self.progressBar.setGeometry(QtCore.QRect(10, 236, 151, 28))
+        self.progressBar.setProperty("value", 0)
+        self.progressBar.setAlignment(QtCore.Qt.AlignCenter)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
 
         self.retranslateUi(dialogImageCapture)
         QtCore.QObject.connect(self.buttonDone, QtCore.SIGNAL(_fromUtf8("clicked()")), dialogImageCapture.accept)
@@ -154,8 +152,6 @@ class Ui_dialogImageCapture(object):
         self.labelTimeElapsed.setText(_translate("dialogImageCapture", "Time Elapsed: 00:00:00", None))
         self.labelStatusBar.setText(_translate("dialogImageCapture", "Status:", None))
         self.buttonCheckTrigger.setText(_translate("dialogImageCapture", "Check Trigger", None))
-        self.checkDisplayImage.setToolTip(_translate("dialogImageCapture", "Check to display the captured image (processed or not) on the Main Window under the Image Viewer tab.", None))
-        self.checkDisplayImage.setText(_translate("dialogImageCapture", "Display Image", None))
         self.labelTimeIdle.setText(_translate("dialogImageCapture", "Time Idle: 00:00:00", None))
 
 import icons_rc
