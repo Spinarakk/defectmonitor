@@ -1,3 +1,15 @@
+August 7
+- Tested the .cli file to see how it works and how to convert from binary to ascii
+
+
+August 4
+- Moved the conversion to contours method to the SliceConverter method
+- Wrote the contours as an image file to a folder
+- Added the overlaying of the part contour images over any other image
+- Fixed image capture saving images
+- Recoded the stopwatch function to also count for idle time
+- Program works on the 3D printing machine, restarted taking pictures again
+
 August 2
 - Ported everything to their 64bit version counterparts
 - Managed to somehow run and compile the pypylon under 64bit to work with python 64bit

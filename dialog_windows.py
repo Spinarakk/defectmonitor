@@ -615,7 +615,8 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.update_status('Conversion in progress...')
 
         # Instantiate and run a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_file)
+        self.SC_instance = slice_converter.SliceConverter(self.slice_file, self.checkPolygons.isChecked(),
+                                                          self.checkContours.isChecked())
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
         self.connect(self.SC_instance, SIGNAL("finished()"), self.start_conversion_finished)

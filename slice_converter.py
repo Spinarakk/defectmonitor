@@ -18,7 +18,7 @@ class SliceConverter(QThread):
     Currently takes in a .cls or .cli file and parses it, saving it as a .txt file after conversion
     """
 
-    def __init__(self, file_name=None):
+    def __init__(self, file_name, polygons_flag, contours_flag):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -27,62 +27,72 @@ class SliceConverter(QThread):
         with open('config.json') as config:
             self.config = json.load(config)
 
+        # Save respective values to be used to draw contours and polygons
+        # Get the resolution of the cropped images using the crop boundaries
+        self.image_resolution = ((self.config['CropBoundary'][1] - self.config['CropBoundary'][0]),
+                                 (self.config['CropBoundary'][3] - self.config['CropBoundary'][2]))
         self.platform_dimensions = self.config['PlatformDimensions']
         self.boundary_offset = self.config['BoundaryOffset']
+        self.scale_factor = 192.0 / 36.0
 
-        # Save the files as local instance variables
-        self.slice_file_name = str(file_name)
-        self.slice_file_name_processed = str(file_name)
+        # Store the received arguments as local instance variables
+        self.file_name = str(file_name)
+        self.file_name_processed = str(file_name)
+        self.polygons_flag = polygons_flag
+        self.contours_flag = contours_flag
 
         self.slice_parsed = dict()
         self.part_contours = dict()
 
     def run(self):
 
-        self.emit(SIGNAL("update_progress(QString)"), '0')
-
-        # Change the name of the slice file for checking if it already exists
-        self.slice_file_name_processed = self.slice_file_name_processed.replace('.cls', '_cls_processed.txt')
-        self.slice_file_name_processed = self.slice_file_name_processed.replace('.cli', '_cli_processed.txt')
-
-        # Checks if a converted slice file already exists in the form of XXX_processed.txt in the sent folder
-        # If so, load from it instead of converting again
-        if os.path.isfile(self.slice_file_name_processed):
-            self.emit(SIGNAL("update_status(QString)"), 'Processed file found. Loading from disk...')
-            self.load_slice(self.slice_file_name_processed)
-        else:
-            # Checks if the sent file is of cls or cli format
-            if '.cls' in self.slice_file_name:
-                self.parse_cls(self.slice_file_name)
+        # Check if the sent file name is in .cls or .cli format
+        if '.cls' in self.file_name:
+            # Look for an already converted contours file
+            if os.path.isfile(self.file_name.replace('.cls', '_cls_contours.txt')):
+                self.emit(SIGNAL("update_status(QString)"), 'CLS contours file found. Loading from disk...')
+                self.load_contours(self.file_name.replace('.cls', '_cls_contours.txt'))
             else:
-                self.parse_cli(self.slice_file_name)
+                self.parse_cls(self.file_name)
 
-        self.emit(SIGNAL("update_progress(QString)"), '50')
+            slice_number = 1
 
-        slice_number = 1
+            while True:
+                try:
+                    self.deconstruct_cls(slice_number)
+                    slice_number += 1
+                except KeyError:
+                    self.slice_parsed['Max Layer'] = slice_number - 1
+                    break
 
-        while True:
-            try:
-                self.deconstruct_cls(slice_number)
-                slice_number += 1
-            except KeyError:
-                self.slice_parsed['Max Layer'] = slice_number - 1
-                break
+            self.emit(SIGNAL("update_progress(QString)"), '100')
 
-        self.emit(SIGNAL("update_progress(QString)"), '100')
-        
-        for index in xrange(slice_number - 2):
-            self.emit(SIGNAL("update_status(QString)"), 'Parsing layer %s...' % index)
-            self.convert2contours(index + 1)
-            self.draw_contours(index + 1)
+            for index in xrange(slice_number - 2):
+                self.emit(SIGNAL("update_status(QString)"), 'Parsing layer %s...' % index)
+                self.converttocontours(index + 1)
+                self.draw_contours2(index + 1)
 
-    def parse_cls(self, cls_file):
+        elif '.cli' in self.file_name:
+            if os.path.isfile(self.file_name.replace('.cli', '_cli_contours.txt')):
+                self.emit(SIGNAL("update_status(QString)"), 'CLI contours file found. Loading from disk...')
+                self.load_contours(self.file_name.replace('.cli', '_cli_contours.txt'))
+            else:
+                data_cli = self.read_cli(self.file_name)
+                data_cli = self.convert2contours(data_cli)
+                self.save_contours(self.file_name.replace('.cli', '_cli_contours.txt'), data_cli)
+                self.emit(SIGNAL("update_status(QString)"), 'CLS file converted.')
+                if self.contours_flag:
+                    self.draw_contours(data_cli)
+        else:
+            self.emit(SIGNAL("update_status(QString)"), 'Slice file not found.')
+
+    def parse_cls(self, file_name):
         """Parses and converts the .cls file into ASCII"""
 
         #self.slice_parsed[self.slice_file] = {'Format': self.slice_file[-3:]}
 
         #Open the slice file and read it as binary
-        with open(cls_file, 'rb') as slice_file:
+        with open(file_name, 'rb') as slice_file:
             slice_unicode = slice_file.read()
 
         # slice_unicode = []
@@ -212,7 +222,6 @@ class SliceConverter(QThread):
             if 'NEW_CORE' in string:
                 core_flag = True
 
-        gc.collect()
         self.emit(SIGNAL("update_status(QString)"), 'STEP BINARY')
 
         for element in slice_binary:
@@ -258,7 +267,7 @@ class SliceConverter(QThread):
 
         self.emit(SIGNAL("update_status(QString)"), 'STEP SAVING')
         # Save the converted slice file as a text document
-        with open(self.slice_file_name_processed, 'w+') as slice_file:
+        with open(self.file_name_processed, 'w+') as slice_file:
             for element in slice_output:
                 if 'Border 01' in element or 'Border' not in element:
                     slice_file.write(element)
@@ -295,11 +304,134 @@ class SliceConverter(QThread):
         self.slice_parsed[slice_number]['Polyline-Indices'] = polygon_index
         return
 
-    def parse_cli(self):
-        """Parses and converts the .cli file into ASCII"""
-        pass
+    def read_cli(self, file_name):
+        """Reads the .cli file and converts the contents into an organised list
+        If the file was encoded in binary, this method also converts the contents into ascii format"""
 
-    def load_slice(self, file_name):
+        # Instantiate an ordered dictionary to store all the data
+        # data_cli = OrderedDict()
+        # data_cli['Layers'] = 0
+
+        # Set up a few flags, counters and lists
+        binary_flag = False
+        # layer_no = 0
+        # contour_no = 0
+        data_ascii = list()
+        line_ascii = ''
+
+        # Open the .cli file
+        with open(file_name, 'r') as cli_file:
+            for line in cli_file:
+                # Check if the file is actually encoded in binary, if so, break from this loop
+                if 'BINARY' in line.strip():
+                    binary_flag = True
+                    break
+                # Extract pertinent information from the header and store them in the dictionary
+                elif 'UNITS' in line.strip():
+                    data_ascii.append(float(line[8:-2]))
+                elif 'GEOMETRYSTART' in line.strip():
+                    break
+            for line in cli_file:
+                if binary_flag:
+                    break
+                # Check if the line is empty or not (because of the removal of random newline characters
+                if line.rstrip('\r\n/n'):
+                    data_ascii.append(line.rstrip('\r\n/n'))
+
+        if binary_flag:
+            # The file needs to be read as binary if it was encoded in binary
+            with open(file_name, 'rb') as cli_file:
+                for line in cli_file:
+                    if 'UNITS' in line.strip():
+                        data_ascii.append(float(line[8:-2]))
+                    elif 'HEADEREND' in line.strip():
+                        data_binary = line.replace('$$HEADEREND', '')
+                        break
+                for line in cli_file:
+                    data_binary += line
+
+            for one, two in zip(data_binary[0::2], data_binary[1::2]):
+                # Convert the character unicode into an integer, then into a binary number
+                # Join the second binary number with the first binary number and convert the 16-bit bin number into int
+                decimal = int(bin(ord(two))[2:].zfill(8) + bin(ord(one))[2:].zfill(8), 2)
+                # Check for command indexes and replace with appropriate ascii words
+                if decimal == 128:
+                    data_ascii.append(line_ascii.rstrip(','))
+                    line_ascii = '$$LAYER/'
+                elif decimal == 129:
+                    data_ascii.append(line_ascii.rstrip(','))
+                    line_ascii = '$$POLYLINE/'
+                else:
+                    line_ascii += (str(decimal) + ',')
+
+        return data_ascii
+
+    def convert2contours(self, data_ascii):
+        """Converts the data from the slice file into organized scaled contour data"""
+        
+        data = OrderedDict()
+        data['Units'] = data_ascii[0]
+        data['Layers'] = 0
+        
+        layer_no = 0
+        contour_no = 0
+        
+        for line in data_ascii[1::]:
+            if 'LAYER' in line:
+                # Strip the newline character from the end, and split the string where the slash appears
+                line = re.split('(/)', line.rstrip('\n'))
+                # Store the number of contours the current layer has
+                if layer_no is not 0:
+                    data['Layer %s Contour No.' % str(layer_no).zfill(4)] = contour_no
+                # Create a key for each layer's height
+                layer_no += 1
+                data['Layer %s Height' % str(layer_no).zfill(4)] = int(line[2])
+                contour_no = 0
+            elif 'POLYLINE' in line:
+                contour_no += 1
+                # Split each number into its own entry in a list and remove all the comma elements
+                line = re.split('(,)', line.rstrip('\r\n/n'))
+                line = [comma for comma in line if comma != ',']
+                # Store the contour coordinates as
+                line = [round(float(element) * data['Units'] * self.scale_factor) for element in line[3:]]
+                data['Layer %s Contour %s' % (str(layer_no).zfill(4), str(contour_no).zfill(2))] = line
+
+        data['Layers'] = layer_no
+
+        return data
+
+    def draw_contours(self, data):
+        for index in xrange(data['Layers']):
+            index += 1
+            if index == data['Layers']:
+                break
+            image_contours = np.zeros(self.image_resolution).astype(np.uint8)
+            image_contours = cv2.cvtColor(image_contours, cv2.COLOR_GRAY2BGR)
+
+            self.emit(SIGNAL("update_status(QString)"), 'Drawing contour %s.' % str(index).zfill(4))
+
+            for contour_no in xrange(data['Layer %s Contour No.' % str(index).zfill(4)]):
+                contours = data['Layer %s Contour %s' % (str(index).zfill(4), str(contour_no + 1).zfill(2))]
+                contours = np.array(contours).reshape(1, len(contours) / 2, 2).astype(np.int32)
+                cv2.drawContours(image_contours, contours, -1, (128, 128, 0), int(self.scale_factor))
+                if self.polygons_flag:
+                    image_polygons = np.zeros(self.image_resolution).astype(np.uint8)
+                    image_polygons = cv2.cvtColor(image_polygons, cv2.COLOR_GRAY2BGR)
+                    image_polygons_next = image_polygons.copy()
+                    if contour_no == 0:
+                        cv2.fillPoly(image_polygons, contours, (128, 128, 0))
+                    else:
+                        cv2.fillPoly(image_polygons_next, contours, (128, 128, 0))
+                        image_polygons = cv2.bitwise_xor(image_polygons, image_polygons_next)
+
+            image_contours = cv2.flip(image_contours, 0)
+            cv2.imwrite('contours/image_contours_%s.png' % str(index).zfill(4), image_contours)
+
+            if self.polygons_flag:
+                image_polygons = cv2.flip(image_polygons, 0)
+                cv2.imwrite('polygons/image_polygons_%s.png' % str(index).zfill(4), image_polygons)
+
+    def load_contours(self, file_name):
         """Loads the converted slice file instead"""
 
         slice_dictionary = dict()
@@ -310,7 +442,11 @@ class SliceConverter(QThread):
                 slice_dictionary[data[0]] = data[1:]
             self.slice_parsed['Parsed'] = slice_dictionary
 
-    def convert2contours(self, layer):
+    def save_contours(self, file_name, contours):
+        with open(file_name, 'w+') as slice_file:
+            slice_file.write(json.dumps(contours))
+
+    def converttocontours(self, layer):
         """Convert the vectors from the parsed slice file into contours which can then be drawn"""
 
         # Initialize some variables
@@ -385,7 +521,7 @@ class SliceConverter(QThread):
 
         self.part_contours[layer] = {'PartTopleft': (min_x, min_y), 'PartData': {'Contours': part_contours, 'Hierarchy': hierarchy}}
 
-    def draw_contours(self, layer):
+    def draw_contours2(self, layer):
 
         # Draws the contours
         image_overlay = np.zeros(self.image_resolution).astype(np.uint8)
