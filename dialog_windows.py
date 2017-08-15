@@ -17,7 +17,7 @@ import camera_calibration
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogImageCapture, dialogCameraSettings, dialogNotificationSettings
+    dialogSliceConverter, dialogImageCapture, dialogCameraSettings, dialogNotificationSettings, dialogOverlayAdjustment
 
 
 class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -111,23 +111,20 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         # Create new directories to store camera images and processing outputs
         # Includes error checking in case the folder already exist (shouldn't due to the seconds output)
-        try:
-            os.mkdir('%s' % image_folder)
-        except WindowsError:
-            image_folder = image_folder + "_2"
-            os.mkdir('%s' % image_folder)
+        if not os.path.exists(image_folder):
+            os.makedirs(image_folder)
+        else:
+            os.makedirs(image_folder + '_2')
 
         # Create respective sub-directories for images
-        os.mkdir('%s/raw' % image_folder)
-        os.mkdir('%s/raw/coat' % image_folder)
-        os.mkdir('%s/raw/scan' % image_folder)
-        os.mkdir('%s/raw/single' % image_folder)
-        os.mkdir('%s/slice' % image_folder)
-        os.mkdir('%s/defects' % image_folder)
-        os.mkdir('%s/processed' % image_folder)
-        os.mkdir('%s/processed/coat' % image_folder)
-        os.mkdir('%s/processed/scan' % image_folder)
-        os.mkdir('%s/processed/single' % image_folder)
+        os.makedirs('%s/raw/coat' % image_folder)
+        os.makedirs('%s/raw/scan' % image_folder)
+        os.makedirs('%s/raw/single' % image_folder)
+        os.makedirs('%s/contours' % image_folder)
+        os.makedirs('%s/defects' % image_folder)
+        os.makedirs('%s/processed/coat' % image_folder)
+        os.makedirs('%s/processed/scan' % image_folder)
+        os.makedirs('%s/processed/single' % image_folder)
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
@@ -595,15 +592,19 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
 
         self.buttonBrowse.clicked.connect(self.browse)
         self.buttonStartConversion.clicked.connect(self.start_conversion)
+        self.checkContours.toggled.connect(self.toggle_contours)
 
     def browse(self):
 
-        # Opens a file select dialog, allowing user to select a slice file
-        self.slice_file = None
-        self.slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        # Opens a file select dialog, allowing user to select one or multiple slice file
+        self.slice_files = list()
+        files = QtGui.QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        if self.slice_file:
-            self.lineSliceFile.setText(self.slice_file)
+        for item in files:
+            self.slice_files.append(str(item))
+
+        if self.slice_files:
+            self.lineSliceFile.setText(self.slice_files[0])
             self.buttonStartConversion.setEnabled(True)
             self.update_status('Waiting to start conversion.')
 
@@ -612,12 +613,13 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.buttonStartConversion.setEnabled(False)
         self.buttonBrowse.setEnabled(False)
         self.buttonDone.setEnabled(False)
-        self.update_status('Conversion in progress...')
+        self.update_progress(0)
 
         # Instantiate and run a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_file, self.checkPolygons.isChecked(),
-                                                          self.checkContours.isChecked())
+        self.SC_instance = slice_converter.SliceConverter(self.slice_files, self.checkContours.isChecked(),
+                                                          self.checkFill.isChecked(), self.checkCombine.isChecked())
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
+        self.connect(self.SC_instance, SIGNAL("update_status_slice(QString)"), self.update_status_slice)
         self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
         self.connect(self.SC_instance, SIGNAL("finished()"), self.start_conversion_finished)
         self.SC_instance.start()
@@ -625,17 +627,27 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
     def start_conversion_finished(self):
         """Executes when the SliceConverter instance has finished"""
 
-        # Deletes the SliceConverter instance and releases the memory that it was using
-        self.SC_instance = []
-        gc.collect()
-
         self.buttonStartConversion.setEnabled(True)
         self.buttonBrowse.setEnabled(True)
         self.buttonDone.setEnabled(True)
         self.update_status('Conversion completed successfully.')
 
+    def toggle_contours(self):
+        """Simply enables or disables the Fill Contours checkbox depending if the Draw Contours is checked or not"""
+        if self.checkContours.isChecked():
+            self.checkFill.setEnabled(True)
+            self.checkCombine.setEnabled(True)
+        else:
+            self.checkFill.setEnabled(False)
+            self.checkFill.setChecked(False)
+            self.checkCombine.setEnabled(False)
+            self.checkCombine.setChecked(False)
+
     def update_status(self, string):
         self.labelStatus.setText(string)
+
+    def update_status_slice(self, string):
+        self.labelStatusSlice.setText('Current Slice: ' + string)
 
     def update_progress(self, percentage):
         self.progressBar.setValue(int(percentage))
@@ -885,3 +897,194 @@ class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibr
         # Save the current position of the dialog window
         self.window_position.setValue('geometry', self.saveGeometry())
 
+
+class OverlayAdjustment(QtGui.QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustment):
+    """Opens a Dialog Window when the Overlay Adjustment button is clicked
+    If an overlay is on the display, allows the user to adjust its position in quite a few ways
+    Setup as a Modeless window, opereating independently of other windows
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup Dialog UI with CameraCalibration as parent
+        super(OverlayAdjustment, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+
+        # Load configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Transformation Parameters saved as a list of the respective transformation values
+        self.transform = self.config['TransformationParameters']
+        self.transform_states = list()
+
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        # General
+        self.buttonReset.clicked.connect(self.reset)
+        self.buttonUndo.clicked.connect(self.undo)
+
+        # Translation
+        self.buttonTranslateUp.clicked.connect(self.translate_up)
+        self.buttonTranslateDown.clicked.connect(self.translate_down)
+        self.buttonTranslateLeft.clicked.connect(self.translate_left)
+        self.buttonTranslateRight.clicked.connect(self.translate_right)
+
+        # Rotation / Flip
+        self.buttonRotateACW.clicked.connect(self.rotate_acw)
+        self.buttonRotateCW.clicked.connect(self.rotate_cw)
+        self.buttonFlipHorizontal.clicked.connect(self.flip_horizontal)
+        self.buttonFlipVertical.clicked.connect(self.flip_vertical)
+
+        # Stretch / Pull
+        self.buttonResetStretch.clicked.connect(self.stretch_reset)
+        self.buttonStretchN.clicked.connect(self.stretch_n)
+        self.buttonStretchNE.clicked.connect(self.stretch_ne)
+        self.buttonStretchE.clicked.connect(self.stretch_e)
+        self.buttonStretchSE.clicked.connect(self.stretch_se)
+        self.buttonStretchS.clicked.connect(self.stretch_s)
+        self.buttonStretchSW.clicked.connect(self.stretch_sw)
+        self.buttonStretchW.clicked.connect(self.stretch_w)
+        self.buttonStretchNW.clicked.connect(self.stretch_nw)
+
+        self.buttonStretchUpLeft.clicked.connect(self.stretch_ul)
+        self.buttonStretchLeftUp.clicked.connect(self.stretch_lu)
+        self.buttonStretchUpRight.clicked.connect(self.stretch_ur)
+        self.buttonStretchRightUp.clicked.connect(self.stretch_ru)
+        self.buttonStretchDownLeft.clicked.connect(self.stretch_dl)
+        self.buttonStretchLeftDown.clicked.connect(self.stretch_ld)
+        self.buttonStretchDownRight.clicked.connect(self.stretch_dr)
+        self.buttonStretchRightDown.clicked.connect(self.stretch_rd)
+
+    def reset(self):
+        self.transform = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.save()
+
+    def undo(self):
+        del self.transform_states[-1]
+        self.transform = self.transform_states[-1]
+        self.save(True)
+
+    def translate_up(self):
+        self.transform[0] -= self.spinPixels.value()
+        self.save()
+
+    def translate_down(self):
+        self.transform[0] += self.spinPixels.value()
+        self.save()
+
+    def translate_left(self):
+        self.transform[1] -= self.spinPixels.value()
+        self.save()
+
+    def translate_right(self):
+        self.transform[1] += self.spinPixels.value()
+        self.save()
+
+    def rotate_acw(self):
+        self.transform[2] += self.spinDegrees.value()
+        self.save()
+
+    def rotate_cw(self):
+        self.transform[2] -= self.spinDegrees.value()
+        self.save()
+
+    def flip_horizontal(self):
+        self.transform[3] ^= 1
+        self.save()
+
+    def flip_vertical(self):
+        self.transform[4] ^= 1
+        self.save()
+
+    def stretch_reset(self):
+        self.transform[5:] = [0] * (len(self.transform) - 5)
+        self.save()
+
+    def stretch_n(self):
+        self.transform[5] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_ne(self):
+        self.transform[5] -= self.spinPixels.value()
+        self.transform[6] += self.spinPixels.value()
+        self.save()
+
+    def stretch_e(self):
+        self.transform[6] += self.spinPixels.value()
+        self.save()
+
+    def stretch_se(self):
+        self.transform[7] += self.spinPixels.value()
+        self.transform[6] += self.spinPixels.value()
+        self.save()
+
+    def stretch_s(self):
+        self.transform[7] += self.spinPixels.value()
+        self.save()
+
+    def stretch_sw(self):
+        self.transform[7] += self.spinPixels.value()
+        self.transform[8] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_w(self):
+        self.transform[8] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_nw(self):
+        self.transform[5] -= self.spinPixels.value()
+        self.transform[8] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_ul(self):
+        self.transform[9] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_lu(self):
+        self.transform[10] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_ur(self):
+        self.transform[11] += self.spinPixels.value()
+        self.save()
+
+    def stretch_ru(self):
+        self.transform[12] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_dl(self):
+        self.transform[13] -= self.spinPixels.value()
+        self.save()
+
+    def stretch_ld(self):
+        self.transform[14] += self.spinPixels.value()
+        self.save()
+
+    def stretch_dr(self):
+        self.transform[15] += self.spinPixels.value()
+        self.save()
+
+    def stretch_rd(self):
+        self.transform[16] += self.spinPixels.value()
+        self.save()
+
+    def save(self, undo_flag=False):
+
+        self.emit(SIGNAL("overlay_adjustment_execute(PyQt_PyObject)"), self.transform)
+
+        if not undo_flag:
+            self.transform_states.append(self.transform[:])
+
+        if len(self.transform_states) > 10:
+            del self.transform_states[0]
+
+        self.config['TransformationParameters'] = self.transform
+
+        # Save configuration settings to config.json file
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config)
+
+    def closeEvent(self, event):
+        """Executes when the top-right X is clicked"""
+        self.emit(SIGNAL("accepted()"))

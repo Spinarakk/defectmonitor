@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>381</width>
-    <height>244</height>
+    <width>415</width>
+    <height>288</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>415</width>
+    <height>288</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>415</width>
+    <height>288</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Slice Converter</string>
@@ -25,12 +37,12 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>361</width>
-     <height>51</height>
+     <width>391</width>
+     <height>61</height>
     </rect>
    </property>
    <property name="text">
-    <string>To convert a .cls or .cli file, please select the file in question. The parsed slice will be saved as a text document with the same name in the same folder. </string>
+    <string>To convert a .cls or .cli file, please select the file in question. If multiple files are selected, each file will be converted and an option to combine all the drawn contours will be enabled. The contour data will be saved as a JSON file with the same name in the same folder. </string>
    </property>
    <property name="scaledContents">
     <bool>false</bool>
@@ -42,8 +54,8 @@
   <widget class="QPushButton" name="buttonBrowse">
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>69</y>
+     <x>310</x>
+     <y>80</y>
      <width>91</width>
      <height>28</height>
     </rect>
@@ -59,8 +71,8 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>206</y>
-     <width>261</width>
+     <y>250</y>
+     <width>291</width>
      <height>28</height>
     </rect>
    </property>
@@ -71,8 +83,8 @@
   <widget class="QPushButton" name="buttonDone">
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>206</y>
+     <x>310</x>
+     <y>250</y>
      <width>91</width>
      <height>28</height>
     </rect>
@@ -85,8 +97,8 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>172</y>
-     <width>361</width>
+     <y>216</y>
+     <width>391</width>
      <height>28</height>
     </rect>
    </property>
@@ -107,13 +119,13 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>138</y>
-     <width>361</width>
+     <y>182</y>
+     <width>391</width>
      <height>28</height>
     </rect>
    </property>
    <property name="text">
-    <string>Please select a .cls or .cli file to convert.</string>
+    <string>Please select a .cls or .cli file(s) to convert.</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
@@ -123,8 +135,8 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>70</y>
-     <width>261</width>
+     <y>80</y>
+     <width>291</width>
      <height>26</height>
     </rect>
    </property>
@@ -135,9 +147,9 @@
   <widget class="QCheckBox" name="checkContours">
    <property name="geometry">
     <rect>
-     <x>220</x>
-     <y>104</y>
-     <width>131</width>
+     <x>10</x>
+     <y>114</y>
+     <width>111</width>
      <height>28</height>
     </rect>
    </property>
@@ -145,17 +157,52 @@
     <string>Draw Contours</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkPolygons">
+  <widget class="QCheckBox" name="checkFill">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>104</y>
-     <width>141</width>
+     <x>150</x>
+     <y>114</y>
+     <width>101</width>
      <height>28</height>
     </rect>
    </property>
    <property name="text">
-    <string>Draw Polygons</string>
+    <string>Fill Contours</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelStatusSlice">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>148</y>
+     <width>391</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Current Slice:</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkCombine">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>114</y>
+     <width>131</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Combine Contours</string>
    </property>
   </widget>
  </widget>

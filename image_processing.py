@@ -108,6 +108,53 @@ class ImageCorrection(QThread):
 
         return image
 
+    def transform(self, image, transform):
+
+        width = image.shape[1]
+        height = image.shape[0]
+
+        # Flip
+        if transform[3]:
+            image = cv2.flip(image, 1)
+        if transform[4]:
+            image = cv2.flip(image, 0)
+
+        # Translation
+        translation_matrix = np.float32([[1, 0, transform[1]], [0, 1, transform[0]]])
+        image = cv2.warpAffine(image, translation_matrix, (width, height))
+
+        # Rotation
+        rotation_matrix = cv2.getRotationMatrix2D((width / 2, height / 2), transform[2], 1)
+        image = cv2.warpAffine(image, rotation_matrix, (width, height))
+
+        # Stretching
+        # Top Left Corner
+        points1 = np.float32([[width, 0], [0, 0], [0, height]])
+        points2 = np.float32([[width, transform[5] + transform[12]],
+                              [transform[8], transform[5]],
+                              [transform[8] + transform[13], height + transform[7]]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        image = cv2.warpAffine(image, matrix, (width, height))
+        # Top Right Corner
+        points1 = np.float32([[0, 0], [width, 0], [width, height]])
+        points2 = np.float32([[0, transform[10]],
+                              [width + transform[6], 0],
+                              [width + transform[6] + transform[15], height + transform[7]]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        image = cv2.warpAffine(image, matrix, (width, height))
+        # Bottom Left Corner
+        points1 = np.float32([[0, 0], [0, height], [width, height]])
+        points2 = np.float32([[transform[9], 0], [0, height], [width, height + transform[16]]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        image = cv2.warpAffine(image, matrix, (width, height))
+        # Bottom Right Corner
+        points1 = np.float32([[0, height], [width, height], [width, 0]])
+        points2 = np.float32([[0, height + transform[14]], [width, height], [width + transform[11], 0]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        image = cv2.warpAffine(image, matrix, (width, height))
+
+        return image
+    
     @staticmethod
     def clahe(image):
         """

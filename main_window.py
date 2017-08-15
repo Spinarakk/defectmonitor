@@ -4,6 +4,7 @@ import sys
 import shutil
 import json
 import cv2
+import numpy as np
 from PyQt4 import QtGui
 from PyQt4.QtCore import SIGNAL, Qt, QEvent
 
@@ -29,7 +30,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Setup Main Window UI
         super(self.__class__, self).__init__(parent)
         self.setupUi(self)
-
+        self.distort_flag = False
         # Get the current working directory
         self.working_directory = os.getcwd()
         self.working_directory = self.working_directory.replace("\\", '/')
@@ -91,19 +92,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonDefectProcessing.clicked.connect(self.defect_processing)
         self.buttonImageConverter.clicked.connect(self.image_converter)
         self.buttonDisplayImages.clicked.connect(self.display_images)
+        self.buttonOverlayAdjustment.clicked.connect(self.overlay_adjustment)
 
         # Layer Number Frame
         self.buttonGo.clicked.connect(self.set_layer)
-
-        # Position Adjustment Group Box
-        self.buttonBoundary.toggled.connect(self.toggle_boundary)
-        self.buttonCrop.toggled.connect(self.toggle_crop)
-        self.buttonShiftUp.clicked.connect(self.shift_up)
-        self.buttonShiftDown.clicked.connect(self.shift_down)
-        self.buttonShiftLeft.clicked.connect(self.shift_left)
-        self.buttonShiftRight.clicked.connect(self.shift_right)
-        self.buttonRotateACW.clicked.connect(self.rotate_acw)
-        self.buttonRotateCW.clicked.connect(self.rotate_cw)
 
         # Display Widget Tabs
         self.widgetDisplay.currentChanged.connect(self.tab_change)
@@ -130,6 +122,12 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Instantiate any instances that cannot be run simultaneously
         self.FM_instance = None
+
+        self.translation_x = 0
+        self.translation_y = 0
+        self.rotation_angle = 0.00
+        self.resize_x = 0
+        self.resize_y = 0
 
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
@@ -161,6 +159,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.config = json.load(config)
 
             # Store config settings as respective variables and update appropriate UI elements
+            self.transform = self.config['TransformationParameters']
             self.setWindowTitle('Defect Monitor - Build ' + str(self.config['BuildName']))
             self.update_status('New build created. Click Image Capture to begin capturing images.')
 
@@ -168,8 +167,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             self.buttonImageCapture.setEnabled(True)
             self.buttonDisplayImages.setEnabled(True)
 
-            # Instantiate a dialog variable for existence validation purposes
+            # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
             self.image_capture_dialog = None
+            self.overlay_adjustment_dialog = None
 
             if self.checkTestFolders.isChecked():
                 # TODO Temporary list of folders to use in the meantime
@@ -259,7 +259,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 self.connect(self.image_capture_dialog, SIGNAL("accepted()"), self.image_capture_close)
                 self.connect(self.image_capture_dialog, SIGNAL("tab_focus(QString, QString)"), self.tab_focus)
             except RuntimeError:
-                self.image_capture_close
+                self.image_capture_close()
         try:
             self.image_capture_dialog.show()
             self.image_capture_dialog.activateWindow()
@@ -451,6 +451,40 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonGo.setEnabled(True)
         self.update_layer_range(self.widgetDisplay.currentIndex())
 
+    def overlay_adjustment(self):
+        """Opens a Dialog Window when the Overlay Adjustment button is clicked
+        Allows the user to transform the overlayed image in a variety of ways
+        Setup as a Modeless window, operating independently of other windows
+        """
+
+        self.update_status('')
+
+        if self.overlay_adjustment_dialog is None:
+            self.overlay_adjustment_dialog = dialog_windows.OverlayAdjustment(self)
+            try:
+                self.connect(self.overlay_adjustment_dialog, SIGNAL("accepted()"), self.overlay_adjustment_close)
+                self.connect(self.overlay_adjustment_dialog, SIGNAL("overlay_adjustment_execute(PyQt_PyObject)"),
+                             self.overlay_adjustment_execute)
+            except RuntimeError:
+                self.overlay_adjustment_close()
+        try:
+            self.overlay_adjustment_dialog.show()
+            self.overlay_adjustment_dialog.activateWindow()
+        except RuntimeError:
+            self.overlay_adjustment_dialog = None
+
+    def overlay_adjustment_execute(self, transform):
+        """Executes the adjustment of the overlay"""
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        self.transform = transform
+
+        self.update_display()
+
+    def overlay_adjustment_close(self):
+        self.overlay_adjustment_dialog = None
+
     def options(self):
         pass
 
@@ -461,34 +495,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Changes the displayed slider's value which in turn executes the slider_change method"""
         self.display['SliderNames'][self.widgetDisplay.currentIndex()].setValue(self.spinLayer.value())
 
-    # POSITION ADJUSTMENT BOX
-
-    def toggle_boundary(self):
-        """Switches the Position Adjustment arrows to instead control the crop boundary size"""
-        pass
-
-    def toggle_crop(self):
-        """Switches the Position Adjustment arrows to instead control the crop position"""
-        pass
-
-    def shift_up(self):
-        pass
-
-    def shift_down(self):
-        pass
-
-    def shift_left(self):
-        pass
-
-    def shift_right(self):
-        pass
-
-    def rotate_acw(self):
-        pass
-
-    def rotate_cw(self):
-        pass
-
     # TOGGLES AND CHECKBOXES
 
     def toggle_overlay(self):
@@ -498,8 +504,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         if self.checkToggleOverlay.isChecked():
             # Display the message for 5 seconds
             self.update_status('Displaying part contours.', 5000)
+            self.buttonOverlayAdjustment.setEnabled(True)
         else:
             self.update_status('Hiding part contours.', 5000)
+            self.buttonOverlayAdjustment.setEnabled(False)
 
         self.update_display()
 
@@ -520,10 +528,22 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
         else:
             if self.checkToggleOverlay.isChecked():
+                
                 self.update_image(2)
                 overlay = self.display['Image'][2]
+                
+                # Resizes the overlay image if the resolution doesn't match the displayed image
                 if overlay.shape[:2] != image.shape[:2]:
-                    overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC )
+                    overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
+
+                overlay = image_processing.ImageCorrection(None).transform(overlay, self.transform)
+
+                #self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
+                # Display a status message with the current transformation of the overlay image
+                self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
+                                   (self.transform[1], -self.transform[0], -1 * self.transform[2],
+                                    self.transform[4], self.transform[5]), 10000)
+                
                 image = cv2.add(image, overlay)
 
             if self.radioCLAHE.isChecked():
@@ -646,7 +666,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.display['ImageList'][index][:] = []
 
         # Checks the returned sorted folder list for actual images (.png or .jpg) while ignoring other files
-        for filename in sorted(os.listdir(self.display['ImageFolder'][index])):
+        for filename in os.listdir(self.display['ImageFolder'][index]):
             if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
                 self.display['ImageList'][index].append(filename)
 

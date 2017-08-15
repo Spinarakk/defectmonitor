@@ -47,16 +47,11 @@ class Calibration(QThread):
 
         # Create two folders inside the received calibration folder to store chessboard corner and undistorted images
         if self.save_chess_flag:
-            try:
-                os.mkdir('%s/corners' % self.calibration_folder)
-            except WindowsError:
-                pass
-
+            if not os.path.exists('%s/corners' % self.calibration_folder):
+                os.makedirs('%s/corners' % self.calibration_folder)
         if self.save_undistort_flag:
-            try:
-                os.mkdir('%s/undistorted' % self.calibration_folder)
-            except WindowsError:
-                pass
+            if not os.path.exists('%s/undistorted' % self.calibration_folder):
+                os.makedirs('%s/undistorted' % self.calibration_folder)
 
         # Load the calibration image names
         for image_calibration in os.listdir(self.calibration_folder):

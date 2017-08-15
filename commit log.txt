@@ -1,6 +1,12 @@
+August 8
+- Converted the .cli binary into ascii
+- Drew polygons and contours of each layer of the test .cli slice files
+- Works on all different shapes and for any number of contours, even ones nested in larger contours
+- Implanted the code back into the SliceConverter within the main program
+
 August 7
 - Tested the .cli file to see how it works and how to convert from binary to ascii
-
+- Created a bunch of .cli test files and output them as ascii
 
 August 4
 - Moved the conversion to contours method to the SliceConverter method
