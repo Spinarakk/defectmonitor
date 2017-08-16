@@ -1,3 +1,42 @@
+August 16
+- Changed the contour dictionaries into lists that can be read line for line instead of needing to be entirely loaded into memory to read from
+- Cuts down on memory usage
+- Fixed up drawing of all the contours on the one image
+- Started integrating John's Defect Analysis code into the program
+- Modified the Defect Processing button to execute his code
+- Started modifying the MainWindow and NewBuild to be more accessible to users wanting to start a new monitoring build
+
+August 15
+- Tested .cls conversion code on more complex parts
+- Doesn't work properly as of this revision, code only works on single contour parts
+- Created a dialog window for the overlay adjustment options
+- Modified the way the slice contour drawing works
+- Added combine contours to combine all the contours onto the one image
+
+August 14
+- Slightly adapted the .cli conversion code to the .cls file
+- Recreated the structure of a .cli file using the .cls file data
+- Cleaned up and removed a lot of the previous slow code
+- .cls conversion code now runs much faster and doesn't use as much memory
+
+August 11
+- Added functionality to the Position Adjustment buttons to allow the user to make transformation changes to the overlay image in real time
+- Move this group box into a separate window as there were too many buttons to fit comfortably on the MainWindow
+- Added options to stretch only in one direction and back
+- Started to look at the .cls file and getting it working like the .cli converter
+
+August 9
+- Tested the SliceConverter code on multiple parts of varying complexity
+- Set a specific folder to save the contours to
+- Used DrawContours to fill in the contours rather than the FillPoly XOR method
+- Fixed up the binary code to work when CommandIndex 128 and 129 are encountered twice
+- Changed the Fill Polygon button to a Fill Contours button
+- Calculated an offset in pixels to shift the contours to match the build platform and the platform in MAGICS
+- Saved the scale factor to the config.json file
+- Improved the binary logic when encountering numbers the same as the command indexes to ignore them if part of polyline or layer count
+- Moved all the files and folders to the SSD to test out disk speed
+- Added more status updates and progress updates to the conversion code
+
 August 8
 - Converted the .cli binary into ascii
 - Drew polygons and contours of each layer of the test .cli slice files

@@ -26,6 +26,8 @@ class Ui_dialogImageCapture(object):
     def setupUi(self, dialogImageCapture):
         dialogImageCapture.setObjectName(_fromUtf8("dialogImageCapture"))
         dialogImageCapture.resize(491, 310)
+        dialogImageCapture.setMinimumSize(QtCore.QSize(491, 310))
+        dialogImageCapture.setMaximumSize(QtCore.QSize(491, 310))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogImageCapture.setWindowIcon(icon)

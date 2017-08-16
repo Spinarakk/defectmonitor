@@ -408,6 +408,9 @@
     </item>
     <item row="9" column="2">
      <widget class="QCheckBox" name="checkTestFolders">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="font">
        <font>
         <pointsize>11</pointsize>
@@ -419,7 +422,7 @@
        <string>Use Test Folders</string>
       </property>
       <property name="checked">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
      </widget>
     </item>
@@ -435,7 +438,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tabCoatExplorer">
        <attribute name="title">

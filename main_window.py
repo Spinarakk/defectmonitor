@@ -16,6 +16,7 @@ from gui import mainWindow
 import dialog_windows
 import extra_functions
 import image_processing
+import defect_analysis
 
 
 class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
@@ -182,7 +183,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 # Store the names of the five folders to be monitored in the display dictionary
                 self.display['ImageFolder'] = ['%s/processed/coat' % self.config['ImageFolder'],
                                                '%s/processed/scan' % self.config['ImageFolder'],
-                                               '%s/slice' % self.config['ImageFolder'],
+                                               '%s/contours' % self.config['ImageFolder'],
                                                '%s/defects' % self.config['ImageFolder'],
                                                '%s/processed/single' % self.config['ImageFolder']]
 
@@ -311,47 +312,70 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         self.update_progress('0')
-
+        overlay = self.display['Image'][2]
         # Check which tab is currently being displayed on the widgetDisplay
         if self.widgetDisplay.currentIndex() == 0:
-            image_raw = self.image_display_coat
+            image = self.display['Image'][0]
+            detector = defect_analysis.DefectDetection(image, overlay, self.display['SliderNames'][
+                self.widgetDisplay.currentIndex()].value())
+            detector.run()
         elif self.widgetDisplay.currentIndex() == 1:
-            image_raw = self.image_display_scan
-        else:
-            image_raw = None
+            image = self.display['Image'][1]
 
-        # Instantiate a DefectDetection instance
-        self.DD_instance = image_processing.DefectDetection(image_raw)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            gray = cv2.GaussianBlur(gray, (27, 27), 0)
+            edge = cv2.Laplacian(gray, cv2.CV_64F)
+            for i in xrange(3):
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * i + 1, 2 * i + 1))
+                edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel)
+                edge = cv2.morphologyEx(edge, cv2.MORPH_OPEN, kernel)
 
-        # Listen for emitted signals from the created instance, and send them to the corresponding method
-        self.connect(self.DD_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.DD_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+            edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel, iterations=3)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ERODE, (5, 5))
+            edge = cv2.erode(edge, kernel, iterations=1)
+            edge = cv2.convertScaleAbs(edge)
+            out, contours, hierarchy = cv2.findContours(edge, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+            cont = []
+            for cnt in contours:
+                if cv2.contourArea(cnt) > 1000:
+                    cont.append(cnt)
 
-        # Specific signal that moves on to the next task once the current QThread finishes running
-        self.connect(self.DD_instance, SIGNAL("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, "
-                                              "PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
-                     self.defect_processing_finished)
+            cv2.drawContours(image, cont, -1, (0, 255, 0), thickness=5)
+            cv2.imwrite('%s/defects/scan_contours_%s.jpg' % (self.config['ImageFolder'], self.display['SliderNames'][
+                self.widgetDisplay.currentIndex()].value()), image)
 
-        # Start the DefectDetection instance which performs the contained Run method
-        self.DD_instance.start()
+        # # Instantiate a DefectDetection instance
+        # self.DD_instance = image_processing.DefectDetection(image_raw)
+        #
+        # # Listen for emitted signals from the created instance, and send them to the corresponding method
+        # self.connect(self.DD_instance, SIGNAL("update_status(QString)"), self.update_status)
+        # self.connect(self.DD_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+        #
+        # # Specific signal that moves on to the next task once the current QThread finishes running
+        # self.connect(self.DD_instance, SIGNAL("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, "
+        #                                       "PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
+        #              self.defect_processing_finished)
+        #
+        # # Start the DefectDetection instance which performs the contained Run method
+        # self.DD_instance.start()
 
-    def defect_processing_finished(self, image_1, image_2, image_3, image_4, image_5):
-        """Executes when the DefectDetection instance has finished"""
-
-        # Saves the processed images in their respective variables
-        self.image_defect_1 = image_1
-        self.image_defect_2 = image_2
-        self.image_defect_3 = image_3
-        self.image_defect_4 = image_4
-        self.image_defect_5 = image_5
-
-        # Cleanup UI
-        self.groupOpenCV.setEnabled(True)
-        self.widgetDisplay.setCurrentIndex(3)
-        self.update_status('Displaying images...')
-
-        # Display the defect images on the widgetDisplay tab
-        self.update_display()
+    # def defect_processing_finished(self, image_1, image_2, image_3, image_4, image_5):
+    #     """Executes when the DefectDetection instance has finished"""
+    #
+    #     # Saves the processed images in their respective variables
+    #     self.image_defect_1 = image_1
+    #     self.image_defect_2 = image_2
+    #     self.image_defect_3 = image_3
+    #     self.image_defect_4 = image_4
+    #     self.image_defect_5 = image_5
+    #
+    #     # Cleanup UI
+    #     self.groupOpenCV.setEnabled(True)
+    #     self.widgetDisplay.setCurrentIndex(3)
+    #     self.update_status('Displaying images...')
+    #
+    #     # Display the defect images on the widgetDisplay tab
+    #     self.update_display()
 
     def image_converter(self):
         """Opens a FileDialog when Image Converter button is pressed

@@ -10,6 +10,18 @@
     <height>310</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>491</width>
+    <height>310</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>491</width>
+    <height>310</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>Image Capture</string>
   </property>

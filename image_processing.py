@@ -43,16 +43,6 @@ class ImageCorrection(QThread):
         self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
         self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
 
-        # Define lists containing the 2 image arrays, 2 phase strings, 3 processing tag strings and 3 status messages
-        # if bool(image_folder):
-        #     self.image_folder = image_folder + '/processed'
-        #     self.images = (image_coat, image_scan)
-        #     self.phases = ('coat', 'scan')
-        #     self.tags = ('DP', 'DPC', 'DPCE')
-        #     self.status_messages = ('Fixing Distortion & Perspective...', 'Cropping images...',
-        #                             'Applying CLAHE algorithm...')
-        #     self.progress_counter = 0.0
-
     def run(self):
         self.image_D = self.distortion_fix(self.image)
         self.image_DP = self.perspective_fix(self.image_D)

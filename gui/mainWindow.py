@@ -194,12 +194,13 @@ class Ui_mainWindow(object):
         self.checkCleanup.setObjectName(_fromUtf8("checkCleanup"))
         self.gridLayout_4.addWidget(self.checkCleanup, 9, 3, 1, 1)
         self.checkTestFolders = QtGui.QCheckBox(self.mainWidget)
+        self.checkTestFolders.setEnabled(True)
         font = QtGui.QFont()
         font.setPointSize(11)
         font.setBold(True)
         font.setWeight(75)
         self.checkTestFolders.setFont(font)
-        self.checkTestFolders.setChecked(True)
+        self.checkTestFolders.setChecked(False)
         self.checkTestFolders.setObjectName(_fromUtf8("checkTestFolders"))
         self.gridLayout_4.addWidget(self.checkTestFolders, 9, 2, 1, 1)
         self.widgetDisplay = QtGui.QTabWidget(self.mainWidget)
@@ -524,7 +525,7 @@ class Ui_mainWindow(object):
         self.menuBar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainWindow)
-        self.widgetDisplay.setCurrentIndex(0)
+        self.widgetDisplay.setCurrentIndex(3)
         QtCore.QObject.connect(self.widgetDisplay, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), mainWindow.update)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
 

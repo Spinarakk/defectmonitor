@@ -26,6 +26,8 @@ class Ui_dialogCameraSettings(object):
     def setupUi(self, dialogCameraSettings):
         dialogCameraSettings.setObjectName(_fromUtf8("dialogCameraSettings"))
         dialogCameraSettings.resize(311, 271)
+        dialogCameraSettings.setMinimumSize(QtCore.QSize(311, 271))
+        dialogCameraSettings.setMaximumSize(QtCore.QSize(311, 271))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogCameraSettings.setWindowIcon(icon)

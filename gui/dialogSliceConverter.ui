@@ -159,7 +159,7 @@
   </widget>
   <widget class="QCheckBox" name="checkFill">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="geometry">
     <rect>
