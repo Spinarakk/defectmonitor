@@ -17,7 +17,7 @@ import dialog_windows
 import extra_functions
 import image_processing
 import defect_analysis
-
+import slice_converter
 
 class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
     """Main module used to initiate the main GUI window and all of its associated dialogs/widgets
@@ -31,12 +31,11 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Setup Main Window UI
         super(self.__class__, self).__init__(parent)
         self.setupUi(self)
-        self.distort_flag = False
-        # Get the current working directory
-        self.working_directory = os.getcwd()
-        self.working_directory = self.working_directory.replace("\\", '/')
 
-        # Load configuration settings from config.json file
+        # Get the current working directory
+        self.working_directory = os.getcwd().replace('\\', '/')
+
+        # Load configuration settings from config.json file, the default configuration file
         # If config.json is empty or missing, config_backup.json is read and dumped as config.json
         try:
             with open('config.json') as config:
@@ -45,17 +44,18 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             with open('config_backup.json') as config:
                 self.config = json.load(config)
             with open('config.json', 'w+') as config:
-                json.dump(self.config, config)
+                json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Save the current working directory to the config.json file so later methods can grab it
         self.config['WorkingDirectory'] = self.working_directory
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Menubar -> File
         self.actionNewBuild.triggered.connect(self.new_build)
         self.actionOpenBuild.triggered.connect(self.open_build)
+        self.actionSaveBuild.triggered.connect(self.save_build)
         self.actionExportImage.triggered.connect(self.export_image)
         self.actionExit.triggered.connect(self.closeEvent)
 
@@ -78,13 +78,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.radioCLAHE.toggled.connect(self.update_display)
         self.checkToggleOverlay.toggled.connect(self.toggle_overlay)
 
-        # OpenCV Processing Group Box
-        self.radioOpenCV1.toggled.connect(self.update_display)
-        self.radioOpenCV2.toggled.connect(self.update_display)
-        self.radioOpenCV3.toggled.connect(self.update_display)
-        self.radioOpenCV4.toggled.connect(self.update_display)
-        self.radioOpenCV5.toggled.connect(self.update_display)
-
         # Assorted Tools Group Box
         self.buttonCameraCalibration.clicked.connect(self.camera_calibration)
         self.buttonSliceConverter.clicked.connect(self.slice_converter)
@@ -95,8 +88,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonDisplayImages.clicked.connect(self.display_images)
         self.buttonOverlayAdjustment.clicked.connect(self.overlay_adjustment)
 
-        # Layer Number Frame
+        # Frames
         self.buttonGo.clicked.connect(self.set_layer)
+        self.buttonCheckCT.clicked.connect(self.check_camera_trigger)
 
         # Display Widget Tabs
         self.widgetDisplay.currentChanged.connect(self.tab_change)
@@ -108,12 +102,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderSE.valueChanged.connect(self.slider_change)
         self.buttonSliderUpSE.clicked.connect(self.slider_up)
         self.buttonSliderDownSE.clicked.connect(self.slider_down)
-        self.sliderSLE.valueChanged.connect(self.slider_change)
-        self.buttonSliderUpSLE.clicked.connect(self.slider_up)
-        self.buttonSliderDownSLE.clicked.connect(self.slider_down)
-        self.sliderDA.valueChanged.connect(self.slider_change)
-        self.buttonSliderUpDA.clicked.connect(self.slider_up)
-        self.buttonSliderDownDA.clicked.connect(self.slider_down)
+        self.sliderPC.valueChanged.connect(self.slider_change)
+        self.buttonSliderUpPC.clicked.connect(self.slider_up)
+        self.buttonSliderDownPC.clicked.connect(self.slider_down)
         self.sliderIC.valueChanged.connect(self.slider_change)
         self.buttonSliderUpIC.clicked.connect(self.slider_up)
         self.buttonSliderDownIC.clicked.connect(self.slider_down)
@@ -124,22 +115,15 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         # Instantiate any instances that cannot be run simultaneously
         self.FM_instance = None
 
-        self.translation_x = 0
-        self.translation_y = 0
-        self.rotation_angle = 0.00
-        self.resize_x = 0
-        self.resize_y = 0
-
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
-        # Easier to store each of these in a dictionary under a specific key to call on one of the five sets
+        # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding list or name
-        self.display = {'Image': [0, 0, 0, 0, 0], 'ImageList': [[], [], [], [], []],
-                        'LayerRange': [1, 1, 1, 1, 1], 'SliderValue': [1, 1, 1, 1, 1],
-                        'FolderNames': ['Coat/', 'Scan/', 'Slice/', 'Defect/', 'Single/'],
-                        'LabelNames': [self.labelDisplayCE, self.labelDisplaySE, self.labelDisplaySLE,
-                                       self.labelDisplayDA, self.labelDisplayIC],
-                        'SliderNames': [self.sliderCE, self.sliderSE, self.sliderSLE, self.sliderDA, self.sliderIC]}
+        self.display = {'Image': [0, 0, 0, 0], 'ImageList': [[], [], [], []],
+                        'LayerRange': [1, 1, 1, 1], 'SliderValue': [1, 1, 1, 1],
+                        'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'],
+                        'LabelNames': [self.labelDisplayCE, self.labelDisplaySE, self.labelDisplayPC, self.labelDisplayIC],
+                        'SliderNames': [self.sliderCE, self.sliderSE, self.sliderPC, self.sliderIC]}
 
     # MENUBAR -> FILE
 
@@ -159,74 +143,129 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             with open('config.json') as config:
                 self.config = json.load(config)
 
+            self.setup_build()
+
+    def open_build(self):
+        """Opens a File Dialog Window when File > Open Build... is clicked
+        Prompts the user to select a previous build's configuration settings
+        """
+
+        # Get the name of the config file to be read
+        config_name = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'JSON File (*.json)')
+
+        if config_name:
+            # Open the new config file and overwrite the contents of the default config file with the new config file
+            with open(config_name) as config:
+                self.config = json.load(config)
+            with open('config.json', 'w+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
+
+            self.setup_build()
+
+    def setup_build(self):
+        """Sets up the MainWindow and any background threads for the current build"""
+
+        try:
+            # Check if the Basler Pylon software has been installed correctly
+            # Also if the pypylon folder is available and is the correct version
+            import image_capture
+        except ImportError:
+            # Open a message box with an error stating that certain features cannot be accessed
+            self.export_confirmation = QtGui.QMessageBox()
+            self.export_confirmation.setIcon(QtGui.QMessageBox.Critical)
+            self.export_confirmation.setText(
+                "Unable to access camera related functions.<br><br>Either the Basler Pylon Software is not "
+                "installed, the software wasn't installed as a developer, or PyPylon is either "
+                "missing from the working directory, not installed properly, or the incorrect x32/x64 version is "
+                "being used.")
+            self.export_confirmation.setWindowTitle('New Build')
+            self.export_confirmation.exec_()
+        else:
+            # Set the imported module as an instance variable
+            self.image_capture_module = image_capture
+
             # Store config settings as respective variables and update appropriate UI elements
             self.transform = self.config['TransformationParameters']
             self.setWindowTitle('Defect Monitor - Build ' + str(self.config['BuildName']))
-            self.update_status('New build created. Click Image Capture to begin capturing images.')
 
             # Enable certain UI elements
+            self.actionSaveBuild.setEnabled(True)
             self.buttonImageCapture.setEnabled(True)
             self.buttonDisplayImages.setEnabled(True)
+            self.buttonCheckCT.setEnabled(True)
 
             # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
             self.image_capture_dialog = None
             self.overlay_adjustment_dialog = None
 
-            if self.checkTestFolders.isChecked():
-                # TODO Temporary list of folders to use in the meantime
-                self.display['ImageFolder'] = ['%s/samples/folder1' % self.config['WorkingDirectory'],
-                                               '%s/samples/folder2' % self.config['WorkingDirectory'],
-                                               '%s/samples/folder3' % self.config['WorkingDirectory'],
-                                               '%s/samples/folder4' % self.config['WorkingDirectory'],
-                                               '%s/samples/folder5' % self.config['WorkingDirectory']]
-            else:
-                # Store the names of the five folders to be monitored in the display dictionary
-                self.display['ImageFolder'] = ['%s/processed/coat' % self.config['ImageFolder'],
-                                               '%s/processed/scan' % self.config['ImageFolder'],
-                                               '%s/contours' % self.config['ImageFolder'],
-                                               '%s/defects' % self.config['ImageFolder'],
-                                               '%s/processed/single' % self.config['ImageFolder']]
-
-            # If a previous Folder Monitor instance exists, stop it
-            if self.FM_instance:
-                self.FM_instance.stop()
+            # Store the names of the four folders to be monitored in the display dictionary
+            self.display['ImageFolder'] = ['%s/processed/coat' % self.config['ImageFolder'],
+                                           '%s/processed/scan' % self.config['ImageFolder'],
+                                           '%s/contours' % self.config['ImageFolder'],
+                                           '%s/processed/single' % self.config['ImageFolder']]
 
             # Instantiate and run a FolderMonitor instance
             self.FM_instance = extra_functions.FolderMonitor(self.display['ImageFolder'])
             self.connect(self.FM_instance, SIGNAL("folder_change(QString)"), self.folder_change)
             self.FM_instance.start()
 
-    def open_build(self):
-        """Opens a Dialog Window when File > Open Build... is clicked
-        Allows user to load a previous build's settings
-        Setup as a Modal window, blocking input to other visible windows until this window is closed
-        """
-        pass
+            self.display_images()
 
+            # Checks for a valid attached camera and trigger
+            self.update_status('Checking for valid camera and trigger...')
+            self.check_camera_trigger()
+
+            # Instantiate and run a SliceConverter instance
+            self.update_status('Converting slice files into contours...')
+            self.SC_instance = slice_converter.SliceConverter(self.config['SliceFiles'], False, True, True)
+            self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
+            self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+            self.connect(self.SC_instance, SIGNAL("finished()"), self.setup_build_finished)
+            self.SC_instance.start()
+
+    def setup_build_finished(self):
+
+        self.update_status('Build %s setup complete.' % self.config['BuildName'])
+
+    def save_build(self):
+        """Opens a FileDialog Window when File > Save Build... is clicked
+        Allows the user to save the current build's config.json file to whatever location the user specifies
+        """
+        
+        config_name = QtGui.QFileDialog.getSaveFileName(self, 'Save Build As', '', 'JSON File (*.json)',
+                                                                   selectedFilter='*.json')
+
+        # Checking if user has chosen to save the build or clicked cancel
+        if config_name:
+            # Save the config file as the given name in the given location
+            with open(config_name, 'w+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
+
+            # Open a message box with a save confirmation message
+            self.save_confirmation = QtGui.QMessageBox()
+            self.save_confirmation.setIcon(QtGui.QMessageBox.Information)
+            self.save_confirmation.setText('The build has been saved to %s.' % config_name)
+            self.save_confirmation.setWindowTitle('Save Build')
+            self.save_confirmation.exec_()
+            
     def export_image(self):
         """Opens a FileDialog Window when File > Export Image... is clicked
         Allows the user to save the currently displayed image to whatever location the user specifies as a .png
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        self.export_image_name = None
-        self.export_image_name = QtGui.QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)',
+        image_name = QtGui.QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)',
                                                                    selectedFilter='*.png')
 
         # Checking if user has chosen to save the image or clicked cancel
-        if self.export_image_name:
-            # Check which tab is currently being displayed on the widgetDisplay
-            if self.widgetDisplay.currentIndex() == 0:
-                cv2.imwrite(str(self.export_image_name), self.image_display_coat)
-            elif self.widgetDisplay.currentIndex() == 1:
-                cv2.imwrite(str(self.export_image_name), self.image_display_scan)
-            elif self.widgetDisplay.currentIndex() == 3:
-                cv2.imwrite(str(self.export_image_name), self.image_display_defect)
+        if image_name:
+            # Check which tab is currently being displayed on the widgetDisplay and grab the image
+            cv2.imwrite(str(image_name), self.display['Image'][self.widgetDisplay.currentIndex()])
 
             # Open a message box with a save confirmation message
             self.export_confirmation = QtGui.QMessageBox()
             self.export_confirmation.setIcon(QtGui.QMessageBox.Information)
-            self.export_confirmation.setText('Your image has been saved to %s.' % self.export_image_name)
+            self.export_confirmation.setText('The image has been saved to %s.' % image_name)
             self.export_confirmation.setWindowTitle('Export Image')
             self.export_confirmation.exec_()
 
@@ -344,39 +383,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             cv2.imwrite('%s/defects/scan_contours_%s.jpg' % (self.config['ImageFolder'], self.display['SliderNames'][
                 self.widgetDisplay.currentIndex()].value()), image)
 
-        # # Instantiate a DefectDetection instance
-        # self.DD_instance = image_processing.DefectDetection(image_raw)
-        #
-        # # Listen for emitted signals from the created instance, and send them to the corresponding method
-        # self.connect(self.DD_instance, SIGNAL("update_status(QString)"), self.update_status)
-        # self.connect(self.DD_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        #
-        # # Specific signal that moves on to the next task once the current QThread finishes running
-        # self.connect(self.DD_instance, SIGNAL("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, "
-        #                                       "PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
-        #              self.defect_processing_finished)
-        #
-        # # Start the DefectDetection instance which performs the contained Run method
-        # self.DD_instance.start()
-
-    # def defect_processing_finished(self, image_1, image_2, image_3, image_4, image_5):
-    #     """Executes when the DefectDetection instance has finished"""
-    #
-    #     # Saves the processed images in their respective variables
-    #     self.image_defect_1 = image_1
-    #     self.image_defect_2 = image_2
-    #     self.image_defect_3 = image_3
-    #     self.image_defect_4 = image_4
-    #     self.image_defect_5 = image_5
-    #
-    #     # Cleanup UI
-    #     self.groupOpenCV.setEnabled(True)
-    #     self.widgetDisplay.setCurrentIndex(3)
-    #     self.update_status('Displaying images...')
-    #
-    #     # Display the defect images on the widgetDisplay tab
-    #     self.update_display()
-
     def image_converter(self):
         """Opens a FileDialog when Image Converter button is pressed
         Prompts the user to select an image to apply image correction on
@@ -426,7 +432,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         status_empty = ''
         status_display = ''
 
-        for index in xrange(5):
+        for index in xrange(4):
             # Update the current image using the current value of the corresponding slider
             self.update_image(index)
             # Start an event filter that detects changes in the label
@@ -460,12 +466,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderSE.setEnabled(True)
         self.buttonSliderUpSE.setEnabled(True)
         self.buttonSliderDownSE.setEnabled(True)
-        self.sliderSLE.setEnabled(True)
-        self.buttonSliderUpSLE.setEnabled(True)
-        self.buttonSliderDownSLE.setEnabled(True)
-        self.sliderDA.setEnabled(True)
-        self.buttonSliderUpDA.setEnabled(True)
-        self.buttonSliderDownDA.setEnabled(True)
+        self.sliderPC.setEnabled(True)
+        self.buttonSliderUpPC.setEnabled(True)
+        self.buttonSliderDownPC.setEnabled(True)
         self.sliderIC.setEnabled(True)
         self.buttonSliderUpIC.setEnabled(True)
         self.buttonSliderDownIC.setEnabled(True)
@@ -527,10 +530,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         if self.checkToggleOverlay.isChecked():
             # Display the message for 5 seconds
-            self.update_status('Displaying part contours.', 5000)
+            self.update_status('Displaying part contours.')
             self.buttonOverlayAdjustment.setEnabled(True)
         else:
-            self.update_status('Hiding part contours.', 5000)
+            self.update_status('Hiding part contours.')
             self.buttonOverlayAdjustment.setEnabled(False)
 
         self.update_display()
@@ -574,17 +577,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                 label.setPixmap(self.convert2pixmap(image_processing.ImageCorrection.clahe(image), label))
             else:
                 label.setPixmap(self.convert2pixmap(image, label))
-
-        # This block updates the Defect Analyzer tab
-        if self.groupOpenCV.isEnabled():
-            if self.radioOpenCV1.isChecked(): self.image_display_defect = self.image_defect_1
-            if self.radioOpenCV2.isChecked(): self.image_display_defect = self.image_defect_2
-            if self.radioOpenCV3.isChecked(): self.image_display_defect = self.image_defect_3
-            if self.radioOpenCV4.isChecked(): self.image_display_defect = self.image_defect_4
-            if self.radioOpenCV5.isChecked(): self.image_display_defect = self.image_defect_5
-
-            # Display the defect image on its respective label after converting it to pixmap
-            self.labelDisplayDA.setPixmap(self.convert2pixmap(self.image_display_defect))
 
     @staticmethod
     def convert2pixmap(image, label):
@@ -633,9 +625,10 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Changes the tab focus to the received index's tab and sets the slider value to the received value
         Used for when an image has been captured and focus is given to the new image
         """
-        if self.display_flag:
-            self.widgetDisplay.setCurrentIndex(int(index))
-            self.display['SliderNames'][int(index)].setValue(int(value))
+        pass
+        # if self.display_flag:
+        #     self.widgetDisplay.setCurrentIndex(int(index))
+        #     self.display['SliderNames'][int(index)].setValue(int(value))
 
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value
@@ -672,8 +665,6 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         """Executes whenever a change of items in any of the image folders is detected
         Updates the Layer spinBox and the Sliders with a new range of acceptable values
         """
-
-        self.update_status('')
 
         # Updates various UI elements with updated values
         self.update_image_list(int(slider))
@@ -720,7 +711,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
                     cv2.imread('%s/%s' % (self.display['ImageFolder'][index], self.display['ImageList'][index]
                     [self.display['SliderNames'][index_overlay].value() - 1]))
             except IndexError:
-                self.update_status('Part contours not found.', 5000)
+                self.update_status('Part contours not found.')
         else:
             self.display['Image'][index] = 0
 
@@ -731,14 +722,29 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
         self.display['SliderNames'][index].setMaximum(self.display['LayerRange'][index])
 
     def update_status(self, string, duration=0):
-        """Updates the status bar at the bottom of the Main Window with the received string argument
-        Duration refers to how long the message will be displayed in milliseconds
-        """
+        """Updates the custom status bar at the bottom of the Main Window with the received string argument"""
         self.statusBar.showMessage(string, duration)
 
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
         self.progressBar.setValue(int(percentage))
+
+    def check_camera_trigger(self):
+        """Checks for a valid attached camera and trigger"""
+        camera_flag = self.image_capture_module.ImageCapture().acquire_camera()
+        trigger_flag = self.image_capture_module.ImageCapture().acquire_trigger()
+        if bool(camera_flag):
+            self.labelCameraStatus.setText('FOUND')
+        else:
+            self.labelCameraStatus.setText('NOT FOUND')
+        if bool(trigger_flag):
+            self.labelTriggerStatus.setText(str(trigger_flag))
+        else:
+            self.labelTriggerStatus.setText('NOT FOUND')
+        if bool(camera_flag) and bool(trigger_flag):
+            self.buttonRun.setEnabled(True)
+        else:
+            self.buttonRun.setEnabled(False)
 
     def eventFilter(self, label, event):
         """Executes whenever the currently displayed label changes in size due to resizing the MainWindow
@@ -773,7 +779,7 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Delete the created image folder if the Clean Up checkbox is checked
         if self.checkCleanup.isChecked():

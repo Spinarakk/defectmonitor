@@ -1,3 +1,12 @@
+August 17
+- Modified the program to work with the defect analysis on the printer machine
+- Added a camera and trigger check to the MainWindow that will poll both the camera and the trigger when a new build is created or a build is loaded
+- Integrated the ImageCapture functionality into the MainWindow using RUN and STOP buttons
+- Removed unnecessary OpenCV processing group box from the MainWindow
+- Created a default config file to initially load from
+- Created a Save Build action and implemented functionality
+- Modified the Open Build method to work by replacing the contents of config.json with the new config file
+
 August 16
 - Changed the contour dictionaries into lists that can be read line for line instead of needing to be entirely loaded into memory to read from
 - Cuts down on memory usage

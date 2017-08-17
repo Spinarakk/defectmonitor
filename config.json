@@ -1,1 +1,67 @@
-{"CalibrationWidth": 9, "BuildFolder": "C:/Users/Spinarakk/Documents/Defect Monitor/builds", "ImageFolder": "C:/Users/Spinarakk/Documents/Defect Monitor/builds/2017-08-16 [15''44'45] Default", "SliceFile": "D:/Documents/MCAM/Defect Monitor/slice/SmallPyramid.cls", "BuildName": "Default", "CaptureCount": 1, "Username": "Nicholas Lee", "PacketSize": 1500, "CalibrationHeight": 7, "RotationAngle": 180, "TriggerTimeout": 5, "Offset": [39, 122], "EmailAddress": "nicholascklee@gmail.com", "ExposureTimeAbs": 23000, "CropBoundary": [1581, 3991, 398, 3868], "WorkingDirectory": "C:/Users/Spinarakk/Documents/Defect Monitor", "InterPacketDelay": 500, "DownscalingRatio": 1, "FrameTransmissionDelay": 0, "PlatformDimensions": [636.0, 406.0], "CurrentLayer": 0.5, "CalibrationFile": "C:/Users/Spinarakk/Documents/Defect Monitor/camera_parameters.txt", "PixelFormat": 0, "CurrentPhase": 1, "TransformationParameters": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "ScaleFactor": 5.333333333333333}
+{
+    "BuildFolder": "D:/Documents/MCAM/Defect Monitor/builds", 
+    "BuildName": "Default", 
+    "CalibrationFile": "D:/Documents/MCAM/Defect Monitor/camera_parameters.txt", 
+    "CalibrationHeight": 7, 
+    "CalibrationWidth": 9, 
+    "CaptureCount": 1, 
+    "CropBoundary": [
+        1581, 
+        3991, 
+        398, 
+        3868
+    ], 
+    "CurrentLayer": 0.5, 
+    "CurrentPhase": 1, 
+    "DownscalingRatio": 1, 
+    "EmailAddress": "nicholascklee@gmail.com", 
+    "ExposureTimeAbs": 23000, 
+    "FrameTransmissionDelay": 0, 
+    "ImageFolder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-17 [15''52'15] Default", 
+    "InterPacketDelay": 500, 
+    "Offset": [
+        39, 
+        122
+    ], 
+    "PacketSize": 1500, 
+    "PixelFormat": 0, 
+    "PlatformDimensions": [
+        636.0, 
+        406.0
+    ], 
+    "RotationAngle": 180, 
+    "ScaleFactor": 5.333333333333333, 
+    "SliceFiles": [
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 05.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 06.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 07.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 08.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 09.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 10.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 11.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 12.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/Part 13.cli"
+    ], 
+    "TransformationParameters": [
+        20, 
+        -10, 
+        0, 
+        0, 
+        0, 
+        -80, 
+        0, 
+        35, 
+        0, 
+        0, 
+        -55, 
+        10, 
+        0, 
+        -5, 
+        5, 
+        0, 
+        10
+    ], 
+    "TriggerTimeout": 5, 
+    "Username": "Nicholas Lee", 
+    "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
+}

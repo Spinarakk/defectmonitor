@@ -4,8 +4,6 @@ import re
 import json
 import cv2
 import numpy as np
-import pickle
-from collections import OrderedDict
 from PyQt4.QtCore import QThread, SIGNAL
 
 import image_processing
@@ -56,6 +54,7 @@ class SliceConverter(QThread):
                 if os.path.isfile(file_name.replace('.cls', '_cls_contours.txt')):
                     self.emit(SIGNAL("update_status(QString)"), 'CLS contours file found. Loading from disk...')
                     data_cls = self.load_contours(file_name.replace('.cls', '_cls_contours.txt'))
+                    data_cls[1] = int(data_cli[1].strip('\n'))
                 else:
                     data_cls = self.read_cls(file_name)
                     data_cls = self.convert2contours(data_cls)
@@ -75,13 +74,13 @@ class SliceConverter(QThread):
                 if os.path.isfile(file_name.replace('.cli', '_cli_contours.txt')):
                     self.emit(SIGNAL("update_status(QString)"), 'CLI contours file found. Loading from disk...')
                     data_cli = self.load_contours(file_name.replace('.cli', '_cli_contours.txt'))
+                    data_cli[1] = int(data_cli[1].strip('\n'))
                 else:
                     data_cli = self.read_cli(file_name)
                     data_cli = self.convert2contours(data_cli)
                     self.emit(SIGNAL("update_status(QString)"), 'Saving to .txt file...')
                     self.save_contours(file_name.replace('.cli', '_cli_contours.txt'), data_cli)
 
-                data_cli[1] = int(data_cli[1].strip('\n'))
                 if data_cli[1] > max_layers:
                     max_layers = data_cli[1]
 
@@ -149,8 +148,8 @@ class SliceConverter(QThread):
                 image_contours = cv2.flip(image_contours, 0)
                 image_contours = image_processing.ImageCorrection(None).transform(image_contours, self.transform)
 
-                cv2.imwrite('%s/contours/combined/image_contours_combined_%s.png' %
-                            (self.config['WorkingDirectory'], str(index).zfill(4)), image_contours)
+                cv2.imwrite('%s/contours/image_contours_%s.png' %
+                            (self.config['ImageFolder'], str(index).zfill(4)), image_contours)
 
                 # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
                 if int(round(progress)) is not progress_previous:

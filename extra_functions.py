@@ -134,6 +134,9 @@ class FolderMonitor(QThread):
                     self.emit(SIGNAL("folder_change(QString)"), str(index))
                     length_old[index] = length_new[index]
 
+            # Delay the loop by a second to severely reduce CPU usage
+            time.sleep(1)
+
     def poll_folder(self, folder):
         """Checks the given folder and returns the number of files in that directory"""
         return len(os.walk(folder).next()[2])

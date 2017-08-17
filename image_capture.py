@@ -79,7 +79,7 @@ class ImageCapture(QThread):
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def acquire_camera(self):
         """Accesses the pypylon wrapper and checks the ethernet ports for a connected camera
@@ -209,29 +209,6 @@ class ImageCapture(QThread):
 
             # Reset the serial input buffer to prevent triggers within the timeout window causing another image save
             self.serial_trigger.reset_input_buffer()
-
-    def correction(self, image, phase=None, layer=None, count=None):
-        """Executes if the Apply Correction checkbox has been checked"""
-
-        # Apply the image processing techniques in order
-        image = image_processing.ImageCorrection(None, None, None).distortion_fix(image)
-        image = image_processing.ImageCorrection(None, None, None).perspective_fix(image)
-        image = image_processing.ImageCorrection(None, None, None).crop(image)
-        image = image_processing.ImageCorrection(None, None, None).clahe(image)
-
-        # Save the processed image in the processed folder with an appended file name
-        if bool(count):
-            # Create a file name for the corrected image
-            image_name = '%s/processed/image_capture_%s_processed.png' % (self.image_folder, str(int(count)).zfill(4))
-            cv2.imwrite(image_name, image)
-            self.emit(SIGNAL("display_image(QString)"), image_name)
-        else:
-            image_name = '%s/processed/image_%s_%s_processed.png' % (self.image_folder, self.phases[phase],
-                                                                     str(int(layer)).zfill(4))
-            cv2.imwrite(image_name, image)
-            self.emit(SIGNAL("display_image(QString)"), image_name)
-
-        self.emit(SIGNAL("display_image(QString)"), image_name)
 
     def stop(self):
         """Method that happens if the Stop button is pressed, which terminates the QThread"""

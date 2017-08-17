@@ -14,6 +14,7 @@ import slice_converter
 import image_processing
 import extra_functions
 import camera_calibration
+import defect_analysis
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
@@ -41,12 +42,22 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         # Buttons
         self.buttonBrowseCF.clicked.connect(self.browse_calibration)
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
-        self.buttonChangeBF.clicked.connect(self.change_build_folder)
+        self.buttonBrowseBF.clicked.connect(self.browse_build_folder)
+        self.buttonSendTestEmail.clicked.connect(self.send_test)
+        self.checkAll.toggled.connect(self.toggle_all)
+        self.lineEmailAddress.textChanged.connect(self.enable_button)
 
         # Set and display the default image folder, calibration file and slice file as stated in the config.json file
         self.lineCalibrationFile.setText(QString(self.config['CalibrationFile']).section('/', -1))
-        self.lineSliceFile.setText(QString(self.config['SliceFile']).section('/', -1))
+        for index, item in enumerate(self.config['SliceFiles']):
+            self.listSliceFiles.addItem(os.path.basename(item))
+            if '.cls' in item:
+                self.listSliceFiles.item(index).setBackground(QtGui.QColor('blue'))
+            elif '.cli' in item:
+                self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
         self.lineBuildFolder.setText(self.config['BuildFolder'])
+        self.lineUsername.setText(self.config['Username'])
+        self.lineEmailAddress.setText(self.config['EmailAddress'])
 
     def browse_calibration(self):
 
@@ -57,20 +68,28 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
             # Save the file path to the configuration file
             self.config['CalibrationFile'] = str(calibration_file)
             # Display just the file name on the line box
-            self.lineCalibrationFile.setText(calibration_file.section('/', -1))
+            self.lineCalibrationFile.setText(os.path.basename(calibration_file))
 
     def browse_slice(self):
+        # Opens a file select dialog, allowing user to select one or multiple slice files
+        slice_list = list()
+        files = QtGui.QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        # Opens a file select dialog, allowing user to select a slice file
-        slice_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        # Turn the received QtFileList into a Python list of names
+        for item in files:
+            slice_list.append(str(item).replace('\\', '/'))
 
-        if slice_file:
-            # Save the file path to the configuration file
-            self.config['SliceFile'] = str(slice_file)
-            # Display just the file name on the line box
-            self.lineSliceFile.setText(slice_file.section('/', -1))
+        if slice_list:
+            self.config['SliceFiles'] = slice_list
+            self.listSliceFiles.clear()
+            for index, item in enumerate(slice_list):
+                self.listSliceFiles.addItem(os.path.basename(item))
+                if '.cls' in item:
+                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('blue'))
+                elif '.cli' in item:
+                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
 
-    def change_build_folder(self):
+    def browse_build_folder(self):
 
         # Opens a folder select dialog, allowing the user to select a folder
         build_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Change Build Folder...', '')
@@ -82,12 +101,77 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
             # Display just the file name on the line box
             self.lineBuildFolder.setText(build_folder)
 
+    def send_test(self):
+        """Sends a test notification email to the inputted email address"""
+
+        # Open a message box with a send test email confirmation message so accidental emails don't get sent
+        self.send_confirmation = QtGui.QMessageBox()
+        self.send_confirmation.setIcon(QtGui.QMessageBox.Question)
+        self.send_confirmation.setText('Are you sure you want to send a test email notification to %s?' %
+                                       self.lineEmailAddress.text())
+        self.send_confirmation.setWindowTitle('Send Test Email')
+        self.send_confirmation.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+
+        confirmation = self.send_confirmation.exec_()
+
+        # If the user clicked Yes
+        if confirmation == 16384:
+            valid_email = self.verify_email()
+
+            if valid_email:
+                # Disable the Send Test Email button to prevent SPAM
+                self.buttonSendTestEmail.setEnabled(False)
+
+                # Instantiate and run a Notifications instance
+                self.N_instance = extra_functions.Notifications('Test Email Notification')
+                self.N_instance.start()
+                self.connect(self.N_instance, SIGNAL("finished()"), self.send_test_finished)
+
+        else:
+            # Do nothing
+            pass
+
+    def send_test_finished(self):
+        """Open a message box with a send test confirmation message"""
+        self.send_test_confirmation = QtGui.QMessageBox()
+        self.send_test_confirmation.setIcon(QtGui.QMessageBox.Information)
+        self.send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
+                                            (self.lineEmailAddress.text(), self.lineUsername.text()))
+        self.send_test_confirmation.setWindowTitle('Send Test Email')
+        self.send_test_confirmation.exec_()
+
+    def toggle_all(self):
+        """Toggling the All checkbox causes all the subsequent checkboxes to toggle being check"""
+        self.checkMinor.setChecked(self.checkAll.isChecked())
+        self.checkMajor.setChecked(self.checkAll.isChecked())
+        self.checkFailure.setChecked(self.checkAll.isChecked())
+        self.checkError.setChecked(self.checkAll.isChecked())
+
+    def verify_email(self):
+        """Checks if the entered email address is valid or not"""
+        if '@' in self.lineEmailAddress.text():
+            return True
+        else:
+            # Opens a message box indicating that the entered email address is invalid
+            self.invalid_email_error = QtGui.QMessageBox()
+            self.invalid_email_error.setIcon(QtGui.QMessageBox.Critical)
+            self.invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
+            self.invalid_email_error.setWindowTitle('Error')
+            self.invalid_email_error.exec_()
+            return False
+
+    def enable_button(self):
+        """Re-enables the Send Test Email button if someone changes the email address text"""
+        self.buttonSendTestEmail.setEnabled(True)
+
     def accept(self):
         """Executes when the OK button is clicked
         Saves important selection options to the config.json file and closes the window
         """
 
         self.config['BuildName'] = str(self.lineBuildName.text())
+        self.config['Username'] = str(self.lineUsername.text())
+        self.config['EmailAddress'] = str(self.lineEmailAddress.text())
 
         # Save the selected platform dimensions to the config.json file
         if self.comboPlatform.currentIndex() == 0:
@@ -120,15 +204,17 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         os.makedirs('%s/raw/coat' % image_folder)
         os.makedirs('%s/raw/scan' % image_folder)
         os.makedirs('%s/raw/single' % image_folder)
-        os.makedirs('%s/contours' % image_folder)
-        os.makedirs('%s/defects' % image_folder)
         os.makedirs('%s/processed/coat' % image_folder)
         os.makedirs('%s/processed/scan' % image_folder)
         os.makedirs('%s/processed/single' % image_folder)
+        os.makedirs('%s/defects/coat' % image_folder)
+        os.makedirs('%s/defects/scan' % image_folder)
+        os.makedirs('%s/defects/single' % image_folder)
+        os.makedirs('%s/contours' % image_folder)
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Close the dialog window
         self.done(1)
@@ -233,7 +319,7 @@ class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNo
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Close the dialog window
         self.done(1)
@@ -247,47 +333,32 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
     def __init__(self, parent=None, image_folder=None):
 
-        # Reason why this is here is so that the rest of the program can run without this module which requires pypylon
-        # Pypylon requires the Basler Pylon software to be installed
-        try:
-            # Import related module
-            import image_capture
-        except ImportError:
-            # Open a message box with an error stating that this tool cannot be run
-            self.export_confirmation = QtGui.QMessageBox()
-            self.export_confirmation.setIcon(QtGui.QMessageBox.Critical)
-            self.export_confirmation.setText("Unable to open tool.<br><br>Either the Basler Pylon Software is not installed, "
-                                             "the software wasn't installed as a developer, or PyPylon is either "
-                                             "missing or not installed properly")
-            self.export_confirmation.setWindowTitle('Image Capture')
-            self.export_confirmation.exec_()
+        # Setup Dialog UI with MainWindow as parent
+        super(ImageCapture, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
 
-        else:
-            # If the Basler Pylon software and pypylon is installed, run the window as per normal
-            # Setup Dialog UI with MainWindow as parent
-            super(ImageCapture, self).__init__(parent)
-            self.setAttribute(Qt.WA_DeleteOnClose)
-            self.setupUi(self)
+        # Import related module
+        import image_capture
+        # Set the imported module as an instance variable
+        self.image_capture = image_capture
 
-            # Set the imported module as an instance variable
-            self.image_capture = image_capture
+        # Set and display the default image folder name to be used to store all acquired images
+        self.image_folder = image_folder
+        self.lineImageFolder.setText(self.image_folder)
 
-            # Set and display the default image folder name to be used to store all acquired images
-            self.image_folder = image_folder
-            self.lineImageFolder.setText(self.image_folder)
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.buttonBrowse.clicked.connect(self.browse)
+        self.buttonCameraSettings.clicked.connect(self.camera_settings)
+        self.buttonCheckCamera.clicked.connect(self.check_camera)
+        self.buttonCheckTrigger.clicked.connect(self.check_trigger)
+        self.buttonCapture.clicked.connect(self.capture)
+        self.buttonRun.clicked.connect(self.run)
+        self.buttonStop.clicked.connect(self.stop)
 
-            # Setup event listeners for all the relevant UI components, and connect them to specific functions
-            self.buttonBrowse.clicked.connect(self.browse)
-            self.buttonCameraSettings.clicked.connect(self.camera_settings)
-            self.buttonCheckCamera.clicked.connect(self.check_camera)
-            self.buttonCheckTrigger.clicked.connect(self.check_trigger)
-            self.buttonCapture.clicked.connect(self.capture)
-            self.buttonRun.clicked.connect(self.run)
-            self.buttonStop.clicked.connect(self.stop)
-
-            # These are flags to check if the camera and/or trigger are detected
-            self.camera_flag = False
-            self.trigger_flag = False
+        # These are flags to check if the camera and/or trigger are detected
+        self.camera_flag = False
+        self.trigger_flag = False
 
     def browse(self):
 
@@ -316,7 +387,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def check_camera(self):
         """Checks that a camera is found and available"""
 
-        self.camera_flag = self.image_capture.ImageCapture(self.image_folder).acquire_camera()
+        self.camera_flag = self.image_capture.ImageCapture().acquire_camera()
 
         if bool(self.camera_flag):
             self.labelCameraStatus.setText('FOUND')
@@ -331,7 +402,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
     def check_trigger(self):
         """Checks that a triggering device is found and available"""
-        self.trigger_flag = self.image_capture.ImageCapture(None).acquire_trigger()
+        self.trigger_flag = self.image_capture.ImageCapture().acquire_trigger()
 
         if bool(self.trigger_flag):
             self.labelTriggerStatus.setText(str(self.trigger_flag))
@@ -435,7 +506,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.IC_instance.start()
 
     def image_correction_finished(self):
-        """Executes when the ImageCorrection instance has finished"""
+        """Executes when the ImageCorrection instance has finished
+        """
 
         self.update_status('Image correction applied. Saving image')
 
@@ -446,6 +518,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         cv2.imwrite('%s/processed/%s/imageC_%s_%s.png' %
                     (self.image_folder, self.phase, self.phase, self.layer.zfill(4)), image)
 
+        self.update_status('Image saved.')
+
         # Setting the appropriate tab index to send depending on which phase the image is
         if self.phase == 'coat': index = '0'
         elif self.phase == 'scan': index = '1'
@@ -455,7 +529,59 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         self.emit(SIGNAL("tab_focus(QString, QString)"), index, self.layer)
 
-        self.update_status('Image saved.')
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+        # Defect Analysis (To be modified)
+        overlay = cv2.imread('%s/contours/image_contours_%s.png' % (self.image_folder, self.layer.zfill(4)))
+        if self.phase == 'coat':
+            detector = defect_analysis.DefectDetection(image, overlay, self.layer)
+            detector.run()
+        elif self.phase == 'scan':
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            gray = cv2.GaussianBlur(gray, (27, 27), 0)
+            edge = cv2.Laplacian(gray, cv2.CV_64F)
+            for i in xrange(3):
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * i + 1, 2 * i + 1))
+                edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel)
+                edge = cv2.morphologyEx(edge, cv2.MORPH_OPEN, kernel)
+
+            edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel, iterations=3)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ERODE, (5, 5))
+            edge = cv2.erode(edge, kernel, iterations=1)
+            edge = cv2.convertScaleAbs(edge)
+            out, contours, hierarchy = cv2.findContours(edge, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+            cont = []
+            for cnt in contours:
+                if cv2.contourArea(cnt) > 1000:
+                    cont.append(cnt)
+
+            cv2.drawContours(image, cont, -1, (0, 255, 0), thickness=5)
+            cv2.imwrite('%s/defects/scan/scan_contours_%s.jpg' % (self.image_folder, self.layer), image)
+        else:
+            detector = defect_analysis.DefectDetection(image, overlay, self.layer)
+            detector.run()
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            gray = cv2.GaussianBlur(gray, (27, 27), 0)
+            edge = cv2.Laplacian(gray, cv2.CV_64F)
+            for i in xrange(3):
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * i + 1, 2 * i + 1))
+                edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel)
+                edge = cv2.morphologyEx(edge, cv2.MORPH_OPEN, kernel)
+
+            edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel, iterations=3)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ERODE, (5, 5))
+            edge = cv2.erode(edge, kernel, iterations=1)
+            edge = cv2.convertScaleAbs(edge)
+            out, contours, hierarchy = cv2.findContours(edge, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+            cont = []
+            for cnt in contours:
+                if cv2.contourArea(cnt) > 1000:
+                    cont.append(cnt)
+
+            cv2.drawContours(image, cont, -1, (0, 255, 0), thickness=5)
+            cv2.imwrite('%s/defects/single/single_contours_%s.jpg' % (self.image_folder, self.layer), image)
+
+        self.update_status('Defects analyzed.')
 
     def reset_time_idle(self):
         """Resets the internal countdown that checks if a new image has been captured within a preset period of time"""
@@ -562,7 +688,7 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Disable the Apply button until another setting is changed
         self.buttonApply.setEnabled(False)
@@ -596,15 +722,15 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
 
     def browse(self):
 
-        # Opens a file select dialog, allowing user to select one or multiple slice file
-        self.slice_files = list()
+        # Opens a file select dialog, allowing user to select one or multiple slice files
+        self.slice_list = list()
         files = QtGui.QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         for item in files:
-            self.slice_files.append(str(item))
+            self.slice_list.append(str(item))
 
-        if self.slice_files:
-            self.lineSliceFile.setText(self.slice_files[0])
+        if self.slice_list:
+            self.lineSliceFile.setText(self.slice_list[0])
             self.buttonStartConversion.setEnabled(True)
             self.update_status('Waiting to start conversion.')
 
@@ -616,7 +742,7 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.update_progress(0)
 
         # Instantiate and run a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_files, self.checkContours.isChecked(),
+        self.SC_instance = slice_converter.SliceConverter(self.slice_list, self.checkContours.isChecked(),
                                                           self.checkFill.isChecked(), self.checkCombine.isChecked())
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.SC_instance, SIGNAL("update_status_slice(QString)"), self.update_status_slice)
@@ -687,8 +813,8 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
     def browse(self):
 
-        # Empty the image lists
-        self.image_list_valid = []
+        # Empty the image list
+        self.image_list = list()
 
         # Opens a folder select dialog, allowing the user to select a folder
         self.calibration_folder = None
@@ -706,14 +832,14 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             # Search for images containing the word calibration_image in the folder
             for image_name in self.image_list:
                 if 'image_calibration' in str(image_name):
-                    self.image_list_valid.append(str(image_name))
+                    self.image_list.append(str(image_name))
 
-            if not self.image_list_valid:
+            if not self.image_list:
                 self.update_status('No valid calibration images found.')
                 self.buttonStartCalibration.setEnabled(False)
             else:
                 # Remove previous entries and fill with new entries
-                self.listImages.addItems(self.image_list_valid)
+                self.listImages.addItems(self.image_list)
 
                 self.buttonStartCalibration.setEnabled(True)
                 self.update_status('Waiting to start process.')
@@ -813,7 +939,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def update_status(self, string):
         self.labelStatus.setText(string)
@@ -1083,7 +1209,7 @@ class OverlayAdjustment(QtGui.QDialog, dialogOverlayAdjustment.Ui_dialogOverlayA
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
-            json.dump(self.config, config)
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def closeEvent(self, event):
         """Executes when the top-right X is clicked"""
