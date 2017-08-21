@@ -17,148 +17,62 @@ class SliceConverter(QThread):
     Currently takes in a .cls or .cli file and parses it, saving it as a .txt file after conversion
     """
 
-    def __init__(self, file_names, contours_flag, fill_flag, combine_flag):
+    def __init__(self, part_names, draw_flag, fill_flag, contours_folder=None):
 
-        # Defines the class as a thread
         QThread.__init__(self)
 
-        # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
         # Save respective values to be used to draw contours and polygons
-        # Get the resolution of the cropped images using the crop boundaries
+        # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
         self.image_resolution = ((self.config['CropBoundary'][1] - self.config['CropBoundary'][0]),
-                                 (self.config['CropBoundary'][3] - self.config['CropBoundary'][2]))
+                                 (self.config['CropBoundary'][3] - self.config['CropBoundary'][2]), 3)
         self.offset = (self.config['Offset'][0], self.config['Offset'][1])
         self.scale_factor = self.config['ScaleFactor']
         self.transform = self.config['TransformationParameters']
 
         # Store the received arguments as local instance variables
-        self.file_names = file_names
-        self.contours_flag = contours_flag
+        self.part_names = part_names
+        self.draw_flag = draw_flag
         self.fill_flag = fill_flag
-        self.combine_flag = combine_flag
+        self.contours_folder = contours_folder
 
     def run(self):
 
-        max_layers = 0
+        for part_name in self.part_names:
 
-        for file_name in self.file_names:
-
-            self.emit(SIGNAL("update_status_slice(QString)"), os.path.basename(file_name))
+            self.emit(SIGNAL("update_status_slice(QString)"), os.path.basename(part_name))
 
             # Executes if the sent file is a .cls file
-            if '.cls' in file_name:
+            if '.cls' in part_name:
                 # Look for an already converted contours file
-                if os.path.isfile(file_name.replace('.cls', '_cls_contours.txt')):
-                    self.emit(SIGNAL("update_status(QString)"), 'CLS contours file found. Loading from disk...')
-                    data_cls = self.load_contours(file_name.replace('.cls', '_cls_contours.txt'))
-                    data_cls[1] = int(data_cli[1].strip('\n'))
-                else:
-                    data_cls = self.read_cls(file_name)
-                    data_cls = self.convert2contours(data_cls)
-                    self.emit(SIGNAL("update_status(QString)"), 'Saving to .txt file...')
-                    self.save_contours(file_name.replace('.cls', '_cls_contours.txt'), data_cls)
-
-                if data_cls['Layers'] > max_layers:
-                    max_layers = data_cls['Layers']
-
-                if self.contours_flag:
-                    self.emit(SIGNAL("update_status(QString)"), 'Drawing Contours.')
-                    self.draw_contours(data_cls, file_name)
-
+                if not os.path.isfile(part_name.replace('.cls', '_contours.txt')):
+                    self.convert2contours(part_name.replace('.cli', '_contours.txt'), self.read_cls(part_name))
             # Executes if the sent file is a .cli file
-            elif '.cli' in file_name:
+            elif '.cli' in part_name:
                 # Look for an already converted contours file
-                if os.path.isfile(file_name.replace('.cli', '_cli_contours.txt')):
-                    self.emit(SIGNAL("update_status(QString)"), 'CLI contours file found. Loading from disk...')
-                    data_cli = self.load_contours(file_name.replace('.cli', '_cli_contours.txt'))
-                    data_cli[1] = int(data_cli[1].strip('\n'))
-                else:
-                    data_cli = self.read_cli(file_name)
-                    data_cli = self.convert2contours(data_cli)
-                    self.emit(SIGNAL("update_status(QString)"), 'Saving to .txt file...')
-                    self.save_contours(file_name.replace('.cli', '_cli_contours.txt'), data_cli)
-
-                if data_cli[1] > max_layers:
-                    max_layers = data_cli[1]
-
-                if self.contours_flag:
-                    self.emit(SIGNAL("update_status(QString)"), 'Drawing Contours.')
-                    self.draw_contours(data_cli, file_name)
+                if not os.path.isfile(part_name.replace('.cli', '_contours.txt')):
+                    self.convert2contours(part_name.replace('.cli', '_contours.txt'), self.read_cli(part_name))
             else:
                 self.emit(SIGNAL("update_status(QString)"), 'Slice file not found.')
 
-        if self.combine_flag:
+            self.emit(SIGNAL("update_status(QString)"), 'Contours file %s found.' % os.path.basename(part_name))
 
-            blue = 20
-            green = 40
-            red = 60
-
-            contour_colours = dict()
-            for file_name in self.file_names:
-                contour_colours['%s' % os.path.basename(file_name)] = (blue, green, red)
-                blue = (blue + 20) % 255
-                green = (green + 40) % 255
-                red = (red + 60) % 150
+        if self.draw_flag:
+            # Create a dictionary of colours (different shades of teal) for each part's contours
+            colours = dict()
+            for index, part_name in enumerate(self.part_names):
+                colours['%s' % os.path.basename(part_name)] = ((100 + 5 * index) % 255, (100 + 5 * index) % 255, 0)
 
             self.emit(SIGNAL("update_status_slice(QString)"), 'All.')
             self.emit(SIGNAL("update_progress(QString)"), '0')
 
-            progress = 0.0
-            progress_previous = None
-
-            for index in xrange(1, max_layers):
-                # UI Progress and Status Messages
-
-
-                self.emit(SIGNAL("update_status(QString)"), 'Combining contour %s of %s.' %
-                          (str(index).zfill(4), str(max_layers).zfill(4)))
-
-                image_contours = np.zeros(self.image_resolution).astype(np.uint8)
-                image_contours = cv2.cvtColor(image_contours, cv2.COLOR_GRAY2BGR)
-
-                contour_flag = False
-                contours = list()
-
-                for file_name in self.file_names:
-                    with open(file_name.replace('.cli', '_cli_contours.txt').replace('.cls', 'cls_contours.txt')) as contour_file:
-                        for line in contour_file:
-                            if 'ENDLAYER' in line:
-                                contour_flag = False
-                            if contour_flag:
-                                line = line.strip('[]\n').split(', ')
-                                contours.append(np.array(line).reshape(1, len(line)/2, 2).astype(np.int32))
-                            if 'STARTLAYER%s' % str(index).zfill(4) in line:
-                                contour_flag = True
-
-                    # If the Fill Contours checkbox is checked, fill the contours, otherwise just draw the contours itself
-                    if self.fill_flag:
-                        cv2.drawContours(image_contours, contours, -1, contour_colours['%s' % os.path.basename(file_name)], offset=self.offset,
-                                         thickness=cv2.FILLED)
-                        #fill = '_fill'
-                    else:
-                        cv2.drawContours(image_contours, contours, -1, contour_colours['%s' % os.path.basename(file_name)], offset=self.offset,
-                                         thickness=int(self.scale_factor))
-                        #fill = ''
-
-                    contours = list()
-
-                image_contours = cv2.flip(image_contours, 0)
-                image_contours = image_processing.ImageCorrection(None).transform(image_contours, self.transform)
-
-                cv2.imwrite('%s/contours/image_contours_%s.png' %
-                            (self.config['ImageFolder'], str(index).zfill(4)), image_contours)
-
-                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-                if int(round(progress)) is not progress_previous:
-                    self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
-                    progress_previous = int(round(progress))
-                progress += 100.0 / max_layers
+            # Draw and save the contours to an image file
+            self.draw_contours(self.part_names, colours, self.contours_folder)
 
     def read_cls(self, file_name):
-        """Parses and converts the .cls file into ASCII"""
+        """Reads the .cls file and converts the contents into ASCII, then organises the data into a list"""
 
         self.emit(SIGNAL("update_status(QString)"), 'Reading CLS file...')
 
@@ -297,8 +211,10 @@ class SliceConverter(QThread):
                         progress_previous = int(round(progress))
                     progress += increment
 
-            layer_flag = True
-            polyline_count = 10
+            layer_flag = False
+            layer_count = 0
+            polyline_count = 0
+            vector_count = 0
 
             # UI Progress and Status Messages
             progress = 0.0
@@ -311,20 +227,26 @@ class SliceConverter(QThread):
                 # Join the second binary number with the first binary number and convert the 16-bit bin number into int
                 decimal = int(bin(ord(two))[2:].zfill(8) + bin(ord(one))[2:].zfill(8), 2)
                 # Check for command indexes and replace with appropriate ascii words
-                if not layer_flag:
+                if layer_flag:
                     line_ascii += (str(decimal) + ',')
-                    layer_flag = True
-                elif decimal == 128 and layer_flag:
+                    layer_flag = False
+                elif polyline_count > 0:
+                    line_ascii += (str(decimal) + ',')
+                    polyline_count -= 1
+                    if polyline_count == 0:
+                        vector_count = decimal * 2
+                elif vector_count > 0:
+                    line_ascii += (str(decimal) + ',')
+                    vector_count -= 1
+                elif decimal == 128:
                     data_ascii.append(line_ascii.rstrip(','))
                     line_ascii = '$$LAYER/'
-                    layer_flag = False
-                elif decimal == 129 and polyline_count >= 5:
+                    layer_count += 1
+                    layer_flag = True
+                elif decimal == 129:
                     data_ascii.append(line_ascii.rstrip(','))
                     line_ascii = '$$POLYLINE/'
-                    polyline_count = 0
-                else:
-                    line_ascii += (str(decimal) + ',')
-                    polyline_count += 1
+                    polyline_count = 3
 
                 # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
                 if int(round(progress)) is not progress_previous:
@@ -332,14 +254,16 @@ class SliceConverter(QThread):
                     progress_previous = int(round(progress))
                 progress += increment
 
+            data_ascii[1] = layer_count
+
         return data_ascii
 
-    def convert2contours(self, data_ascii):
+    def convert2contours(self, file_name, data_ascii):
         """Converts the data from the slice file into an organized scaled list of contours
-        First element is the units the contours are in
-        Second element is the number of units
-        Every layer starts with a LAYER/XX/YY string followed with the strings of contours, followed with a LAYER/END
-        XX refers to the layer height, YY refers to the number of contours
+        First element is the number of layers
+        Every layer starts with a START LAYER XX, YY list, followed by the list of contours, followed by a END LAYER
+        XX is the layer number, YY is the scaled layer height
+        Method also saves the contours to a text file in real-time
         """
 
         # UI Progress and Status Messages
@@ -348,40 +272,30 @@ class SliceConverter(QThread):
         increment = 100.0 / (len(data_ascii))
         self.emit(SIGNAL("update_status(QString)"), 'Converting data into organized list of contours...')
 
-        #data = OrderedDict()
-        #data['Units'] = data_ascii[0]
-        #data['Layers'] = 0
-        data = [data_ascii[0], 0]
+        # Initialize some variables to be used later
+        units = data_ascii[0]
+        layer_count = 0
 
-        layer_no = 0
-        contour_no = 0
-        index = 1
+        with open(file_name, 'w+') as contours_file:
+            # Write the first line, the number of layers, to the text file
+            contours_file.write('%s\n' % ['LAYERS', data_ascii[1]])
 
-        for line in data_ascii[1::]:
-            if 'LAYER' in line:
-                # Strip the newline character from the end, and split the string where the slash appears
-                line = re.split('(/)', line.rstrip('\n'))
-                # Store the number of contours the current layer has
-                if layer_no is not 0:
-                    data[index - contour_no][2] = contour_no
-                    data.append('ENDLAYER')
-                    index += 1
-                # Create a key for each layer's height
-                layer_no += 1
-                data.append(['STARTLAYER%s' % str(layer_no).zfill(4), int(line[2]), 0])
-                index += 1
-                #data['Layer %s Height' % str(layer_no).zfill(4)] = int(line[2])
-                contour_no = 0
-            elif 'POLYLINE' in line:
-                contour_no += 1
-                # Split each number into its own entry in a list, remove all the comma elements and the first 3 numbers
-                line = re.split('(,)', line.rstrip('\r\n/n'))
-                line = [comma for comma in line if comma != ',']
-                # Store the contour coordinates as pixel units after taking scale factor into account
-                line = [int(round(float(element) * data[0] * self.scale_factor)) for element in line[3:]]
-                data.append(line)
-                #data['Layer %s Contour %s' % (str(layer_no).zfill(4), str(contour_no).zfill(2))] = line
-                index += 1
+            for line in data_ascii[2::]:
+                if 'LAYER' in line:
+                    # Strip the newline character from the end, and split the string where the slash appears
+                    line = re.split('(/)', line.rstrip('\n'))
+                    if layer_count is not 0:
+                        contours_file.write('%s\n' % ['END LAYER'])
+                    layer_count += 1
+                    contours_file.write('%s\n' % ['START LAYER %s' % str(layer_count).zfill(4), float(line[2]) * units])
+                elif 'POLYLINE' in line:
+                    # Split each number into its own entry in a list
+                    # Remove all the comma elements and the first 3 numbers
+                    line = re.split('(,)', line.rstrip('\r\n/n'))
+                    line = [comma for comma in line if comma != ',']
+                    # Store the contour coordinates as pixel units after taking scale factor into account
+                    line = [int(round(float(element) * units * self.scale_factor)) for element in line[3:]]
+                    contours_file.write('%s\n' % line)
 
             # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
             if int(round(progress)) is not progress_previous:
@@ -389,70 +303,78 @@ class SliceConverter(QThread):
                 progress_previous = int(round(progress))
             progress += increment
 
-        # Set the layer contour number for the last layer
-        #data['Layer %s Contour No.' % str(layer_no).zfill(4)] = contour_no
-        #data['Layers'] = layer_no
-        data[index - contour_no][2] = contour_no
-        data.append('ENDLAYER')
-        data[1] = layer_no
+        self.emit(SIGNAL("update_status(QString)"), 'Conversion complete.')
 
-        self.emit(SIGNAL("update_status(QString)"), 'Conversion complete. Returning array to main function...')
+    def draw_contours(self, file_names, colours, folder_name):
+        """Draw all the contours of the selected parts on the same image"""
 
-        return data
-
-    def draw_contours(self, data, file_name):
-        # Create a folder in the working directory to store the contours
-        # Folder name created by taking the input slice file's name and getting rid of the .cls or .cli
-        folder_name = '%s/contours/%s' % (self.config['WorkingDirectory'],
-                                          os.path.basename(str(file_name)).replace('.cls', '').replace('.cli', ''))
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
+        # Check if a separate folder has been selected to save the drawn contours to
+        # If so, make sure that the folder exists, otherwise save to the contours folder in the current build
+        if folder_name:
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+        else:
+            folder_name = '%s/contours' % self.config['ImageFolder']
 
         # UI Progress and Status Messages
         progress = 0.0
         progress_previous = None
 
-        for index in xrange(1, data[1] + 1):
-            image_contours = np.zeros(self.image_resolution).astype(np.uint8)
-            image_contours = cv2.cvtColor(image_contours, cv2.COLOR_GRAY2BGR)
+        # Initial while loop conditions
+        layer = 1
+        layer_max = 10
 
-            self.emit(SIGNAL("update_status(QString)"), 'Drawing contour %s of %s.' %
-                      (str(index).zfill(4), str(data[1]).zfill(4)))
+        while layer < layer_max:
+            # Create a black RGB image to draw contours on
+            image_contours = np.zeros(self.image_resolution, np.uint8)
+
+            for file_name in file_names:
+                # Create an empty contours list to store all the contours of the current layer
+                contours = list()
+                contours_flag = False
+
+                with open(file_name.replace('.cli', '_contours.txt').replace('.cls', '_contours.txt')) as contours_file:
+                    for line in contours_file:
+                        # Grab the contours and format them as a numpy array that drawContours accepts
+                        if 'END LAYER' in line and contours_flag:
+                            # Break to save a tiny bit of processing time once the current layer's contours are grabbed
+                            break
+                        elif contours_flag:
+                            line = line.strip('[]\n').split(', ')
+                            contours.append(np.array(line).reshape(1, len(line)/2, 2).astype(np.int32))
+                        elif 'START LAYER %s' % str(layer).zfill(4) in line:
+                            contours_flag = True
+                        elif 'LAYERS' in line:
+                            line = line.strip('[]\n').split(', ')
+                            if int(line[1]) > layer_max:
+                                layer_max = int(line[1])
+
+                # Draw the contours onto the image_contours canvas
+                # If the Fill Contours checkbox is checked, fill the contours, otherwise just draw the contours itself
+                if self.fill_flag:
+                    cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
+                                     offset=self.offset, thickness=cv2.FILLED)
+                else:
+                    cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
+                                     offset=self.offset, thickness=int(self.scale_factor))
+
+            self.emit(SIGNAL("update_status(QString)"), 'Drawing contours %s of %s.' %
+                      (str(layer).zfill(4), str(layer_max).zfill(4)))
+
+            # Flip the image vertically to account for the fact that OpenCV's origin is the top left corner
+            image_contours = cv2.flip(image_contours, 0)
+
+            # Correct the image using calculated transformation parameters to account for the perspective warp
+            image_contours = image_processing.ImageCorrection(None).transform(image_contours, self.transform)
+
+            # Save the image to the selected image folder
+            cv2.imwrite('%s/image_contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)
+
+            # Increment to the next layer
+            layer += 1
 
             # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+            progress += 100.0 / layer_max
             if int(round(progress)) is not progress_previous:
                 self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
                 progress_previous = int(round(progress))
-            progress += 100.0 / data['Layers']
-
-            contours = list()
-            for contour_no in xrange(data['Layer %s Contour No.' % str(index).zfill(4)]):
-                contours.append(data['Layer %s Contour %s' % (str(index).zfill(4), str(contour_no + 1).zfill(2))])
-                contours[contour_no] = np.array(contours[contour_no]).reshape(1, len(contours[contour_no]) / 2,
-                                                                              2).astype(np.int32)
-
-            # If the Fill Contours checkbox is checked, fill the contours, otherwise just draw the contours itself
-            if self.fill_flag:
-                cv2.drawContours(image_contours, contours, -1, (128, 128, 0), offset=self.offset, thickness=cv2.FILLED)
-                fill = '_fill'
-            else:
-                cv2.drawContours(image_contours, contours, -1, (128, 128, 0), offset=self.offset,
-                                 thickness=int(self.scale_factor))
-                fill = ''
-
-            image_contours = cv2.flip(image_contours, 0)
-            cv2.imwrite('%s/contours%s_%s.png' % (folder_name, fill, str(index).zfill(4)), image_contours)
-
-    def transform_contours(self, image):
-        """Applies image transformations that help the contour image match the scan image"""
-
-    def load_contours(self, file_name):
-        """Load the converted slice contours file from disk"""
-        with open(file_name) as slice_file:
-            return [next(slice_file) for line in xrange(2)]
-
-    def save_contours(self, file_name, contours):
-        """Save the converted slice contours file to disk"""
-        with open(file_name, 'w+') as slice_file:
-            for line in contours:
-                slice_file.write('%s\n' % line)

@@ -1,3 +1,8 @@
+August 21
+- Modified the .cli conversion code to work off of the number of vectors given in the .cli file
+- This is to prevent any command indexes (128, 129) that appear as vectors screwing up the layers
+- Started cleaning up code by removing unncessary comments
+
 August 17
 - Modified the program to work with the defect analysis on the printer machine
 - Added a camera and trigger check to the MainWindow that will poll both the camera and the trigger when a new build is created or a build is loaded

@@ -16,19 +16,23 @@ Installation
 	- Navigate to the python/scripts folder (cd "Folder Name")
 	- Run: pip2.7.exe install "numpy-1.11.3+mkl-cp27-cp27m-win32.whl"
 
+Note
+- DO NOT MOVE, RENAME OR DELETE CONFIG_DEFAULT.JSON 
+
 Operation
 - Run main_window.py
 
-Required Software (32-bit Required)
+Required Software
 - Python 2.7.13
 - OpenCV 3.2.0
 - PyQt 4.11.4
 - Qt 4.8.7
 - Numpy 1.11.3
+- PySerial
+- Basler Pylon 5.0.5.8999 (Required to Start New Build)
 
 Optional Software
 - Pycharm 2017.1.2
-- Basler Pylon 5.0.5.8999 (Required to use Image Capture Tool)
 
 Hardware
 - Basler Ace acA3800-10gm GigE

@@ -25,9 +25,8 @@ except AttributeError:
 class Ui_dialogImageCapture(object):
     def setupUi(self, dialogImageCapture):
         dialogImageCapture.setObjectName(_fromUtf8("dialogImageCapture"))
-        dialogImageCapture.resize(491, 310)
+        dialogImageCapture.resize(491, 344)
         dialogImageCapture.setMinimumSize(QtCore.QSize(491, 310))
-        dialogImageCapture.setMaximumSize(QtCore.QSize(491, 310))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogImageCapture.setWindowIcon(icon)
@@ -135,6 +134,17 @@ class Ui_dialogImageCapture(object):
         self.progressBar.setProperty("value", 0)
         self.progressBar.setAlignment(QtCore.Qt.AlignCenter)
         self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.label = QtGui.QLabel(dialogImageCapture)
+        self.label.setGeometry(QtCore.QRect(10, 310, 141, 16))
+        self.label.setObjectName(_fromUtf8("label"))
+        self.spinStartingLayer = QtGui.QSpinBox(dialogImageCapture)
+        self.spinStartingLayer.setGeometry(QtCore.QRect(150, 310, 91, 22))
+        self.spinStartingLayer.setMaximum(10000)
+        self.spinStartingLayer.setProperty("value", 1)
+        self.spinStartingLayer.setObjectName(_fromUtf8("spinStartingLayer"))
+        self.checkContinue = QtGui.QCheckBox(dialogImageCapture)
+        self.checkContinue.setGeometry(QtCore.QRect(260, 310, 161, 20))
+        self.checkContinue.setObjectName(_fromUtf8("checkContinue"))
 
         self.retranslateUi(dialogImageCapture)
         QtCore.QObject.connect(self.buttonDone, QtCore.SIGNAL(_fromUtf8("clicked()")), dialogImageCapture.accept)
@@ -155,5 +165,7 @@ class Ui_dialogImageCapture(object):
         self.labelStatusBar.setText(_translate("dialogImageCapture", "Status:", None))
         self.buttonCheckTrigger.setText(_translate("dialogImageCapture", "Check Trigger", None))
         self.labelTimeIdle.setText(_translate("dialogImageCapture", "Time Idle: 00:00:00", None))
+        self.label.setText(_translate("dialogImageCapture", "Specify Starting Layer", None))
+        self.checkContinue.setText(_translate("dialogImageCapture", "Continue from Layer", None))
 
 import icons_rc

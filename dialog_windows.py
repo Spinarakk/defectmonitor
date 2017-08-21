@@ -90,16 +90,14 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
                     self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
 
     def browse_build_folder(self):
-
         # Opens a folder select dialog, allowing the user to select a folder
-        build_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Change Build Folder...', '')
+        folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
-        if build_folder:
+        if folder:
             # Save the folder path to the configuration file
-            build_folder = build_folder.replace('\\', '/')
-            self.config['BuildFolder'] = str(build_folder)
+            self.config['BuildFolder'] = folder.replace('\\', '/')
             # Display just the file name on the line box
-            self.lineBuildFolder.setText(build_folder)
+            self.lineBuildFolder.setText(self.config['BuildFolder'])
 
     def send_test(self):
         """Sends a test notification email to the inputted email address"""
@@ -172,6 +170,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.config['BuildName'] = str(self.lineBuildName.text())
         self.config['Username'] = str(self.lineUsername.text())
         self.config['EmailAddress'] = str(self.lineEmailAddress.text())
+        self.config['ConvertContours'] = str(self.checkConvert.isChecked())
 
         # Save the selected platform dimensions to the config.json file
         if self.comboPlatform.currentIndex() == 0:
@@ -415,6 +414,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def capture(self):
         """Captures and saves a single image to the save location"""
 
+        self.set_start_layer()
+
         # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(False)
         self.buttonCameraSettings.setEnabled(False)
@@ -445,6 +446,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         """Wait indefinitely until trigger device sends a signal
         An image is captured and saved to the save location, and goes back to waiting after a pre-determined timeout
         """
+
+        self.set_start_layer()
 
         ## Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowse.setEnabled(False)
@@ -532,7 +535,11 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
         # Defect Analysis (To be modified)
-        overlay = cv2.imread('%s/contours/image_contours_%s.png' % (self.image_folder, self.layer.zfill(4)))
+        try:
+            overlay = cv2.imread('%s/contours/image_contours_%s.png' % (self.image_folder, self.layer.zfill(4)))
+        except:
+            overlay = cv2.imread('%s/contours.png' % self.config['WorkingDirectory'])
+
         if self.phase == 'coat':
             detector = defect_analysis.DefectDetection(image, overlay, self.layer)
             detector.run()
@@ -606,6 +613,16 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.update_status('Stopped. Waiting for timeout to end.')
         self.stopwatch_instance.stop()
         self.ICR_instance.stop()
+
+    def set_start_layer(self):
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        self.config['CaptureCount'] = self.spinStartingLayer.value()
+        self.config['CurrentLayer'] = self.spinStartingLayer.value() - 0.5
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def update_time(self, time_elapsed, time_idle):
         """Updates the stopwatch label at the bottom of the dialog window with the received time"""
@@ -716,34 +733,56 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonStartConversion.clicked.connect(self.start_conversion)
-        self.checkContours.toggled.connect(self.toggle_contours)
+        with open('config.json') as config:
+            self.config = json.load(config)
 
-    def browse(self):
+        self.buttonBrowseSF.clicked.connect(self.browse_slice)
+        self.buttonBrowseF.clicked.connect(self.browse_folder)
+        self.buttonStartConversion.clicked.connect(self.start_conversion)
+        self.checkDraw.toggled.connect(self.toggle_fill)
+
+        self.slice_list = list()
+        self.contours_folder = '%s/contours' % self.config['WorkingDirectory']
+
+        self.lineFolder.setText(self.contours_folder)
+
+    def browse_slice(self):
 
         # Opens a file select dialog, allowing user to select one or multiple slice files
-        self.slice_list = list()
         files = QtGui.QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         for item in files:
-            self.slice_list.append(str(item))
+            self.slice_list.append(str(item).replace('\\', '/'))
 
         if self.slice_list:
-            self.lineSliceFile.setText(self.slice_list[0])
+            self.listSliceFiles.clear()
             self.buttonStartConversion.setEnabled(True)
             self.update_status('Waiting to start conversion.')
+            for index, item in enumerate(self.slice_list):
+                self.listSliceFiles.addItem(os.path.basename(item))
+                if '.cls' in item:
+                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('blue'))
+                elif '.cli' in item:
+                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
+
+    def browse_folder(self):
+        # Opens a folder select dialog, allowing the user to select a folder
+        self.contours_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
+
+        if self.folder:
+            self.lineFolder.setText(self.contours_folder)
 
     def start_conversion(self):
         # Disable all buttons to prevent user from doing other tasks
         self.buttonStartConversion.setEnabled(False)
-        self.buttonBrowse.setEnabled(False)
+        self.buttonBrowseSF.setEnabled(False)
+        self.buttonBrowseF.setEnabled(False)
         self.buttonDone.setEnabled(False)
         self.update_progress(0)
 
         # Instantiate and run a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_list, self.checkContours.isChecked(),
-                                                          self.checkFill.isChecked(), self.checkCombine.isChecked())
+        self.SC_instance = slice_converter.SliceConverter(self.slice_list, self.checkDraw.isChecked(),
+                                                          self.checkFill.isChecked(), self.contours_folder)
         self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
         self.connect(self.SC_instance, SIGNAL("update_status_slice(QString)"), self.update_status_slice)
         self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
@@ -754,20 +793,18 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         """Executes when the SliceConverter instance has finished"""
 
         self.buttonStartConversion.setEnabled(True)
-        self.buttonBrowse.setEnabled(True)
+        self.buttonBrowseSF.setEnabled(True)
+        self.buttonBrowseF.setEnabled(True)
         self.buttonDone.setEnabled(True)
         self.update_status('Conversion completed successfully.')
 
-    def toggle_contours(self):
-        """Simply enables or disables the Fill Contours checkbox depending if the Draw Contours is checked or not"""
-        if self.checkContours.isChecked():
+    def toggle_fill(self):
+        """Enables or disables the Fill Contours checkbox depending if the Draw Contours is checked or not"""
+        if self.checkDraw.isChecked():
             self.checkFill.setEnabled(True)
-            self.checkCombine.setEnabled(True)
         else:
             self.checkFill.setEnabled(False)
             self.checkFill.setChecked(False)
-            self.checkCombine.setEnabled(False)
-            self.checkCombine.setChecked(False)
 
     def update_status(self, string):
         self.labelStatus.setText(string)

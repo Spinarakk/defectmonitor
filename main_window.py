@@ -160,9 +160,9 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             with open('config.json', 'w+') as config:
                 json.dump(self.config, config, indent=4, sort_keys=True)
 
-            self.setup_build()
+            self.setup_build(True)
 
-    def setup_build(self):
+    def setup_build(self, open_flag=False):
         """Sets up the MainWindow and any background threads for the current build"""
 
         try:
@@ -214,14 +214,16 @@ class MainWindow(QtGui.QMainWindow, mainWindow.Ui_mainWindow):
             # Checks for a valid attached camera and trigger
             self.update_status('Checking for valid camera and trigger...')
             self.check_camera_trigger()
-
-            # Instantiate and run a SliceConverter instance
-            self.update_status('Converting slice files into contours...')
-            self.SC_instance = slice_converter.SliceConverter(self.config['SliceFiles'], False, True, True)
-            self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
-            self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-            self.connect(self.SC_instance, SIGNAL("finished()"), self.setup_build_finished)
-            self.SC_instance.start()
+            if not open_flag and 'True' in self.config['ConvertContours']:
+                # Instantiate and run a SliceConverter instance
+                self.update_status('Converting slice files into contours...')
+                self.SC_instance = slice_converter.SliceConverter(self.config['SliceFiles'], True, True)
+                self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
+                self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
+                self.connect(self.SC_instance, SIGNAL("finished()"), self.setup_build_finished)
+                self.SC_instance.start()
+            else:
+                self.setup_build_finished()
 
     def setup_build_finished(self):
 

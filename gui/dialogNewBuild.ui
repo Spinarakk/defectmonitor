@@ -10,8 +10,20 @@
     <x>0</x>
     <y>0</y>
     <width>411</width>
-    <height>436</height>
+    <height>469</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>411</width>
+    <height>469</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>411</width>
+    <height>469</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>New Build</string>
@@ -91,13 +103,13 @@
    <property name="geometry">
     <rect>
      <x>310</x>
-     <y>182</y>
+     <y>214</y>
      <width>91</width>
      <height>28</height>
     </rect>
    </property>
    <property name="toolTip">
-    <string>Change where the captured images for the current build will be stored.</string>
+    <string>Select where the captured images for the current build will be stored.</string>
    </property>
    <property name="text">
     <string>Browse</string>
@@ -130,7 +142,7 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>395</y>
+     <y>428</y>
      <width>191</width>
      <height>31</height>
     </rect>
@@ -202,10 +214,7 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string/>
-   </property>
-   <property name="statusTip">
-    <string/>
+    <string>Select the calibration parameters file to be used to process the captured images.</string>
    </property>
    <property name="text">
     <string>Browse</string>
@@ -221,10 +230,7 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string/>
-   </property>
-   <property name="statusTip">
-    <string/>
+    <string>Select the slice files to be used to draw the part contours.</string>
    </property>
    <property name="text">
     <string>Browse</string>
@@ -234,7 +240,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>182</y>
+     <y>214</y>
      <width>291</width>
      <height>26</height>
     </rect>
@@ -247,9 +253,9 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>112</y>
+     <y>110</y>
      <width>161</width>
-     <height>62</height>
+     <height>96</height>
     </rect>
    </property>
    <property name="font">
@@ -257,12 +263,15 @@
      <pointsize>8</pointsize>
     </font>
    </property>
+   <property name="horizontalScrollBarPolicy">
+    <enum>Qt::ScrollBarAlwaysOff</enum>
+   </property>
   </widget>
   <widget class="QLabel" name="labelBuildFolder">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>148</y>
+     <y>180</y>
      <width>121</width>
      <height>28</height>
     </rect>
@@ -282,7 +291,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>216</y>
+     <y>248</y>
      <width>121</width>
      <height>28</height>
     </rect>
@@ -302,7 +311,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>216</y>
+     <y>248</y>
      <width>261</width>
      <height>26</height>
     </rect>
@@ -318,7 +327,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>284</y>
+     <y>316</y>
      <width>181</width>
      <height>141</height>
     </rect>
@@ -330,7 +339,7 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>10</y>
+      <y>8</y>
       <width>151</width>
       <height>130</height>
      </rect>
@@ -378,7 +387,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>250</y>
+     <y>282</y>
      <width>121</width>
      <height>28</height>
     </rect>
@@ -398,7 +407,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>250</y>
+     <y>282</y>
      <width>261</width>
      <height>26</height>
     </rect>
@@ -414,13 +423,29 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>284</y>
+     <y>316</y>
      <width>191</width>
      <height>27</height>
     </rect>
    </property>
    <property name="text">
     <string>Send Test Email</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkConvert">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>146</y>
+     <width>81</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Check this box to convert, draw and save the contours.</string>
+   </property>
+   <property name="text">
+    <string>Convert</string>
    </property>
   </widget>
  </widget>

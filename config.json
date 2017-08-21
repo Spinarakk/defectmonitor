@@ -5,6 +5,7 @@
     "CalibrationHeight": 7, 
     "CalibrationWidth": 9, 
     "CaptureCount": 1, 
+    "ConvertContours": "True", 
     "CropBoundary": [
         1581, 
         3991, 
@@ -15,9 +16,9 @@
     "CurrentPhase": 1, 
     "DownscalingRatio": 1, 
     "EmailAddress": "nicholascklee@gmail.com", 
-    "ExposureTimeAbs": 23000, 
+    "ExposureTimeAbs": 10000, 
     "FrameTransmissionDelay": 0, 
-    "ImageFolder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-17 [15''52'15] Default", 
+    "ImageFolder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-22 [15''43'30] Default", 
     "InterPacketDelay": 500, 
     "Offset": [
         39, 
@@ -32,15 +33,10 @@
     "RotationAngle": 180, 
     "ScaleFactor": 5.333333333333333, 
     "SliceFiles": [
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 05.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 06.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 07.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 08.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 09.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 10.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 11.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 12.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/Part 13.cli"
+        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 04.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 05.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 06.cli", 
+        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 07.cli"
     ], 
     "TransformationParameters": [
         20, 
