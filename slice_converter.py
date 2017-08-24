@@ -26,11 +26,11 @@ class SliceConverter(QThread):
 
         # Save respective values to be used to draw contours and polygons
         # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
-        self.image_resolution = ((self.config['CropBoundary'][1] - self.config['CropBoundary'][0]),
-                                 (self.config['CropBoundary'][3] - self.config['CropBoundary'][2]), 3)
-        self.offset = (self.config['Offset'][0], self.config['Offset'][1])
-        self.scale_factor = self.config['ScaleFactor']
-        self.transform = self.config['TransformationParameters']
+        self.image_resolution = ((self.config['ImageCorrection']['CropBoundary'][1] - self.config['ImageCorrection']['CropBoundary'][0]),
+                                 (self.config['ImageCorrection']['CropBoundary'][3] - self.config['ImageCorrection']['CropBoundary'][2]), 3)
+        self.offset = (self.config['ImageCorrection']['Offset'][0], self.config['ImageCorrection']['Offset'][1])
+        self.scale_factor = self.config['ImageCorrection']['ScaleFactor']
+        self.transform = self.config['ImageCorrection']['TransformParameters']
 
         # Store the received arguments as local instance variables
         self.part_names = part_names
@@ -66,7 +66,7 @@ class SliceConverter(QThread):
                 colours['%s' % os.path.basename(part_name)] = ((100 + 5 * index) % 255, (100 + 5 * index) % 255, 0)
 
             self.emit(SIGNAL("update_status_slice(QString)"), 'All.')
-            self.emit(SIGNAL("update_progress(QString)"), '0')
+
 
             # Draw and save the contours to an image file
             self.draw_contours(self.part_names, colours, self.contours_folder)
@@ -145,9 +145,10 @@ class SliceConverter(QThread):
 
     def read_cli(self, file_name):
         """Reads the .cli file and converts the contents into an organised list
-        If the file was encoded in binary, this method also converts the contents into ascii format"""
+        Assume ascii format, but switch to read binary and convert to ascii if file is encoded in binary"""
 
-        self.emit(SIGNAL("update_status(QString)"), 'Reading CLI file...')
+        self.emit(SIGNAL("update_status(QString)"), 'Reading CLI file... ASCII encoding detected.')
+        self.emit(SIGNAL("update_progress(QString)"), '0')
 
         # Set up a few flags, counters and lists
         binary_flag = False
@@ -187,6 +188,12 @@ class SliceConverter(QThread):
                     progress_previous = int(round(progress))
                 progress += increment
 
+        layer_flag = False
+        layer_count = 0
+        polyline_count = 0
+        vector_count = 0
+        header_length = 0
+        asdf = str()
         if binary_flag:
             self.emit(SIGNAL("update_status(QString)"), 'Reading CLI file... Binary encoding detected.')
             progress = 0.0
@@ -194,65 +201,94 @@ class SliceConverter(QThread):
 
             # The file needs to be read as binary if it was encoded in binary
             with open(file_name, 'rb') as cli_file:
-                increment = 100.0 / sum(1 for _ in cli_file)
+                increment = 100.0 / sum(1 for _ in cli_file.read())
                 # Go back to the start of the file as getting the length of the file put the seek head to the EOF
                 cli_file.seek(0)
                 for line in cli_file:
+                    header_length += len(line)
                     if 'UNITS' in line.strip():
                         data_ascii.append(float(line[8:-2]))
                     elif 'HEADEREND' in line.strip():
                         data_binary = line.replace('$$HEADEREND', '')
                         break
+                header_length -= len(data_binary)
+                progress = header_length * increment
                 for line in cli_file:
                     data_binary += line
-                    # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-                    if int(round(progress)) is not progress_previous:
-                        self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
-                        progress_previous = int(round(progress))
-                    progress += increment
+                    while len(data_binary) > 1:
+                        element_one = data_binary[0]
+                        element_two = data_binary[1]
+                        decimal = int(bin(ord(element_two))[2:].zfill(8) + bin(ord(element_one))[2:].zfill(8), 2)
+                        data_binary = data_binary[2::]
+                        if layer_flag:
+                            line_ascii += (str(decimal) + ',')
+                            layer_flag = False
+                        elif polyline_count > 0:
+                            line_ascii += (str(decimal) + ',')
+                            polyline_count -= 1
+                            if polyline_count == 0:
+                                vector_count = decimal * 2
+                        elif vector_count > 0:
+                            line_ascii += (str(decimal) + ',')
+                            vector_count -= 1
+                        elif decimal == 128:
+                            data_ascii.append(line_ascii.rstrip(','))
+                            line_ascii = '$$LAYER/'
+                            layer_count += 1
+                            layer_flag = True
+                        elif decimal == 129:
+                            data_ascii.append(line_ascii.rstrip(','))
+                            line_ascii = '$$POLYLINE/'
+                            polyline_count = 3
 
-            layer_flag = False
-            layer_count = 0
-            polyline_count = 0
-            vector_count = 0
+                        # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+                        if int(round(progress)) is not progress_previous:
+                            self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                            progress_previous = int(round(progress))
+                        progress += increment*2
 
-            # UI Progress and Status Messages
-            progress = 0.0
-            progress_previous = None
-            increment = 100.0 / (len(data_binary) / 2.0)
-            self.emit(SIGNAL("update_status(QString)"), 'Converting Binary into ASCII...')
-
-            for one, two in zip(data_binary[0::2], data_binary[1::2]):
-                # Convert the character unicode into an integer, then into a binary number
-                # Join the second binary number with the first binary number and convert the 16-bit bin number into int
-                decimal = int(bin(ord(two))[2:].zfill(8) + bin(ord(one))[2:].zfill(8), 2)
-                # Check for command indexes and replace with appropriate ascii words
-                if layer_flag:
-                    line_ascii += (str(decimal) + ',')
-                    layer_flag = False
-                elif polyline_count > 0:
-                    line_ascii += (str(decimal) + ',')
-                    polyline_count -= 1
-                    if polyline_count == 0:
-                        vector_count = decimal * 2
-                elif vector_count > 0:
-                    line_ascii += (str(decimal) + ',')
-                    vector_count -= 1
-                elif decimal == 128:
-                    data_ascii.append(line_ascii.rstrip(','))
-                    line_ascii = '$$LAYER/'
-                    layer_count += 1
-                    layer_flag = True
-                elif decimal == 129:
-                    data_ascii.append(line_ascii.rstrip(','))
-                    line_ascii = '$$POLYLINE/'
-                    polyline_count = 3
-
-                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-                if int(round(progress)) is not progress_previous:
-                    self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
-                    progress_previous = int(round(progress))
-                progress += increment
+            # layer_flag = False
+            # layer_count = 0
+            # polyline_count = 0
+            # vector_count = 0
+            #
+            # # UI Progress and Status Messages
+            # progress = 0.0
+            # progress_previous = None
+            # increment = 100.0 / (len(data_binary) / 2.0)
+            # self.emit(SIGNAL("update_status(QString)"), 'Converting Binary into ASCII...')
+            #
+            # for one, two in zip(data_binary[0::2], data_binary[1::2]):
+            #     # Convert the character unicode into an integer, then into a binary number
+            #     # Join the second binary number with the first binary number and convert the 16-bit bin number into int
+            #     decimal = int(bin(ord(two))[2:].zfill(8) + bin(ord(one))[2:].zfill(8), 2)
+            #     # Check for command indexes and replace with appropriate ascii words
+            #     if layer_flag:
+            #         line_ascii += (str(decimal) + ',')
+            #         layer_flag = False
+            #     elif polyline_count > 0:
+            #         line_ascii += (str(decimal) + ',')
+            #         polyline_count -= 1
+            #         if polyline_count == 0:
+            #             vector_count = decimal * 2
+            #     elif vector_count > 0:
+            #         line_ascii += (str(decimal) + ',')
+            #         vector_count -= 1
+            #     elif decimal == 128:
+            #         data_ascii.append(line_ascii.rstrip(','))
+            #         line_ascii = '$$LAYER/'
+            #         layer_count += 1
+            #         layer_flag = True
+            #     elif decimal == 129:
+            #         data_ascii.append(line_ascii.rstrip(','))
+            #         line_ascii = '$$POLYLINE/'
+            #         polyline_count = 3
+            #
+            #     # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+            #     if int(round(progress)) is not progress_previous:
+            #         self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+            #         progress_previous = int(round(progress))
+            #     progress += increment
 
             data_ascii[1] = layer_count
 
@@ -271,6 +307,7 @@ class SliceConverter(QThread):
         progress_previous = None
         increment = 100.0 / (len(data_ascii))
         self.emit(SIGNAL("update_status(QString)"), 'Converting data into organized list of contours...')
+        self.emit(SIGNAL("update_progress(QString)"), '0')
 
         # Initialize some variables to be used later
         units = data_ascii[0]
@@ -297,11 +334,14 @@ class SliceConverter(QThread):
                     line = [int(round(float(element) * units * self.scale_factor)) for element in line[3:]]
                     contours_file.write('%s\n' % line)
 
-            # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-            if int(round(progress)) is not progress_previous:
-                self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
-                progress_previous = int(round(progress))
-            progress += increment
+                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+                if int(round(progress)) is not progress_previous:
+                    self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                    progress_previous = int(round(progress))
+                progress += increment
+
+            # Write the final END LAYER to the contours file
+            contours_file.write('%s\n' % ['END LAYER'])
 
         self.emit(SIGNAL("update_status(QString)"), 'Conversion complete.')
 
@@ -314,15 +354,18 @@ class SliceConverter(QThread):
             if not os.path.exists(folder_name):
                 os.makedirs(folder_name)
         else:
-            folder_name = '%s/contours' % self.config['ImageFolder']
+            folder_name = '%s/contours' % self.config['ImageCapture']['Folder']
 
         # UI Progress and Status Messages
         progress = 0.0
         progress_previous = None
+        self.emit(SIGNAL("update_progress(QString)"), '0')
 
         # Initial while loop conditions
         layer = 1
         layer_max = 10
+
+        contour_dict = dict()
 
         while layer < layer_max:
             # Create a black RGB image to draw contours on

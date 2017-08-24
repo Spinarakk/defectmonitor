@@ -24,9 +24,9 @@ class Calibration(QThread):
             self.config = json.load(config)
 
         # Save respective values to be used in Calibration functions
-        self.ratio = self.config['DownscalingRatio']
-        self.width = self.config['CalibrationWidth']
-        self.height = self.config['CalibrationHeight']
+        self.ratio = self.config['CameraCalibration']['DownscalingRatio']
+        self.width = self.config['CameraCalibration']['Width']
+        self.height = self.config['CameraCalibration']['Height']
         self.working_directory = self.config['WorkingDirectory']
 
         # Flags are for whether to save the processed images to a folder
@@ -115,20 +115,28 @@ class Calibration(QThread):
                         self.emit(SIGNAL("update_progress(QString)"), str(int(math.ceil(self.progress))))
 
             retval = self.find_homography(image_homography)
-
+            parameters = dict()
             # If the homography matrix was successfully found
             if retval:
                 # Save the camera_parameters to a text file camera_parameters.txt with appropriate headers
-                with open('camera_parameters.txt', 'a+') as camera_parameters:
-                    # Wipe the file before appending stuff
-                    camera_parameters.truncate()
+                # with open('camera_parameters.txt', 'a+') as camera_parameters:
+                #     # Wipe the file before appending stuff
+                #     camera_parameters.truncate()
+                #
+                #     # Append the data
+                #     np.savetxt(camera_parameters, self.camera_matrix, header='Camera Matrix (3x3)')
+                #     np.savetxt(camera_parameters, self.distortion_coefficients, header='Distortion Coefficients (1x5)')
+                #     np.savetxt(camera_parameters, self.homography_matrix, header='Homography Matrix (3x3)')
+                #     np.savetxt(camera_parameters, self.resolution_output, fmt='%d', header='Output Resolution (1x2)')
+                #     np.savetxt(camera_parameters, self.rms, header='Re-projection Error (Root Mean Square)')
+                parameters['CameraMatrix'] = self.camera_matrix.tolist()
+                parameters['DistortionCoefficients'] = self.distortion_coefficients.tolist()
+                parameters['HomographyMatrix'] = self.homography_matrix.tolist()
+                parameters['Resolution'] = self.resolution_output
+                parameters['RMS'] = self.rms.tolist()
 
-                    # Append the data
-                    np.savetxt(camera_parameters, self.camera_matrix, header='Camera Matrix (3x3)')
-                    np.savetxt(camera_parameters, self.distortion_coefficients, header='Distortion Coefficients (1x5)')
-                    np.savetxt(camera_parameters, self.homography_matrix, header='Homography Matrix (3x3)')
-                    np.savetxt(camera_parameters, self.resolution_output, fmt='%d', header='Output Resolution (1x2)')
-                    np.savetxt(camera_parameters, self.rms, header='Re-projection Error (Root Mean Square)')
+                with open('camera_parameters.json', 'w+') as param:
+                    json.dump(parameters, param, indent=4, sort_keys=True)
 
                 self.emit(SIGNAL("update_status(QString)"), 'Parameters saved to camera_parameters.txt.')
         else:
@@ -251,7 +259,7 @@ class Calibration(QThread):
             # Figure out the final resolution to crop the image to
             width_output = int(points_transform[:, 0][:, 0].max() - points_transform[:, 0][:, 0].min())
             height_output = int(points_transform[:, 0][:, 1].max() - points_transform[:, 0][:, 1].min())
-            self.resolution_output = np.array([(width_output, height_output)])
+            self.resolution_output = (width_output, height_output)
 
             self.emit(SIGNAL("update_status(QString)"), 'Homography matrix found.')
 

@@ -1,13 +1,13 @@
 # Import external libraries
 import os
 import time
-from datetime import datetime
 import cv2
 import numpy as np
 import json
-import gc
-from PyQt4 import QtGui
-from PyQt4.QtCore import SIGNAL, Qt, QSettings, QString, SLOT
+from datetime import datetime
+from validate_email import validate_email
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
 # Import related modules
 import slice_converter
@@ -18,186 +18,186 @@ import defect_analysis
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogImageCapture, dialogCameraSettings, dialogNotificationSettings, dialogOverlayAdjustment
+    dialogSliceConverter, dialogImageCapture, dialogCameraSettings, dialogOverlayAdjustment
 
 
-class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
+class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     """Opens a Dialog Window when File > New Build... is clicked
     Allows user to setup a new build and change settings
     Setup as a Modal window, blocking input to other visible windows until this window is closed
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, open_flag=False):
 
         # Setup Dialog UI with MainWindow as parent
         super(NewBuild, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        # Load configuration settings from config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
         # Setup event listeners for all the relevent UI components, and connect them to specific functions
         # Buttons
-        self.buttonBrowseCF.clicked.connect(self.browse_calibration)
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
         self.buttonBrowseBF.clicked.connect(self.browse_build_folder)
         self.buttonSendTestEmail.clicked.connect(self.send_test)
-        self.checkAll.toggled.connect(self.toggle_all)
         self.lineEmailAddress.textChanged.connect(self.enable_button)
 
-        # Set and display the default image folder, calibration file and slice file as stated in the config.json file
-        self.lineCalibrationFile.setText(QString(self.config['CalibrationFile']).section('/', -1))
-        for index, item in enumerate(self.config['SliceFiles']):
-            self.listSliceFiles.addItem(os.path.basename(item))
-            if '.cls' in item:
-                self.listSliceFiles.item(index).setBackground(QtGui.QColor('blue'))
-            elif '.cli' in item:
-                self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
-        self.lineBuildFolder.setText(self.config['BuildFolder'])
-        self.lineUsername.setText(self.config['Username'])
-        self.lineEmailAddress.setText(self.config['EmailAddress'])
+        with open('config.json') as config:
+            self.config = json.load(config)
 
-    def browse_calibration(self):
+        # Set and display the default build image save folder
+        self.build_folder_name = self.config['BuildInfo']['Folder']
+        self.slice_file_list = self.config['SliceConverter']['Files']
+        self.lineBuildFolder.setText(self.build_folder_name)
 
-        # Opens a file select dialog, allowing user to select a calibration file
-        calibration_file = QtGui.QFileDialog.getOpenFileName(self, 'Browse...', '', 'Calibration Files (*.txt)')
-
-        if calibration_file:
-            # Save the file path to the configuration file
-            self.config['CalibrationFile'] = str(calibration_file)
-            # Display just the file name on the line box
-            self.lineCalibrationFile.setText(os.path.basename(calibration_file))
+        # If this dialog window was opened as a result of the Open... action, then the following is executed
+        # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
+        if open_flag:
+            self.lineBuildName.setText(self.config['BuildInfo']['Name'])
+            self.comboPlatform.setCurrentIndex(self.config['BuildInfo']['Platform'])
+            self.set_list(self.config['SliceConverter']['Files'])
+            self.lineUsername.setText(self.config['BuildInfo']['Username'])
+            self.lineEmailAddress.setText(self.config['BuildInfo']['EmailAddress'])
+            self.checkConvert.setChecked(self.config['BuildInfo']['Convert'])
+            self.checkDraw.setChecked(self.config['BuildInfo']['Draw'])
 
     def browse_slice(self):
-        # Opens a file select dialog, allowing user to select one or multiple slice files
-        slice_list = list()
-        files = QtGui.QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        """Opens a File Dialog, allowing the user to select one or multiple slice files"""
 
-        # Turn the received QtFileList into a Python list of names
-        for item in files:
-            slice_list.append(str(item).replace('\\', '/'))
+        file_names = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        if slice_list:
-            self.config['SliceFiles'] = slice_list
-            self.listSliceFiles.clear()
-            for index, item in enumerate(slice_list):
-                self.listSliceFiles.addItem(os.path.basename(item))
-                if '.cls' in item:
-                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('blue'))
-                elif '.cli' in item:
-                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
+        # Turn the received QFileList into a Python list of file names using list comprehension
+        file_list = [str(item).replace('\\', '/') for item in file_names]
+
+        # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
+        if file_list:
+            self.set_list(file_list)
+            self.slice_file_list = file_list
 
     def browse_build_folder(self):
-        # Opens a folder select dialog, allowing the user to select a folder
-        folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
 
-        if folder:
-            # Save the folder path to the configuration file
-            self.config['BuildFolder'] = folder.replace('\\', '/')
+        folder_name = str(QFileDialog.getExistingDirectory(self, 'Browse...', '')).replace('\\', '/')
+
+        if folder_name:
             # Display just the file name on the line box
-            self.lineBuildFolder.setText(self.config['BuildFolder'])
+            self.lineBuildFolder.setText(folder_name)
+            self.build_folder_name = folder_name
 
     def send_test(self):
-        """Sends a test notification email to the inputted email address"""
+        """Sends a test notification email to the entered email address"""
 
         # Open a message box with a send test email confirmation message so accidental emails don't get sent
-        self.send_confirmation = QtGui.QMessageBox()
-        self.send_confirmation.setIcon(QtGui.QMessageBox.Question)
-        self.send_confirmation.setText('Are you sure you want to send a test email notification to %s?' %
-                                       self.lineEmailAddress.text())
-        self.send_confirmation.setWindowTitle('Send Test Email')
-        self.send_confirmation.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+        send_confirmation = QMessageBox()
+        send_confirmation.setIcon(QMessageBox.Question)
+        send_confirmation.setText('Are you sure you want to send a test email notification to %s?\n\n'
+                                  'Note: This will save your entered Username and Email Address to the config file.' %
+                                  self.lineEmailAddress.text())
+        send_confirmation.setWindowTitle('Send Test Email')
+        send_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
 
-        confirmation = self.send_confirmation.exec_()
+        retval = send_confirmation.exec_()
 
         # If the user clicked Yes
-        if confirmation == 16384:
-            valid_email = self.verify_email()
-
-            if valid_email:
+        if retval == 16384:
+            if validate_email(self.lineEmailAddress.text()):
                 # Disable the Send Test Email button to prevent SPAM
                 self.buttonSendTestEmail.setEnabled(False)
 
+                self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
+                self.config['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
+                with open('config.json', 'w+') as config:
+                    json.dump(self.config, config, indent=4, sort_keys=True)
+
+                # Construct the subject lien and message to be sent here
+                subject = 'Test Email Notification'
+                message = 'This is a test email to check if the entered email address is valid.'
+                if self.checkAddAttachment.isChecked():
+                    attachment = 'test_image.jpg'
+                else:
+                    attachment = None
+
                 # Instantiate and run a Notifications instance
-                self.N_instance = extra_functions.Notifications('Test Email Notification')
+                self.N_instance = extra_functions.Notifications(subject, message, attachment)
                 self.N_instance.start()
                 self.connect(self.N_instance, SIGNAL("finished()"), self.send_test_finished)
-
-        else:
-            # Do nothing
-            pass
+            else:
+                # Opens a message box indicating that the entered email address is invalid
+                invalid_email_error = QMessageBox()
+                invalid_email_error.setIcon(QMessageBox.Critical)
+                invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
+                invalid_email_error.setWindowTitle('Error')
+                invalid_email_error.exec_()
 
     def send_test_finished(self):
         """Open a message box with a send test confirmation message"""
-        self.send_test_confirmation = QtGui.QMessageBox()
-        self.send_test_confirmation.setIcon(QtGui.QMessageBox.Information)
-        self.send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
+        send_test_confirmation = QMessageBox()
+        send_test_confirmation.setIcon(QMessageBox.Information)
+        send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
                                             (self.lineEmailAddress.text(), self.lineUsername.text()))
-        self.send_test_confirmation.setWindowTitle('Send Test Email')
-        self.send_test_confirmation.exec_()
+        send_test_confirmation.setWindowTitle('Send Test Email')
+        send_test_confirmation.exec_()
 
-    def toggle_all(self):
-        """Toggling the All checkbox causes all the subsequent checkboxes to toggle being check"""
-        self.checkMinor.setChecked(self.checkAll.isChecked())
-        self.checkMajor.setChecked(self.checkAll.isChecked())
-        self.checkFailure.setChecked(self.checkAll.isChecked())
-        self.checkError.setChecked(self.checkAll.isChecked())
+    def set_list(self, file_list):
+        """Adds file names to the ListWidget and sets the background colour depending on the stated conditions"""
 
-    def verify_email(self):
-        """Checks if the entered email address is valid or not"""
-        if '@' in self.lineEmailAddress.text():
-            return True
-        else:
-            # Opens a message box indicating that the entered email address is invalid
-            self.invalid_email_error = QtGui.QMessageBox()
-            self.invalid_email_error.setIcon(QtGui.QMessageBox.Critical)
-            self.invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
-            self.invalid_email_error.setWindowTitle('Error')
-            self.invalid_email_error.exec_()
-            return False
+        self.listSliceFiles.clear()
+
+        for index, item in enumerate(file_list):
+            self.listSliceFiles.addItem(os.path.basename(item))
+            if '.cls' in item:
+                self.listSliceFiles.item(index).setBackground(QColor('blue'))
+            elif '.cli' in item:
+                self.listSliceFiles.item(index).setBackground(QColor('yellow'))
 
     def enable_button(self):
-        """Re-enables the Send Test Email button if someone changes the email address text"""
-        self.buttonSendTestEmail.setEnabled(True)
+        """(Re-)Enables the Send Test Email button if the email address box is changed and not empty"""
+
+        if self.lineEmailAddress.text():
+            self.buttonSendTestEmail.setEnabled(True)
+            self.checkAddAttachment.setEnabled(True)
+        else:
+            self.buttonSendTestEmail.setEnabled(False)
+            self.checkAddAttachment.setEnabled(False)
 
     def accept(self):
-        """Executes when the OK button is clicked
+        """Executes when the Create button is clicked
+        First checks if all the required boxes have been filled, otherwise a MessageBox will be opened
         Saves important selection options to the config.json file and closes the window
         """
 
-        self.config['BuildName'] = str(self.lineBuildName.text())
-        self.config['Username'] = str(self.lineUsername.text())
-        self.config['EmailAddress'] = str(self.lineEmailAddress.text())
-        self.config['ConvertContours'] = str(self.checkConvert.isChecked())
+        # if self.lineBuildName.text() and self.lineBuildFolder.text() and self.lineUsername.text() and self.lineEmailAddress.text()
+
+        # Save all the entered information to the config file
+        self.config['BuildInfo']['Name'] = str(self.lineBuildName.text())
+        self.config['BuildInfo']['Platform'] = self.comboPlatform.currentIndex()
+        self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
+        self.config['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
+        self.config['BuildInfo']['Convert'] = self.checkConvert.isChecked()
+        if self.checkConvert.isChecked():
+            self.config['BuildInfo']['Draw'] = self.checkDraw.isChecked()
+        self.config['BuildInfo']['Folder'] = self.build_folder_name
+        self.config['SliceConverter']['Files'] = self.slice_file_list
 
         # Save the selected platform dimensions to the config.json file
         if self.comboPlatform.currentIndex() == 0:
-            self.config['PlatformDimensions'] = [636.0, 406.0]
+            self.config['BuildInfo']['PlatformDimensions'] = [636.0, 406.0]
         elif self.comboPlatform.currentIndex() == 1:
-            self.config['PlatformDimensions'] = [800.0, 400.0]
+            self.config['BuildInfo']['PlatformDimensions'] = [800.0, 400.0]
         elif self.comboPlatform.currentIndex() == 2:
-            self.config['PlatformDimensions'] = [250.0, 250.0]
+            self.config['BuildInfo']['PlatformDimensions'] = [250.0, 250.0]
 
         # Generate a timestamp for folder labelling purposes
-        time = datetime.now()
+        current_time = datetime.now()
 
         # Set the full name of the main storage folder for all acquired images
         image_folder = """%s/%s-%s-%s [%s''%s'%s] %s""" % \
-                            (self.config['BuildFolder'], time.year, str(time.month).zfill(2),
-                             str(time.day).zfill(2), str(time.hour).zfill(2),
-                             str(time.minute).zfill(2), str(time.second).zfill(2), self.config['BuildName'])
+                       (self.config['BuildInfo']['Folder'], current_time.year, str(current_time.month).zfill(2),
+                        str(current_time.day).zfill(2), str(current_time.hour).zfill(2),
+                        str(current_time.minute).zfill(2), str(current_time.second).zfill(2),
+                        self.config['BuildInfo']['Name'])
 
         # Save the created image folder's name to the config.json file
-        self.config['ImageFolder'] = image_folder
-
-        # Create new directories to store camera images and processing outputs
-        # Includes error checking in case the folder already exist (shouldn't due to the seconds output)
-        if not os.path.exists(image_folder):
-            os.makedirs(image_folder)
-        else:
-            os.makedirs(image_folder + '_2')
+        self.config['ImageCapture']['Folder'] = image_folder
 
         # Create respective sub-directories for images
         os.makedirs('%s/raw/coat' % image_folder)
@@ -211,7 +211,6 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         os.makedirs('%s/defects/single' % image_folder)
         os.makedirs('%s/contours' % image_folder)
 
-        # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
@@ -219,112 +218,7 @@ class NewBuild(QtGui.QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.done(1)
 
 
-class NotificationSettings(QtGui.QDialog, dialogNotificationSettings.Ui_dialogNotificationSettings):
-    """Opens a Dialog Window when Setup > Report Settings > Notification Settings is clicked
-    Allows user to enter and change the email address and what notifications to be notified of
-    Setup as a Modal window, blocking input to other visible windows until this window is closed
-    """
-
-    def __init__(self, parent=None):
-
-        # Setup Dialog UI with MainWindow as parent
-        super(NotificationSettings, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-
-        # Load configuration settings from config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Set and display the default saved username and email address as stated in the config.json file
-        self.lineUsername.setText(self.config['Username'])
-        self.lineEmailAddress.setText(self.config['EmailAddress'])
-
-        # Setup event listeners for all the relevent UI components, and connect them to specific functions
-        self.buttonSendTestEmail.clicked.connect(self.send_test)
-        self.checkAll.toggled.connect(self.toggle_all)
-        self.lineEmailAddress.textChanged.connect(self.enable_button)
-
-    def send_test(self):
-        """Sends a test notification email to the inputted email address"""
-
-        # Open a message box with a send test email confirmation message so accidental emails don't get sent
-        self.send_confirmation = QtGui.QMessageBox()
-        self.send_confirmation.setIcon(QtGui.QMessageBox.Question)
-        self.send_confirmation.setText('Are you sure you want to send a test email notification to %s?' %
-                                       self.lineEmailAddress.text())
-        self.send_confirmation.setWindowTitle('Send Test Email')
-        self.send_confirmation.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-
-        confirmation = self.send_confirmation.exec_()
-
-        # If the user clicked Yes
-        if confirmation == 16384:
-            valid_email = self.verify_email()
-
-            if valid_email:
-                # Disable the Send Test Email button to prevent SPAM
-                self.buttonSendTestEmail.setEnabled(False)
-                
-                # Instantiate and run a Notifications instance
-                self.N_instance = extra_functions.Notifications('Test Email Notification')
-                self.N_instance.start()
-                self.connect(self.N_instance, SIGNAL("finished()"), self.send_test_finished)
-
-        else:
-            # Do nothing
-            pass
-
-    def send_test_finished(self):
-        """Open a message box with a send test confirmation message"""
-        self.send_test_confirmation = QtGui.QMessageBox()
-        self.send_test_confirmation.setIcon(QtGui.QMessageBox.Information)
-        self.send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
-                                            (self.lineEmailAddress.text(), self.lineUsername.text()))
-        self.send_test_confirmation.setWindowTitle('Send Test Email')
-        self.send_test_confirmation.exec_()
-
-    def toggle_all(self):
-        """Toggling the All checkbox causes all the subsequent checkboxes to toggle being check"""
-        self.checkMinor.setChecked(self.checkAll.isChecked())
-        self.checkMajor.setChecked(self.checkAll.isChecked())
-        self.checkFailure.setChecked(self.checkAll.isChecked())
-        self.checkError.setChecked(self.checkAll.isChecked())
-
-    def verify_email(self):
-        """Checks if the entered email address is valid or not"""
-        if '@' in self.lineEmailAddress.text():
-            return True
-        else:
-            # Opens a message box indicating that the entered email address is invalid
-            self.invalid_email_error = QtGui.QMessageBox()
-            self.invalid_email_error.setIcon(QtGui.QMessageBox.Critical)
-            self.invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
-            self.invalid_email_error.setWindowTitle('Error')
-            self.invalid_email_error.exec_()
-            return False
-
-    def enable_button(self):
-        """Re-enables the Send Test Email button if someone changes the email address text"""
-        self.buttonSendTestEmail.setEnabled(True)
-
-    def accept(self):
-        """Executes when the OK button is clicked
-        Saves important input and selection options to the config.json file and closes the window
-        """
-
-        self.config['Username'] = str(self.lineUsername.text())
-        self.config['EmailAddress'] = str(self.lineEmailAddress.text())
-
-        # Save configuration settings to config.json file
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
-
-        # Close the dialog window
-        self.done(1)
-
-
-class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
+class ImageCapture(QDialog, dialogImageCapture.Ui_dialogImageCapture):
     """Opens a Dialog Window when Image Capture button is clicked
     Allows user to capture images using a connected camera
     Setup as a Modeless window, operating independently of other windows
@@ -337,7 +231,11 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        # Import related module
+        # Restore the last window position when the window is closed and reopened by saving it using QSettings
+        self.window_position = QSettings('MCAM', 'Defect Monitor')
+        self.restoreGeometry(self.window_position.value('geometry', '').toByteArray())
+
+        # Module only imported within this class so that the other classes can run without it
         import image_capture
         # Set the imported module as an instance variable
         self.image_capture = image_capture
@@ -362,7 +260,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
     def browse(self):
 
         # Opens a folder select dialog, allowing the user to choose a folder
-        self.image_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...')
+        self.image_folder = QFileDialog.getExistingDirectory(self, 'Browse...')
 
         # Checks if a folder is actually selected
         if self.image_folder:
@@ -427,7 +325,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         # Instantiate and run an ImageCapture instance that will only take one image
         self.ICS_instance = self.image_capture.ImageCapture(single_flag=True)
         self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICS_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"), self.image_correction)
+        self.connect(self.ICS_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
+                     self.image_correction)
         self.connect(self.ICS_instance, SIGNAL("finished()"), self.capture_finished)
         self.ICS_instance.start()
 
@@ -462,13 +361,14 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         # Instantiate and run a new Stopwatch instance to have a running timer
         self.stopwatch_instance = extra_functions.Stopwatch()
         self.connect(self.stopwatch_instance, SIGNAL("update_time(QString, QString)"), self.update_time)
-        #self.connect(self.stopwatch_instance, SIGNAL("send_notification()"), self.send_notification)
+        # self.connect(self.stopwatch_instance, SIGNAL("send_notification()"), self.send_notification)
         self.stopwatch_instance.start()
 
         # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
         self.ICR_instance = self.image_capture.ImageCapture(run_flag=True)
         self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICR_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"), self.image_correction)
+        self.connect(self.ICR_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
+                     self.image_correction)
         self.connect(self.ICR_instance, SIGNAL("reset_time_idle()"), self.reset_time_idle)
         self.connect(self.ICR_instance, SIGNAL("finished()"), self.run_finished)
         self.ICR_instance.start()
@@ -524,9 +424,12 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         self.update_status('Image saved.')
 
         # Setting the appropriate tab index to send depending on which phase the image is
-        if self.phase == 'coat': index = '0'
-        elif self.phase == 'scan': index = '1'
-        else: index = '4'
+        if self.phase == 'coat':
+            index = '0'
+        elif self.phase == 'scan':
+            index = '1'
+        else:
+            index = '4'
 
         time.sleep(1)
 
@@ -602,7 +505,7 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
 
         if self.checkNotifications.isChecked():
             self.update_status('Sending email notification.')
-            
+
             # Instantiate and run a Notifications instance
             self.N_instance = extra_functions.Notifications()
             self.N_instance.start()
@@ -618,8 +521,8 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        self.config['CaptureCount'] = self.spinStartingLayer.value()
-        self.config['CurrentLayer'] = self.spinStartingLayer.value() - 0.5
+        self.config['ImageCapture']['Single'] = self.spinStartingLayer.value()
+        self.config['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
 
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
@@ -647,10 +550,12 @@ class ImageCapture(QtGui.QDialog, dialogImageCapture.Ui_dialogImageCapture):
         except (AttributeError, RuntimeError):
             pass
 
+        # Save the current position of the dialog window
+        self.window_position.setValue('geometry', self.saveGeometry())
         self.emit(SIGNAL("accepted()"))
 
 
-class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
+class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
     """Opens a Dialog Window when Camera Settings button is clicked within the Image Capture dialog window
     Or when Setup > Camera Settings is clicked
     Allows the user to change camera settings which will be sent to the camera before images are taken
@@ -658,7 +563,6 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
     """
 
     def __init__(self, parent=None):
-
         # Setup Dialog UI with MainWindow as parent
         super(CameraSettings, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -681,12 +585,12 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
 
         # Set the combo box and settings to the previously saved values
         # Combo box settings are saved as their index values in the config.json file
-        self.comboPixelFormat.setCurrentIndex(int(self.config['PixelFormat']))
-        self.spinExposureTime.setValue(int(self.config['ExposureTimeAbs']))
-        self.spinPacketSize.setValue(int(self.config['PacketSize']))
-        self.spinInterPacketDelay.setValue(int(self.config['InterPacketDelay']))
-        self.spinFrameDelay.setValue(int(self.config['FrameTransmissionDelay']))
-        self.spinTriggerTimeout.setValue(int(self.config['TriggerTimeout']))
+        self.comboPixelFormat.setCurrentIndex(int(self.config['CameraSettings']['PixelFormat']))
+        self.spinExposureTime.setValue(int(self.config['CameraSettings']['ExposureTimeAbs']))
+        self.spinPacketSize.setValue(int(self.config['CameraSettings']['PacketSize']))
+        self.spinInterPacketDelay.setValue(int(self.config['CameraSettings']['InterPacketDelay']))
+        self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameTransmissionDelay']))
+        self.spinTriggerTimeout.setValue(int(self.config['ImageCapture']['TriggerTimeout']))
 
         self.buttonApply.setEnabled(False)
 
@@ -696,12 +600,12 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
 
     def apply(self):
         # Save the new index values from the changed settings to the config dictionary
-        self.config['PixelFormat'] = self.comboPixelFormat.currentIndex()
-        self.config['ExposureTimeAbs'] = self.spinExposureTime.value()
-        self.config['PacketSize'] = self.spinPacketSize.value()
-        self.config['InterPacketDelay'] = self.spinInterPacketDelay.value()
-        self.config['FrameTransmissionDelay'] = self.spinFrameDelay.value()
-        self.config['TriggerTimeout'] = self.spinTriggerTimeout.value()
+        self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
+        self.config['CameraSettings']['ExposureTimeAbs'] = self.spinExposureTime.value()
+        self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
+        self.config['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
+        self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
+        self.config['ImageCapture']['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
@@ -719,8 +623,12 @@ class CameraSettings(QtGui.QDialog, dialogCameraSettings.Ui_dialogCameraSettings
 
         self.done(1)
 
+    def closeEvent(self, event):
+        """Executes when the top-right X is clicked"""
+        self.emit(SIGNAL("accepted()"))
 
-class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
+
+class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     """Opens a Dialog Window when Slice Converter button is clicked
     Allows user to convert .cls or .cli files into OpenCV readable ASCII format
     Setup as a Modal window, blocking input to other visible windows until this window is closed
@@ -736,6 +644,9 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         with open('config.json') as config:
             self.config = json.load(config)
 
+        self.window_position = QSettings('MCAM', 'Defect Monitor')
+        self.restoreGeometry(self.window_position.value('geometry', '').toByteArray())
+
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
         self.buttonBrowseF.clicked.connect(self.browse_folder)
         self.buttonStartConversion.clicked.connect(self.start_conversion)
@@ -747,11 +658,15 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
         self.lineFolder.setText(self.contours_folder)
 
     def browse_slice(self):
+        """Opens a File Dialog, allowing the user to select one or multiple slice files
+        The slice files are displayed on the ListWidget and saved to the config file
+        """
 
-        # Opens a file select dialog, allowing user to select one or multiple slice files
-        files = QtGui.QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        file_names = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        for item in files:
+        file_list = [str(item).replace('\\', '/') for item in file_names]
+
+        for item in file_list:
             self.slice_list.append(str(item).replace('\\', '/'))
 
         if self.slice_list:
@@ -761,13 +676,13 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
             for index, item in enumerate(self.slice_list):
                 self.listSliceFiles.addItem(os.path.basename(item))
                 if '.cls' in item:
-                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('blue'))
+                    self.listSliceFiles.item(index).setBackground(QColor('blue'))
                 elif '.cli' in item:
-                    self.listSliceFiles.item(index).setBackground(QtGui.QColor('yellow'))
+                    self.listSliceFiles.item(index).setBackground(QColor('yellow'))
 
     def browse_folder(self):
         # Opens a folder select dialog, allowing the user to select a folder
-        self.contours_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        self.contours_folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if self.folder:
             self.lineFolder.setText(self.contours_folder)
@@ -815,16 +730,17 @@ class SliceConverter(QtGui.QDialog, dialogSliceConverter.Ui_dialogSliceConverter
     def update_progress(self, percentage):
         self.progressBar.setValue(int(percentage))
 
-    def accept(self):
-        """If you press the 'done' button, this just closes the dialog window without doing anything"""
-        self.done(1)
+    def closeEvent(self, event):
+        """Executes when the window is closed"""
+        self.window_position.setValue('geometry', self.saveGeometry())
+        self.emit(SIGNAL("accepted()"))
 
 
-class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
+class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
     """Opens a Dialog Window when Camera Calibration button is clicked
     Or when Setup > Camera Calibration is clicked
     Allows the user to select a folder of checkboard images to calculate the camera's intrinsic values
-    Setup as a Modal window, blocking input to other visible windows until this window is closed
+    Setup as a Modeless window, operating independently of other windows
     """
 
     def __init__(self, parent=None):
@@ -833,6 +749,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         super(CameraCalibration, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+
+        self.window_position = QSettings('MCAM', 'Defect Monitor')
+        self.restoreGeometry(self.window_position.value('geometry', '').toByteArray())
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowse.clicked.connect(self.browse)
@@ -844,9 +763,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
             self.config = json.load(config)
 
         # Set the spinbox settings to the previously saved values
-        self.spinWidth.setValue(int(self.config['CalibrationWidth']))
-        self.spinHeight.setValue(int(self.config['CalibrationHeight']))
-        self.spinRatio.setValue(int(self.config['DownscalingRatio']))
+        self.spinWidth.setValue(int(self.config['CameraCalibration']['Width']))
+        self.spinHeight.setValue(int(self.config['CameraCalibration']['Height']))
+        self.spinRatio.setValue(int(self.config['CameraCalibration']['DownscalingRatio']))
 
     def browse(self):
 
@@ -855,24 +774,24 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
 
         # Opens a folder select dialog, allowing the user to select a folder
         self.calibration_folder = None
-        self.calibration_folder = QtGui.QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        self.calibration_folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         # Checks if a folder is actually selected
         if self.calibration_folder:
             # Store a list of the files found in the folder
-            self.image_list = os.listdir(self.calibration_folder)
+            image_list = os.listdir(self.calibration_folder)
             self.listImages.clear()
 
             # Update the lineEdit with the new folder name
             self.lineCalibrationFolder.setText(self.calibration_folder)
 
             # Search for images containing the word calibration_image in the folder
-            for image_name in self.image_list:
+            for image_name in image_list:
                 if 'image_calibration' in str(image_name):
                     self.image_list.append(str(image_name))
 
             if not self.image_list:
-                self.update_status('No valid calibration images found.')
+                self.update_status('No calibration images found.')
                 self.buttonStartCalibration.setEnabled(False)
             else:
                 # Remove previous entries and fill with new entries
@@ -899,7 +818,7 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         # Try exception causes this function to be skipped the first time when
         try:
             for index in xrange(self.listImages.count()):
-                self.listImages.item(index).setBackground(QtGui.QColor('white'))
+                self.listImages.item(index).setBackground(QColor('white'))
         except AttributeError:
             pass
 
@@ -917,9 +836,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         Changes to green if image is valid, red if image is invalid for calibration
         """
         if int(valid):
-            self.listImages.item(int(index)).setBackground(QtGui.QColor('green'))
+            self.listImages.item(int(index)).setBackground(QColor('green'))
         else:
-            self.listImages.item(int(index)).setBackground(QtGui.QColor('red'))
+            self.listImages.item(int(index)).setBackground(QColor('red'))
 
     def calibration_finished(self):
         """Executes when the CameraCalibration instance has finished"""
@@ -970,9 +889,9 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         """Save the spinxbox values to config.json file"""
 
         # Save the new values from the changed settings to the config dictionary
-        self.config['CalibrationWidth'] = self.spinWidth.value()
-        self.config['CalibrationHeight'] = self.spinHeight.value()
-        self.config['DownscalingRatio'] = self.spinRatio.value()
+        self.config['CameraCalibration']['Width'] = self.spinWidth.value()
+        self.config['CameraCalibration']['Height'] = self.spinHeight.value()
+        self.config['CameraCalibration']['DownscalingRatio'] = self.spinRatio.value()
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
@@ -990,10 +909,16 @@ class CameraCalibration(QtGui.QDialog, dialogCameraCalibration.Ui_dialogCameraCa
         """
 
         self.save_settings()
-        self.done(1)
+        self.closeEvent(None)
+
+    def closeEvent(self, event):
+        """Executes when the window is closed"""
+
+        self.window_position.setValue('geometry', self.saveGeometry())
+        self.emit(SIGNAL("accepted()"))
 
 
-class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
+class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
     """Opens a Dialog Window when the CameraCalibration instance has finished
     Allows user to look at pertinent calibration parameters and information
     Setup as a Modeless window, opereating independently of other windows
@@ -1006,7 +931,6 @@ class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibr
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        # Restore the last window position when the window is closed and reopened by saving it using QSettings
         self.window_position = QSettings('MCAM', 'Defect Monitor')
         self.restoreGeometry(self.window_position.value('geometry', '').toByteArray())
 
@@ -1033,16 +957,16 @@ class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibr
             for column in xrange(3):
 
                 # Setting the item using the corresponding index of the matrix arrays
-                self.tableCameraMatrix.setItem(row, column, QtGui.QTableWidgetItem(
+                self.tableCameraMatrix.setItem(row, column, QTableWidgetItem(
                     format(self.camera_matrix[row][column], '.10g')))
-                self.tableHomographyMatrix.setItem(row, column, QtGui.QTableWidgetItem(
+                self.tableHomographyMatrix.setItem(row, column, QTableWidgetItem(
                     format(self.homography_matrix[row][column], '.10g')))
 
                 # Because the distortion coefficients matrix is a 1x5, a slight modification needs to be made
                 # Exception used to ignore the 2x3 box and 3rd row of the matrix
                 if row >= 1: column += 3
                 try:
-                    self.tableDistortionCoefficients.setItem(row, column % 3, QtGui.QTableWidgetItem(
+                    self.tableDistortionCoefficients.setItem(row, column % 3, QTableWidgetItem(
                         format(self.distortion_coefficients[column], '.10g')))
                 except IndexError:
                     pass
@@ -1050,18 +974,15 @@ class CalibrationResults(QtGui.QDialog, dialogCalibrationResults.Ui_dialogCalibr
         # Displaying the re-projection error on the appropriate text label
         self.labelRMS.setText('Re-Projection Error: ' + format(self.rms[0], '.10g'))
 
-    def accept(self):
-        """Executes when the Done button is clicked"""
-        self.done(1)
-
     def closeEvent(self, event):
         """Executes when the window is closed"""
 
         # Save the current position of the dialog window
         self.window_position.setValue('geometry', self.saveGeometry())
+        self.emit(SIGNAL("accepted()"))
 
 
-class OverlayAdjustment(QtGui.QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustment):
+class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustment):
     """Opens a Dialog Window when the Overlay Adjustment button is clicked
     If an overlay is on the display, allows the user to adjust its position in quite a few ways
     Setup as a Modeless window, opereating independently of other windows
@@ -1079,7 +1000,7 @@ class OverlayAdjustment(QtGui.QDialog, dialogOverlayAdjustment.Ui_dialogOverlayA
             self.config = json.load(config)
 
         # Transformation Parameters saved as a list of the respective transformation values
-        self.transform = self.config['TransformationParameters']
+        self.transform = self.config['ImageCorrection']['TransformParameters']
         self.transform_states = list()
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
@@ -1242,7 +1163,7 @@ class OverlayAdjustment(QtGui.QDialog, dialogOverlayAdjustment.Ui_dialogOverlayA
         if len(self.transform_states) > 10:
             del self.transform_states[0]
 
-        self.config['TransformationParameters'] = self.transform
+        self.config['ImageCorrection']['TransformParameters'] = self.transform
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:

@@ -31,7 +31,7 @@ class Ui_dialogCameraCalibration(object):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogCameraCalibration.setWindowIcon(icon)
-        dialogCameraCalibration.setModal(True)
+        dialogCameraCalibration.setModal(False)
         self.labelInformation = QtGui.QLabel(dialogCameraCalibration)
         self.labelInformation.setGeometry(QtCore.QRect(10, 10, 391, 81))
         self.labelInformation.setScaledContents(False)

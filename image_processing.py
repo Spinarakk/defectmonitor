@@ -32,16 +32,26 @@ class ImageCorrection(QThread):
         # Initiate a list to store all the camera parameters
         self.camera_parameters = []
 
-        # Load camera parameters from specified calibration file
-        with open('%s' % self.config['CalibrationFile']) as camera_parameters:
-            for line in camera_parameters.readlines():
-                self.camera_parameters.append(line.split(' '))
+        # # Load camera parameters from specified calibration file
+        # with open('%s' % self.config['CalibrationFile']) as camera_parameters:
+        #     for line in camera_parameters.readlines():
+        #         self.camera_parameters.append(line.split(' '))
+        #
+        # # Split camera parameters into their own respective values to be used in OpenCV functions
+        # self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float64')
+        # self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float64')
+        # self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
+        # self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
 
-        # Split camera parameters into their own respective values to be used in OpenCV functions
-        self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float64')
-        self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float64')
-        self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
-        self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
+        with open('camera_parameters.json') as camera_parameters:
+            self.parameters = json.load(camera_parameters)
+
+        self.camera_matrix = np.array(self.parameters['CameraMatrix'])
+        self.distortion_coefficients = np.array(self.parameters['DistortionCoefficients'])
+        self.homography_matrix = np.array(self.parameters['HomographyMatrix'])
+        self.output_resolution = tuple(self.parameters['Resolution'])
+
+        print 'asdf'
 
     def run(self):
         self.image_D = self.distortion_fix(self.image)
@@ -79,22 +89,10 @@ class ImageCorrection(QThread):
         """Crops the image to a more desirable region of interest"""
 
         # Save value to be used to determine region of interest
-        crop_boundary = self.config['CropBoundary']
+        crop_boundary = self.config['ImageCorrection']['CropBoundary']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
         image = image[crop_boundary[0]: crop_boundary[1], crop_boundary[2]: crop_boundary[3]]
-
-        return image
-
-    def rotate(self, image):
-        """Rotate the image"""
-
-        # Save value to be used to determine rotation amount
-        rotation_angle = self.config['RotationAngle']
-
-        # Rotate the image by creating and using a 2x3 rotation matrix
-        rotation_matrix = cv2.getRotationMatrix2D((image.shape[1] / 2, image.shape[0] / 2), rotation_angle, 1.0)
-        image = cv2.warpAffine(image, rotation_matrix, (image.shape[1], image.shape[0]))
 
         return image
 

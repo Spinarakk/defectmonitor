@@ -144,7 +144,7 @@ class Ui_dialogCalibrationResults(object):
         self.tableHomographyMatrix.verticalHeader().setVisible(False)
 
         self.retranslateUi(dialogCalibrationResults)
-        QtCore.QObject.connect(self.buttonDone, QtCore.SIGNAL(_fromUtf8("clicked()")), dialogCalibrationResults.accept)
+        QtCore.QObject.connect(self.buttonDone, QtCore.SIGNAL(_fromUtf8("clicked()")), dialogCalibrationResults.close)
         QtCore.QMetaObject.connectSlotsByName(dialogCalibrationResults)
 
     def retranslateUi(self, dialogCalibrationResults):

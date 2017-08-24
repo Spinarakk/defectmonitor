@@ -30,7 +30,7 @@
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <property name="modal">
-   <bool>true</bool>
+   <bool>false</bool>
   </property>
   <widget class="QLabel" name="labelInformation">
    <property name="geometry">
@@ -72,7 +72,7 @@
     <rect>
      <x>10</x>
      <y>318</y>
-     <width>291</width>
+     <width>271</width>
      <height>28</height>
     </rect>
    </property>
@@ -83,9 +83,9 @@
   <widget class="QPushButton" name="buttonDone">
    <property name="geometry">
     <rect>
-     <x>310</x>
+     <x>290</x>
      <y>318</y>
-     <width>91</width>
+     <width>111</width>
      <height>28</height>
     </rect>
    </property>
@@ -129,22 +129,6 @@
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="checkFill">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>290</x>
-     <y>148</y>
-     <width>111</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Fill Contours</string>
    </property>
   </widget>
   <widget class="QLabel" name="labelStatusSlice">
@@ -224,7 +208,7 @@
    <sender>buttonDone</sender>
    <signal>clicked()</signal>
    <receiver>dialogSliceConverter</receiver>
-   <slot>accept()</slot>
+   <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>326</x>

@@ -1,5 +1,5 @@
-Defect Monitor (Tentative Name)
-MCAM CLS Printer Software
+Defect Monitor
+MCAM 3D Printer Software
 
 Installation
 - From the software folder install the following (64-bit Versions)
@@ -10,13 +10,12 @@ Installation
 - Extract OpenCV 3.2.0
 	- Navigate to build/python/2.7/x86
 	- Copy cv2.pyd into Python/Lib/site-packages
-
-- Copy numpy-1.11.3+mkl-cp27-cp27m-win32.whl to Python/Scripts
+- Install the required Python packages as listed under Required Software
 	- Open a command prompt
 	- Navigate to the python/scripts folder (cd "Folder Name")
-	- Run: pip2.7.exe install "numpy-1.11.3+mkl-cp27-cp27m-win32.whl"
+	- Run: pip install name_of_package
 
-Note
+Important Note
 - DO NOT MOVE, RENAME OR DELETE CONFIG_DEFAULT.JSON 
 
 Operation
@@ -26,11 +25,13 @@ Required Software
 - Python 2.7.13
 - OpenCV 3.2.0
 - PyQt 4.11.4
-- Qt 4.8.7
-- Numpy 1.11.3
-- PySerial
-- Basler Pylon 5.0.5.8999 (Required to Start New Build)
-
+- Basler Pylon 5.0.5.8999
+	- Install in Developer Mode
+	- Required to create New Build
+- Python Packages:
+	- numpy
+	- pyserial
+	- validate_email
 Optional Software
 - Pycharm 2017.1.2
 
@@ -123,6 +124,7 @@ Nomenclature Notes
 	- XXX_dialog (For dialog windows)
 	- XXX_instance (For Qthread instances)
 	- image_XXX (Image arrays)
+- Comments will only be provided for the first time the function or block of code appears in the module, starting from the main_window module
 
 GUI Standard Sizes
 - Button Height -> 28

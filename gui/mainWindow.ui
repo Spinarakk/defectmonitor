@@ -707,16 +707,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="buttonSliceConverter">
-            <property name="toolTip">
-             <string>Click to select a slice file to convert into ASCII encoding.</string>
-            </property>
-            <property name="text">
-             <string>Slice Converter</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QPushButton" name="buttonImageCapture">
             <property name="enabled">
              <bool>false</bool>
@@ -730,9 +720,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="buttonNotificationSettings">
+           <widget class="QPushButton" name="buttonSliceConverter">
+            <property name="toolTip">
+             <string>Click to select a slice file to convert into ASCII encoding.</string>
+            </property>
             <property name="text">
-             <string>Notification Settings</string>
+             <string>Slice Converter</string>
             </property>
            </widget>
           </item>
@@ -756,16 +749,6 @@
             </property>
             <property name="text">
              <string>Image Converter</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="buttonDisplayImages">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Display Images</string>
             </property>
            </widget>
           </item>
@@ -905,7 +888,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="frame">
+        <widget class="QFrame" name="frameCamera">
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -1077,6 +1060,13 @@
       </property>
      </widget>
     </item>
+    <item row="9" column="0">
+     <widget class="QLabel" name="labelStatusSlice">
+      <property name="text">
+       <string>Current Slice:                                       </string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -1092,13 +1082,25 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNewBuild"/>
-    <addaction name="actionOpenBuild"/>
-    <addaction name="actionSaveBuild"/>
+    <widget class="QMenu" name="menuRecentBuilds">
+     <property name="title">
+      <string>Recent Builds</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="actionClearMenu"/>
+    </widget>
+    <addaction name="actionNew"/>
+    <addaction name="actionOpen"/>
+    <addaction name="menuRecentBuilds"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
     <addaction name="actionExportImage"/>
     <addaction name="separator"/>
-    <addaction name="actionExit"/>
+    <addaction name="actionClose"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuSetup">
     <property name="title">
@@ -1116,11 +1118,10 @@
     <addaction name="menuCamera"/>
     <addaction name="separator"/>
     <addaction name="actionSliceConverter"/>
-    <addaction name="actionNotificationSettings"/>
     <addaction name="actionDefectProcess"/>
     <addaction name="actionImageConverter"/>
     <addaction name="separator"/>
-    <addaction name="actionOptions"/>
+    <addaction name="actionSettings"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -1143,9 +1144,9 @@
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionOptions">
+  <action name="actionSettings">
    <property name="text">
-    <string>Options...</string>
+    <string>Settings...</string>
    </property>
   </action>
   <action name="actionCLS">
@@ -1161,14 +1162,14 @@
     <string>CLI</string>
    </property>
   </action>
-  <action name="actionNewBuild">
+  <action name="actionNew">
    <property name="text">
-    <string>New Build...</string>
+    <string>New...</string>
    </property>
   </action>
-  <action name="actionOpenBuild">
+  <action name="actionOpen">
    <property name="text">
-    <string>Open Build...</string>
+    <string>Open...</string>
    </property>
   </action>
   <action name="actionExportImage">
@@ -1231,9 +1232,9 @@
     <string>Stop Build</string>
    </property>
   </action>
-  <action name="actionExit">
+  <action name="actionQuit">
    <property name="text">
-    <string>Exit</string>
+    <string>Quit</string>
    </property>
   </action>
   <action name="actionInitializeBuild">
@@ -1268,6 +1269,9 @@
    </property>
   </action>
   <action name="actionImageCapture">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Image Capture</string>
    </property>
@@ -1284,7 +1288,7 @@
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About Defect Monitor</string>
+    <string>About</string>
    </property>
   </action>
   <action name="actionViewHelp">
@@ -1313,12 +1317,30 @@
     <string>Defect Processing</string>
    </property>
   </action>
-  <action name="actionSaveBuild">
+  <action name="actionSave">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Save Build...</string>
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionClearMenu">
+   <property name="text">
+    <string>Clear Menu</string>
+   </property>
+  </action>
+  <action name="actionSaveAs">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save As...</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
    </property>
   </action>
  </widget>

@@ -1,3 +1,20 @@
+August 25
+- Integrated the calibration parameters into the JSON config file
+- Split the image processing transformation sequence into their own individual methods
+
+August 24
+- Changed a lot of code to only load the required variables rather than the entire config file
+- Modified the JSON config file into a nested form and grouping similar settings together for improved readability
+- Updated the UI with more features and functions such as a recent builds action
+- Fixed up the New Build window by finalizing what parameters appear on it
+- Added a Settings function that essentially opens the New Build dialog to let the user change any of the initial settings
+- Removed the Notification Settings dialog window and the associated code
+- Turned majority of the windows into modeless windows that save their positions and cannot be re-opened
+
+August 22
+- Restructured the entire Slice Converter code to run slightly more efficiently
+- Drawing contours for loop changed to a while loop to take into account the highest number of layers
+
 August 21
 - Modified the .cli conversion code to work off of the number of vectors given in the .cli file
 - This is to prevent any command indexes (128, 129) that appear as vectors screwing up the layers

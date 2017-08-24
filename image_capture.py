@@ -32,9 +32,9 @@ class ImageCapture(QThread):
         self.run_flag = run_flag
 
         # For CurrentPhase, 0 corresponds to Coat, 1 corresponds to Scan
-        self.current_layer = self.config['CurrentLayer']
-        self.current_phase = self.config['CurrentPhase']
-        self.capture_count = self.config['CaptureCount']
+        self.current_layer = self.config['ImageCapture']['Layer']
+        self.current_phase = self.config['ImageCapture']['Phase']
+        self.capture_count = self.config['ImageCapture']['Single']
         self.phases = ['coat', 'scan']
 
         # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
@@ -46,7 +46,7 @@ class ImageCapture(QThread):
         self.acquire_settings()
         self.acquire_camera()
 
-        self.image_folder = self.config['ImageFolder']
+        self.image_folder = self.config['ImageCapture']['Folder']
 
         # Opens up the camera and sends it the stored settings to be used for capturing images
         # Put in a try loop in case the camera cannot be opened for some reason (like another program using it)
@@ -74,8 +74,8 @@ class ImageCapture(QThread):
         self.camera.close()
 
         # Set the following values as the current values to be able to restore same state if run again
-        self.config['CurrentLayer'] = self.current_layer
-        self.config['CurrentPhase'] = self.current_phase
+        self.config['ImageCapture']['Layer'] = self.current_layer
+        self.config['ImageCapture']['Phase'] = self.current_phase
 
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
@@ -138,11 +138,11 @@ class ImageCapture(QThread):
         """
 
         # These properties are changeable through the UI
-        self.camera.properties['PixelFormat'] = self.pixel_format_list[self.config['PixelFormat']]
-        self.camera.properties['ExposureTimeAbs'] = self.config['ExposureTimeAbs']
-        self.camera.properties['GevSCPSPacketSize'] = self.config['PacketSize']
-        self.camera.properties['GevSCPD'] = self.config['InterPacketDelay']
-        self.camera.properties['GevSCFTD'] = self.config['FrameTransmissionDelay']
+        self.camera.properties['PixelFormat'] = self.pixel_format_list[self.config['CameraSettings']['PixelFormat']]
+        self.camera.properties['ExposureTimeAbs'] = self.config['CameraSettings']['ExposureTimeAbs']
+        self.camera.properties['GevSCPSPacketSize'] = self.config['CameraSettings']['PacketSize']
+        self.camera.properties['GevSCPD'] = self.config['CameraSettings']['InterPacketDelay']
+        self.camera.properties['GevSCFTD'] = self.config['CameraSettings']['FrameTransmissionDelay']
 
         # These properties are here to override the camera's 'default' and can be changed here
         self.camera.properties['TriggerSelector'] = 'AcquisitionStart'
@@ -164,10 +164,10 @@ class ImageCapture(QThread):
         else:
             # Send the image, the current layer and the phase back to the ImageCapture dialog window
             self.emit(SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
-                      image, str(self.config['CaptureCount']), 'single')
+                      image, str(self.config['ImageCapture']['Single']), 'single')
 
             # Update the capture counter which will be saved to the config.json file
-            self.config['CaptureCount'] += 1
+            self.config['ImageCapture']['Single'] += 1
             self.emit(SIGNAL("update_status(QString)"), 'Image captured.')
 
     def acquire_image_run(self):
@@ -197,7 +197,7 @@ class ImageCapture(QThread):
 
             # Loop used to disallow triggering for additional images for however many seconds
             # Also displays remaining timeout on the status bar
-            for seconds in range(self.config['TriggerTimeout'], 0, -1):
+            for seconds in range(self.config['ImageCapture']['TriggerTimeout'], 0, -1):
                 # If statement used to suppress the status update if the Stop button is pressed
                 if self.run_flag:
                     self.emit(SIGNAL("update_status(QString)"), 'Image saved. %s second timeout...' % seconds)

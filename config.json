@@ -1,63 +1,74 @@
 {
-    "BuildFolder": "D:/Documents/MCAM/Defect Monitor/builds", 
-    "BuildName": "Default", 
-    "CalibrationFile": "D:/Documents/MCAM/Defect Monitor/camera_parameters.txt", 
-    "CalibrationHeight": 7, 
-    "CalibrationWidth": 9, 
-    "CaptureCount": 1, 
-    "ConvertContours": "True", 
-    "CropBoundary": [
-        1581, 
-        3991, 
-        398, 
-        3868
-    ], 
-    "CurrentLayer": 0.5, 
-    "CurrentPhase": 1, 
-    "DownscalingRatio": 1, 
-    "EmailAddress": "nicholascklee@gmail.com", 
-    "ExposureTimeAbs": 10000, 
-    "FrameTransmissionDelay": 0, 
-    "ImageFolder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-22 [15''43'30] Default", 
-    "InterPacketDelay": 500, 
-    "Offset": [
-        39, 
-        122
-    ], 
-    "PacketSize": 1500, 
-    "PixelFormat": 0, 
-    "PlatformDimensions": [
-        636.0, 
-        406.0
-    ], 
-    "RotationAngle": 180, 
-    "ScaleFactor": 5.333333333333333, 
-    "SliceFiles": [
-        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 04.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 05.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 06.cli", 
-        "D:/Documents/MCAM/Defect Monitor/slice/temp/Part 07.cli"
-    ], 
-    "TransformationParameters": [
-        20, 
-        -10, 
-        0, 
-        0, 
-        0, 
-        -80, 
-        0, 
-        35, 
-        0, 
-        0, 
-        -55, 
-        10, 
-        0, 
-        -5, 
-        5, 
-        0, 
-        10
-    ], 
-    "TriggerTimeout": 5, 
-    "Username": "Nicholas Lee", 
+    "BuildInfo": {
+        "ConvertContours": "True", 
+        "EmailAddress": "nicholascklee@gmail.com", 
+        "Folder": "D:/Documents/MCAM/Defect Monitor/builds", 
+        "Name": "Default", 
+        "Platform": 0, 
+        "PlatformDimensions": [
+            636.0, 
+            406.0
+        ], 
+        "Username": "Nicholas Lee"
+    }, 
+    "CameraCalibration": {
+        "DownscalingRatio": 1, 
+        "Height": 7, 
+        "Width": 9
+    }, 
+    "CameraSettings": {
+        "ExposureTimeAbs": 10000, 
+        "FrameTransmissionDelay": 0, 
+        "InterPacketDelay": 500, 
+        "PacketSize": 1500, 
+        "PixelFormat": 0
+    }, 
+    "ImageCapture": {
+        "Folder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-24 [12''39'43] ASDF", 
+        "Layer": 0.5, 
+        "Phase": 1, 
+        "Single": 1, 
+        "TriggerTimeout": 5
+    }, 
+    "ImageCorrection": {
+        "CropBoundary": [
+            1581, 
+            3991, 
+            398, 
+            3868
+        ], 
+        "Offset": [
+            39, 
+            122
+        ], 
+        "ScaleFactor": 5.333333333333333, 
+        "TransformParameters": [
+            20, 
+            -10, 
+            0, 
+            0, 
+            0, 
+            -80, 
+            0, 
+            35, 
+            0, 
+            0, 
+            -55, 
+            10, 
+            0, 
+            -5, 
+            5, 
+            0, 
+            10
+        ]
+    }, 
+    "SliceConverter": {
+        "Files": [
+            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 01.cli", 
+            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 02.cli", 
+            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 04.cli", 
+            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 05.cli"
+        ]
+    }, 
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
 }

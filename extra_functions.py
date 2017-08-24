@@ -7,29 +7,28 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from PyQt4.QtCore import QThread, SIGNAL
+from PyQt4.QtCore import *
 
 
 class Stopwatch(QThread):
-    """ Module used to simulate a stopwatch"""
+    """Module used to simulate a stopwatch"""
 
     def __init__(self):
 
-        # Defines the class as a thread
         QThread.__init__(self)
 
-        # Resets the stopwatch
+        # Reset the stopwatch
         self.stopwatch_elapsed = 0
         self.stopwatch_idle = 0
 
-        # Flag to start and terminate the while loop
+        # Flag to terminate the while loop
         self.run_flag = True
 
     def run(self):
         while self.run_flag:
             # Send a formatted time string to the main function
-            time_elapsed = self.convert2time(self.stopwatch_elapsed)
-            time_idle = self.convert2time(self.stopwatch_idle)
+            time_elapsed = self.format_time(self.stopwatch_elapsed)
+            time_idle = self.format_time(self.stopwatch_idle)
             self.emit(SIGNAL("update_time(QString, QString)"), time_elapsed, time_idle)
 
             # Sleep for one second
@@ -43,63 +42,58 @@ class Stopwatch(QThread):
             # if self.countdown == 300:
             #     self.emit(SIGNAL("send_notification()"))
 
-    def convert2time(self, time):
-        seconds = time % 60
-        minutes = (time % 3600) / 60
-        hours = time / 3600
-        return '%s:%s:%s' % (str(hours).zfill(2), str(minutes).zfill(2), str(seconds).zfill(2))
+    def format_time(self, time):
+        """Format the individual seconds, minutes and hours into a proper time format"""
+        seconds = str(time % 60).zfill(2)
+        minutes = str((time % 3600) / 60).zfill(2)
+        hours = str(time / 3600).zfill(2)
+
+        return '%s:%s:%s' % (hours, minutes, seconds)
 
     def reset_time_idle(self):
         """Resets the countdown timer whenever this function is called"""
-
         self.stopwatch_idle = 0
 
     def stop(self):
+        """Stop the stopwatch entirely"""
         self.run_flag = False
 
 
 class Notifications(QThread):
-    """Module used to send email notifications to a specified email address"""
+    """Module used to send email notifications to a specified email address
+    Attachments such as images can be sent as well"""
 
-    def __init__(self, subject):
+    def __init__(self, subject, message, attachment_name=None):
 
-        # Defines the class as a thread
         QThread.__init__(self)
 
-        # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
-        self.sender = 'donotreply.amaero@gmail.com'
+        # Construct the email using the received subject and message
+        self.message = MIMEMultipart()
+        self.message['From'] = self.config['Notifications']['Sender']
+        self.message['To'] = self.config['BuildInfo']['EmailAddress']
+        self.message['Subject'] = subject
+        self.message.attach(MIMEText(message, 'plain'))
 
-        # Create the email here
-        self.email = MIMEMultipart()
-        self.email['From'] = self.sender
-        self.email['To'] = self.config['EmailAddress']
-        self.email['Subject'] = str(subject)
-        self.email['X-Priority'] = '3'
-
-        # Create the message here individually
-        head = 'Dear %s,' % self.config['Username']
-        body = 'This is a test email to see whether the email address is valid.'
-        foot = ''
-
-        # Create the full message by combining parts
-        self.email.attach(MIMEText(head + '\n\n' + body + '\n\n' + foot, 'plain'))
+        # Add the attachment if received
+        if attachment_name:
+            attachment = open(attachment_name, 'rb')
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload((attachment).read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment; filename= %s' % os.path.basename(attachment_name))
+            self.message.attach(part)
 
     def run(self):
-        self.send_notification()
-
-    def send_notification(self):
-
+        # Connect to the gmail server, login to the default sender email and send the message
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(self.sender, 'Amaero2017')
-        server.sendmail(self.sender, self.config['EmailAddress'], self.email.as_string())
+        server.login(self.config['Notifications']['Sender'], self.config['Notifications']['Password'])
+        server.sendmail(self.config['Notifications']['Sender'], self.config['BuildInfo']['EmailAddress'],
+                        self.message.as_string())
         server.quit()
-
-    def add_attachment(self):
-        pass
 
 
 class FolderMonitor(QThread):
@@ -126,7 +120,7 @@ class FolderMonitor(QThread):
             # Loop through all five folders
             for index, folder in enumerate(self.folders):
                 # Acquire the new length of the folder in question
-                length_new[index] = self.poll_folder(folder)
+                length_new[index] = len(os.walk(folder).next()[2])
 
                 # Emit a signal with the new length and the folder's index back to the MainWindow if different
                 if not length_new[index] == length_old[index]:
@@ -136,10 +130,6 @@ class FolderMonitor(QThread):
 
             # Delay the loop by a second to severely reduce CPU usage
             time.sleep(1)
-
-    def poll_folder(self, folder):
-        """Checks the given folder and returns the number of files in that directory"""
-        return len(os.walk(folder).next()[2])
 
     def stop(self):
         """Method that happens when the MainWindow is closed"""

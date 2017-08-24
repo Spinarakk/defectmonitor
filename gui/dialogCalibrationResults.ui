@@ -361,7 +361,7 @@
    <sender>buttonDone</sender>
    <signal>clicked()</signal>
    <receiver>dialogCalibrationResults</receiver>
-   <slot>accept()</slot>
+   <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>285</x>

@@ -1,10 +1,8 @@
 import numpy as np
 import cv2
-import os
 import json
 import copy
-import time
-from PyQt4.QtCore import QThread, SIGNAL
+from PyQt4.QtCore import *
 
 COLOR_BLACK = np.array((0, 0, 0))
 COLOR_WHITE = np.array((255, 255, 255))
@@ -52,7 +50,7 @@ class DefectDetection(QThread):
             #     os.mkdir('defects')
             # add argument [cv2.CV_IMWRITE_JPEG_QUALITY, x] to change quality of image
             # where x has a range from 0-100(higher = better quality), default is at 95
-            cv2.imwrite('%s/defects/coat/layer_%s.jpg' % (self.config['ImageFolder'], self.layer_number), self.analyzed)
+            cv2.imwrite('%s/defects/coat/layer_%s.jpg' % (self.config['ImageCapture']['Folder'], self.layer_number), self.analyzed)
             if not self.is_empty(self.defects_on_contours):
                 report.write('Possible overlapping defects: \n')
                 for key in self.defects_on_contours:
