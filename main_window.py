@@ -74,6 +74,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionDefectProcess.triggered.connect(self.defect_processing)
         self.actionImageConverter.triggered.connect(self.image_converter)
+        self.actionOverlayAdjustment.triggered.connect(self.overlay_adjustment)
         self.actionSettings.triggered.connect(self.change_settings)
 
         # Menubar -> Help
@@ -119,15 +120,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.FM_instance = None
 
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
-        self.camera_calibration_dialog = None
-        self.slice_converter_dialog = None
-        self.image_capture_dialog = None
-        self.overlay_adjustment_dialog = None
+        self.CC_dialog = None
+        self.CS_dialog = None
+        self.SC_dialog = None
+        self.IC_dialog = None
+        self.OA_dialog = None
+
+        # Initiate an empty config file name to be used for saving purposes
+        self.config_name = None
 
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
-        # The current tab's index will be used to grab the corresponding list or name
+        # The current tab's index will be used to grab the corresponding image, list or name
         self.display = {'Image': [0, 0, 0, 0], 'ImageList': [[], [], [], []],
                         'LayerRange': [1, 1, 1, 1], 'SliderValue': [1, 1, 1, 1],
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'],
@@ -137,17 +142,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     # MENUBAR -> FILE
 
     def new_build(self):
-        """Opens a Dialog Window when File > New Build... is clicked
+        """Opens a Modal Dialog Window when File -> New... is clicked
         Allows the user to setup a new build and change settings
-        Setup as a Modal window, blocking input to other visible windows until this window is closed
         """
 
         # Create a new build dialog variable and execute it as a modal window
-        new_build_dialog = dialog_windows.NewBuild(self)
-        retval = new_build_dialog.exec_()
+        NB_dialog = dialog_windows.NewBuild(self)
 
         # Executes the following if the OK button is clicked, otherwise nothing happens
-        if retval:
+        if NB_dialog.exec_():
             # Load configuration settings from config.json file
             with open('config.json') as config:
                 self.config = json.load(config)
@@ -155,9 +158,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.setup_build()
 
     def open_build(self):
-        """Opens a File Dialog when File > Open Build... is clicked
+        """Opens a File Dialog when File -> Open... is clicked
         Allows the user to select a previous build's configuration settings
-        Subsequently opens the new build dialog with all the boxes filled in, allowing the user to make changes
+        Subsequently opens the New Build Dialog Window with all the boxes filled in, allowing the user to make changes
         """
 
         # Acquire the name of the config file to be opened and read
@@ -171,8 +174,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             with open('config.json', 'w+') as config:
                 json.dump(self.config, config, indent=4, sort_keys=True)
 
-            open_build_dialog = dialog_windows.NewBuild(self, open_flag=True)
-            retval = open_build_dialog.exec_()
+            self.config_name = file_name
+
+            OB_dialog = dialog_windows.NewBuild(self, open_flag=True)
+            retval = OB_dialog.exec_()
 
             if retval:
                 self.setup_build(True)
@@ -205,6 +210,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Enable certain UI elements
             self.actionSave.setEnabled(True)
+            self.actionSaveAs.setEnabled(True)
             self.buttonImageCapture.setEnabled(True)
             self.buttonCheckCT.setEnabled(True)
 
@@ -224,10 +230,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Checks for a valid attached camera and trigger
             self.update_status('Checking for valid camera and trigger...')
             self.check_camera_trigger()
-            if not open_flag and 'True' in self.config['BuildInfo']['ConvertContours']:
+
+            # Converts and draws the contours
+            if self.config['BuildInfo']['Convert']:
                 # Instantiate and run a SliceConverter instance
-                self.update_status('Converting slice files into contours...')
-                self.SC_instance = slice_converter.SliceConverter(self.config['SliceConverter']['Files'], True, True)
+                self.SC_instance = slice_converter.SliceConverter(self.config['SliceConverter']['Files'],
+                                                                  self.config['BuildInfo']['Draw'])
                 self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
                 self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
                 self.connect(self.SC_instance, SIGNAL("finished()"), self.setup_build_finished)
@@ -236,35 +244,35 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.setup_build_finished()
 
     def setup_build_finished(self):
-
         self.update_status('Build %s setup complete.' % self.config['BuildInfo']['Name'])
 
     def clear_menu(self):
         pass
 
     def save_build(self):
-        """Opens a FileDialog Window when File > Save Build... is clicked
+        """Saves the current build to the config.json file when File -> Save is clicked
+        Executes save_as_build instead if this is the first time the build is being saved
+        """
+
+        if self.config_name:
+            # Save the config file as the given name in the given location
+            with open(self.config_name, 'w+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
+            self.update_status('Build saved to %s.' % os.path.basename(self.config_name), 5000)
+        else:
+            self.save_as_build()
+
+    def save_as_build(self):
+        """Opens a File Dialog when File -> Save As... is clicked
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
-        
-        config_name = QFileDialog.getSaveFileName(self, 'Save Build As', '', 'JSON File (*.json)',
-                                                                   selectedFilter='*.json')
+        config_name = str(QFileDialog.getSaveFileName(self, 'Save Build As', '', 'JSON File (*.json)',
+                                                                   selectedFilter='*.json'))
 
         # Checking if user has chosen to save the build or clicked cancel
         if config_name:
-            # Save the config file as the given name in the given location
-            with open(config_name, 'w+') as config:
-                json.dump(self.config, config, indent=4, sort_keys=True)
-
-            # Open a message box with a save confirmation message
-            self.save_confirmation = QMessageBox()
-            self.save_confirmation.setIcon(QMessageBox.Information)
-            self.save_confirmation.setText('The build has been saved to %s.' % config_name)
-            self.save_confirmation.setWindowTitle('Save Build')
-            self.save_confirmation.exec_()
-
-    def save_as_build(self):
-        pass
+            self.config_name = config_name
+            self.save_build()
 
     def export_image(self):
         """Opens a FileDialog Window when File > Export Image... is clicked
@@ -300,88 +308,92 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     # MENUBAR -> TOOLS
 
     def camera_calibration(self):
-        """Opens a Dialog Window when the Camera Calibration button is clicked
-        Allows the user to specify a folder of checkboard images to calibrate the attached camera
-        Setup as a Modeless window, operating independently of other windows
+        """Opens a Modeless Dialog Window when the Camera Calibration button is clicked
+        Or when Tools -> Camera -> Calibration is clicked
+        Allows the user to select a folder of chessboard images to calculate the camera's intrinsic values for calibration
         """
-
-        self.update_status('')
 
         # Check if the dialog window is already open, if not, create a new window and open it
-        # Else focus is given back to the open window
+        # Otherwise focus is given back to the open window
         # Signals listen for if the window is closed, and sets the window to None if so
-        if self.camera_calibration_dialog is None:
-            self.camera_calibration_dialog = dialog_windows.CameraCalibration(self)
-            try:
-                self.connect(self.camera_calibration_dialog, SIGNAL("accepted()"), self.camera_calibration_closed)
-            except RuntimeError:
-                self.camera_calibration_closed()
-        try:
-            self.camera_calibration_dialog.show()
-            self.camera_calibration_dialog.activateWindow()
-        except RuntimeError:
-            self.camera_calibration_closed()
+        if self.CC_dialog is None:
+            self.CC_dialog = dialog_windows.CameraCalibration(self)
+            self.connect(self.CC_dialog, SIGNAL("destroyed()"), self.camera_calibration_closed)
+            self.CC_dialog.show()
+        else:
+            self.CC_dialog.activateWindow()
 
     def camera_calibration_closed(self):
-        self.camera_calibration_dialog = None
+        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
+        self.CC_dialog = None
 
     def image_capture(self):
-        """Opens a Dialog Window when the Image Capture button is clicked
+        """Opens a Modeless Dialog Window when the Image Capture button is clicked
+        Or when Tools -> Camera -> Image Capture is clicked
         Allows the user to capture images from an attached camera, either a single shot or continuously using a trigger
-        Setup as a Modeless window, operating independently of other windows
         """
 
-        self.update_status('')
-
-        if self.image_capture_dialog is None:
-            self.image_capture_dialog = dialog_windows.ImageCapture(self, self.config['ImageCapture']['Folder'])
-            try:
-                self.connect(self.image_capture_dialog, SIGNAL("accepted()"), self.image_capture_closed)
-                self.connect(self.image_capture_dialog, SIGNAL("tab_focus(QString, QString)"), self.tab_focus)
-            except RuntimeError:
-                self.image_capture_closed()
-        try:
-            self.image_capture_dialog.show()
-            self.image_capture_dialog.activateWindow()
-        except RuntimeError:
-            self.image_capture_dialog = None
+        if self.IC_dialog is None:
+            self.IC_dialog = dialog_windows.ImageCapture(self, self.config['ImageCapture']['Folder'])
+            self.connect(self.IC_dialog, SIGNAL("destroyed()"), self.image_capture_closed)
+            self.connect(self.IC_dialog, SIGNAL("tab_focus(QString, QString)"), self.tab_focus)
+            self.IC_dialog.show()
+        else:
+            self.IC_dialog.activateWindow()
 
     def image_capture_closed(self):
-        self.image_capture_dialog = None
+        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
+        self.IC_dialog = None
 
     def camera_settings(self):
-        """Opens a Dialog Window when Setup > Camera Settings is clicked
+        """Opens a Modeless Dialog Window when Tools -> Camera -> Settings is clicked
         Allows the user to change camera settings which will be sent to the camera before images are taken
-        Setup as a Modeless window, operating independently of other windows
         """
 
-        # Create the dialog variable and execute it as a modeless window
-        camera_settings_dialog = dialog_windows.CameraSettings(self)
-        camera_settings_dialog.show()
-        camera_settings_dialog.activateWindow()
+        if self.CS_dialog is None:
+            self.CS_dialog = dialog_windows.CameraSettings(self)
+            self.connect(self.CS_dialog, SIGNAL("destroyed()"), self.camera_settings_closed)
+            self.CS_dialog.show()
+        else:
+            self.CS_dialog.activateWindow()
+
+    def camera_settings_closed(self):
+        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
+        self.CS_dialog = None
 
     def slice_converter(self):
-        """Opens a Dialog Window when the Slice Converter button is clicked
-        Allows the user to convert any slice files from .cls or .cli format into ASCII format
-        Setup as a Modeless window, operating independently of other windows
+        """Opens a Modeless Dialog Window when the Slice Converter button is clicked
+        Or when Tools -> Slice Converter is clicked
+        Allows user to convert .cls or .cli files into ASCII encoded scaled contours that OpenCV can draw
         """
 
-        self.update_status('')
-
-        if self.slice_converter_dialog is None:
-            self.slice_converter_dialog = dialog_windows.SliceConverter(self)
-            try:
-                self.connect(self.slice_converter_dialog, SIGNAL("accepted()"), self.slice_converter_closed)
-            except RuntimeError:
-                self.slice_converter_closed()
-        try:
-            self.slice_converter_dialog.show()
-            self.slice_converter_dialog.activateWindow()
-        except RuntimeError:
-            self.slice_converter_closed()
+        if self.SC_dialog is None:
+            self.SC_dialog = dialog_windows.SliceConverter(self)
+            self.connect(self.SC_dialog, SIGNAL("destroyed()"), self.slice_converter_closed)
+            self.SC_dialog.show()
+        else:
+            self.SC_dialog.activateWindow()
 
     def slice_converter_closed(self):
-        self.slice_converter_dialog = None
+        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
+        self.SC_dialog = None
+
+    def overlay_adjustment(self):
+        """Opens a Modeless Dialog Window when the Overlay Adjustment button is clicked
+        Or when Tools -> Overlay Adjustment is clicked
+        Allows the user to adjust and transform the overlay image in a variety of ways
+        """
+
+        if self.OA_dialog is None:
+            self.OA_dialog = dialog_windows.OverlayAdjustment(self)
+            self.connect(self.OA_dialog, SIGNAL("destroyed()"), self.overlay_adjustment_closed)
+            self.connect(self.OA_dialog, SIGNAL("update_overlay(PyQt_PyObject)"), self.update_overlay)
+        else:
+            self.OA_dialog.activateWindow()
+
+    def overlay_adjustment_closed(self):
+        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
+        self.OA_dialog = None
 
     def defect_processing(self):
         """Executes when the Analyze for Defects button is clicked
@@ -457,40 +469,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             self.update_progress(100)
             self.update_status('Image successfully processed.')
-
-    def overlay_adjustment(self):
-        """Opens a Dialog Window when the Overlay Adjustment button is clicked
-        Allows the user to transform the overlayed image in a variety of ways
-        Setup as a Modeless window, operating independently of other windows
-        """
-
-        self.update_status('')
-
-        if self.overlay_adjustment_dialog is None:
-            self.overlay_adjustment_dialog = dialog_windows.OverlayAdjustment(self)
-            try:
-                self.connect(self.overlay_adjustment_dialog, SIGNAL("accepted()"), self.overlay_adjustment_close)
-                self.connect(self.overlay_adjustment_dialog, SIGNAL("overlay_adjustment_execute(PyQt_PyObject)"),
-                             self.overlay_adjustment_execute)
-            except RuntimeError:
-                self.overlay_adjustment_close()
-        try:
-            self.overlay_adjustment_dialog.show()
-            self.overlay_adjustment_dialog.activateWindow()
-        except RuntimeError:
-            self.overlay_adjustment_dialog = None
-
-    def overlay_adjustment_execute(self, transform):
-        """Executes the adjustment of the overlay"""
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        self.transform = transform
-
-        self.update_display()
-
-    def overlay_adjustment_close(self):
-        self.overlay_adjustment_dialog = None
 
     def change_settings(self):
         pass
@@ -615,6 +593,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 label.setPixmap(self.convert2pixmap(image_processing.ImageCorrection.clahe(image), label))
             else:
                 label.setPixmap(self.convert2pixmap(image, label))
+
+    def update_overlay(self, transform):
+        """Executes the adjustment of the overlay"""
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        self.transform = transform
+
+        self.update_display()
 
     @staticmethod
     def convert2pixmap(image, label):
@@ -759,14 +746,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.spinLayer.setToolTip('1 - %s' % self.display['LayerRange'][index])
         self.display['SliderNames'][index].setMaximum(self.display['LayerRange'][index])
 
-    def update_status(self, string, duration=0):
-        """Updates the custom status bar at the bottom of the Main Window with the received string argument"""
-        self.statusBar.showMessage(string, duration)
-
-    def update_progress(self, percentage):
-        """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
-        self.progressBar.setValue(int(percentage))
-
     def check_camera_trigger(self):
         """Checks for a valid attached camera and trigger"""
         camera_flag = self.image_capture_module.ImageCapture().acquire_camera()
@@ -792,6 +771,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.update_display()
             return True
         return QMainWindow.eventFilter(self, label, event)
+
+    def update_status(self, string, duration=0):
+        """Updates the default status bar at the bottom of the Main Window with the received string argument"""
+        self.statusBar.showMessage(string, duration)
+
+    def update_progress(self, percentage):
+        """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
+        self.progressBar.setValue(int(percentage))
 
     # CLEANUP
 

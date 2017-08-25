@@ -11,13 +11,10 @@ import image_processing
 class SliceConverter(QThread):
     """Module used to convert any slice files from .cls or .cli format into ASCII format
     Output can then be used to draw contours using OpenCV
-    Currently only supports converting .cls files
-    Future implementation will look to either shifting or adding .cli slice conversion
-
     Currently takes in a .cls or .cli file and parses it, saving it as a .txt file after conversion
     """
 
-    def __init__(self, part_names, draw_flag, fill_flag, contours_folder=None):
+    def __init__(self, part_names, draw_flag, contours_folder=None):
 
         QThread.__init__(self)
 
@@ -35,29 +32,21 @@ class SliceConverter(QThread):
         # Store the received arguments as local instance variables
         self.part_names = part_names
         self.draw_flag = draw_flag
-        self.fill_flag = fill_flag
         self.contours_folder = contours_folder
 
     def run(self):
 
         for part_name in self.part_names:
-
-            self.emit(SIGNAL("update_status_slice(QString)"), os.path.basename(part_name))
-
             # Executes if the sent file is a .cls file
             if '.cls' in part_name:
                 # Look for an already converted contours file
                 if not os.path.isfile(part_name.replace('.cls', '_contours.txt')):
-                    self.convert2contours(part_name.replace('.cli', '_contours.txt'), self.read_cls(part_name))
+                    self.format_contours(part_name.replace('.cli', '_contours.txt'), self.read_cls(part_name))
             # Executes if the sent file is a .cli file
             elif '.cli' in part_name:
                 # Look for an already converted contours file
                 if not os.path.isfile(part_name.replace('.cli', '_contours.txt')):
-                    self.convert2contours(part_name.replace('.cli', '_contours.txt'), self.read_cli(part_name))
-            else:
-                self.emit(SIGNAL("update_status(QString)"), 'Slice file not found.')
-
-            self.emit(SIGNAL("update_status(QString)"), 'Contours file %s found.' % os.path.basename(part_name))
+                    self.format_contours(part_name.replace('.cli', '_contours.txt'), self.read_cli(part_name))
 
         if self.draw_flag:
             # Create a dictionary of colours (different shades of teal) for each part's contours
@@ -65,16 +54,14 @@ class SliceConverter(QThread):
             for index, part_name in enumerate(self.part_names):
                 colours['%s' % os.path.basename(part_name)] = ((100 + 5 * index) % 255, (100 + 5 * index) % 255, 0)
 
-            self.emit(SIGNAL("update_status_slice(QString)"), 'All.')
-
-
             # Draw and save the contours to an image file
             self.draw_contours(self.part_names, colours, self.contours_folder)
 
     def read_cls(self, file_name):
         """Reads the .cls file and converts the contents into ASCII, then organises the data into a list"""
 
-        self.emit(SIGNAL("update_status(QString)"), 'Reading CLS file...')
+        self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Reading CLS file...' %
+                  os.path.basename(file_name).replace('.cls', ''))
 
         # Set up a few flags, counters and lists
         layer_flag = False
@@ -145,15 +132,16 @@ class SliceConverter(QThread):
 
     def read_cli(self, file_name):
         """Reads the .cli file and converts the contents into an organised list
-        Assume ascii format, but switch to read binary and convert to ascii if file is encoded in binary"""
+        Assume ASCII encoding, but switch to read binary and convert to ASCII if file is encoded in binary"""
 
-        self.emit(SIGNAL("update_status(QString)"), 'Reading CLI file... ASCII encoding detected.')
+        self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Reading CLI (ASCII) file...' %
+                  os.path.basename(file_name).replace('.cli', ''))
         self.emit(SIGNAL("update_progress(QString)"), '0')
 
         # Set up a few flags, counters and lists
         binary_flag = False
         data_ascii = list()
-        line_ascii = ''
+        line_ascii = str()
 
         # UI Progress and Status Messages
         progress = 0.0
@@ -179,31 +167,34 @@ class SliceConverter(QThread):
             for line in cli_file:
                 if binary_flag:
                     break
-                # Check if the line is empty or not (because of the removal of random newline characters
+                # Check if the line is empty or not (because of the removal of random newline characters)
                 if line.rstrip('\r\n/n'):
                     data_ascii.append(line.rstrip('\r\n/n'))
-                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+
                 if int(round(progress)) is not progress_previous:
                     self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
                     progress_previous = int(round(progress))
                 progress += increment
 
-        layer_flag = False
-        layer_count = 0
-        polyline_count = 0
-        vector_count = 0
-        header_length = 0
-        asdf = str()
         if binary_flag:
-            self.emit(SIGNAL("update_status(QString)"), 'Reading CLI file... Binary encoding detected.')
-            progress = 0.0
+            # UI Progress and Status Messages
             progress_previous = None
+            self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Reading CLI (Binary) file...' %
+                      os.path.basename(file_name).replace('.cli', ''))
+
+            # Set up a few flags, counters and lists
+            layer_flag = False
+            layer_count = 0
+            polyline_count = 0
+            vector_count = 0
+            header_length = 0
 
             # The file needs to be read as binary if it was encoded in binary
             with open(file_name, 'rb') as cli_file:
                 increment = 100.0 / sum(1 for _ in cli_file.read())
                 # Go back to the start of the file as getting the length of the file put the seek head to the EOF
                 cli_file.seek(0)
+
                 for line in cli_file:
                     header_length += len(line)
                     if 'UNITS' in line.strip():
@@ -211,15 +202,19 @@ class SliceConverter(QThread):
                     elif 'HEADEREND' in line.strip():
                         data_binary = line.replace('$$HEADEREND', '')
                         break
+
                 header_length -= len(data_binary)
                 progress = header_length * increment
+
                 for line in cli_file:
                     data_binary += line
                     while len(data_binary) > 1:
-                        element_one = data_binary[0]
-                        element_two = data_binary[1]
-                        decimal = int(bin(ord(element_two))[2:].zfill(8) + bin(ord(element_one))[2:].zfill(8), 2)
+                        # Take the first and second element of the string and convert the unicode character
+                        # Into an integer, then into a binary number
+                        decimal = int(bin(ord(data_binary[1]))[2:].zfill(8) + bin(ord(data_binary[0]))[2:].zfill(8), 2)
                         data_binary = data_binary[2::]
+
+                        # Check for command indexes (128 and 129) and replace with appropriate ASCII labels
                         if layer_flag:
                             line_ascii += (str(decimal) + ',')
                             layer_flag = False
@@ -241,63 +236,19 @@ class SliceConverter(QThread):
                             line_ascii = '$$POLYLINE/'
                             polyline_count = 3
 
-                        # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
                         if int(round(progress)) is not progress_previous:
                             self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
                             progress_previous = int(round(progress))
-                        progress += increment*2
+                        progress += increment * 2
 
-            # layer_flag = False
-            # layer_count = 0
-            # polyline_count = 0
-            # vector_count = 0
-            #
-            # # UI Progress and Status Messages
-            # progress = 0.0
-            # progress_previous = None
-            # increment = 100.0 / (len(data_binary) / 2.0)
-            # self.emit(SIGNAL("update_status(QString)"), 'Converting Binary into ASCII...')
-            #
-            # for one, two in zip(data_binary[0::2], data_binary[1::2]):
-            #     # Convert the character unicode into an integer, then into a binary number
-            #     # Join the second binary number with the first binary number and convert the 16-bit bin number into int
-            #     decimal = int(bin(ord(two))[2:].zfill(8) + bin(ord(one))[2:].zfill(8), 2)
-            #     # Check for command indexes and replace with appropriate ascii words
-            #     if layer_flag:
-            #         line_ascii += (str(decimal) + ',')
-            #         layer_flag = False
-            #     elif polyline_count > 0:
-            #         line_ascii += (str(decimal) + ',')
-            #         polyline_count -= 1
-            #         if polyline_count == 0:
-            #             vector_count = decimal * 2
-            #     elif vector_count > 0:
-            #         line_ascii += (str(decimal) + ',')
-            #         vector_count -= 1
-            #     elif decimal == 128:
-            #         data_ascii.append(line_ascii.rstrip(','))
-            #         line_ascii = '$$LAYER/'
-            #         layer_count += 1
-            #         layer_flag = True
-            #     elif decimal == 129:
-            #         data_ascii.append(line_ascii.rstrip(','))
-            #         line_ascii = '$$POLYLINE/'
-            #         polyline_count = 3
-            #
-            #     # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-            #     if int(round(progress)) is not progress_previous:
-            #         self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
-            #         progress_previous = int(round(progress))
-            #     progress += increment
-
-            data_ascii[1] = layer_count
+        data_ascii[1] = layer_count
 
         return data_ascii
 
-    def convert2contours(self, file_name, data_ascii):
-        """Converts the data from the slice file into an organized scaled list of contours
+    def format_contours(self, file_name, data_ascii):
+        """Formats the data from the slice file into an organized scaled list of contours
         First element is the number of layers
-        Every layer starts with a START LAYER XX, YY list, followed by the list of contours, followed by a END LAYER
+        Every layer starts with a STARTLAYERXX, YY list, followed by the list of contours, followed by a ENDLAYER
         XX is the layer number, YY is the scaled layer height
         Method also saves the contours to a text file in real-time
         """
@@ -306,7 +257,8 @@ class SliceConverter(QThread):
         progress = 0.0
         progress_previous = None
         increment = 100.0 / (len(data_ascii))
-        self.emit(SIGNAL("update_status(QString)"), 'Converting data into organized list of contours...')
+        self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Formatting contour data...' %
+                  os.path.basename(file_name).replace('_contours.txt', ''))
         self.emit(SIGNAL("update_progress(QString)"), '0')
 
         # Initialize some variables to be used later
@@ -322,9 +274,9 @@ class SliceConverter(QThread):
                     # Strip the newline character from the end, and split the string where the slash appears
                     line = re.split('(/)', line.rstrip('\n'))
                     if layer_count is not 0:
-                        contours_file.write('%s\n' % ['END LAYER'])
+                        contours_file.write('%s\n' % ['ENDLAYER'])
                     layer_count += 1
-                    contours_file.write('%s\n' % ['START LAYER %s' % str(layer_count).zfill(4), float(line[2]) * units])
+                    contours_file.write('%s\n' % ['STARTLAYER%s' % str(layer_count).zfill(4), float(line[2]) * units])
                 elif 'POLYLINE' in line:
                     # Split each number into its own entry in a list
                     # Remove all the comma elements and the first 3 numbers
@@ -340,10 +292,8 @@ class SliceConverter(QThread):
                     progress_previous = int(round(progress))
                 progress += increment
 
-            # Write the final END LAYER to the contours file
-            contours_file.write('%s\n' % ['END LAYER'])
-
-        self.emit(SIGNAL("update_status(QString)"), 'Conversion complete.')
+            # Write the final ENDLAYER to the contours file
+            contours_file.write('%s\n' % ['ENDLAYER'])
 
     def draw_contours(self, file_names, colours, folder_name):
         """Draw all the contours of the selected parts on the same image"""
@@ -365,8 +315,6 @@ class SliceConverter(QThread):
         layer = 1
         layer_max = 10
 
-        contour_dict = dict()
-
         while layer < layer_max:
             # Create a black RGB image to draw contours on
             image_contours = np.zeros(self.image_resolution, np.uint8)
@@ -379,13 +327,13 @@ class SliceConverter(QThread):
                 with open(file_name.replace('.cli', '_contours.txt').replace('.cls', '_contours.txt')) as contours_file:
                     for line in contours_file:
                         # Grab the contours and format them as a numpy array that drawContours accepts
-                        if 'END LAYER' in line and contours_flag:
+                        if 'ENDLAYER' in line and contours_flag:
                             # Break to save a tiny bit of processing time once the current layer's contours are grabbed
                             break
                         elif contours_flag:
                             line = line.strip('[]\n').split(', ')
                             contours.append(np.array(line).reshape(1, len(line)/2, 2).astype(np.int32))
-                        elif 'START LAYER %s' % str(layer).zfill(4) in line:
+                        elif 'STARTLAYER%s' % str(layer).zfill(4) in line:
                             contours_flag = True
                         elif 'LAYERS' in line:
                             line = line.strip('[]\n').split(', ')
@@ -393,13 +341,8 @@ class SliceConverter(QThread):
                                 layer_max = int(line[1])
 
                 # Draw the contours onto the image_contours canvas
-                # If the Fill Contours checkbox is checked, fill the contours, otherwise just draw the contours itself
-                if self.fill_flag:
-                    cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
+                cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
                                      offset=self.offset, thickness=cv2.FILLED)
-                else:
-                    cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
-                                     offset=self.offset, thickness=int(self.scale_factor))
 
             self.emit(SIGNAL("update_status(QString)"), 'Drawing contours %s of %s.' %
                       (str(layer).zfill(4), str(layer_max).zfill(4)))
@@ -416,7 +359,6 @@ class SliceConverter(QThread):
             # Increment to the next layer
             layer += 1
 
-            # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
             progress += 100.0 / layer_max
             if int(round(progress)) is not progress_previous:
                 self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))

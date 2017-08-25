@@ -1,10 +1,11 @@
 {
     "BuildInfo": {
-        "ConvertContours": "True", 
+        "Convert": false, 
+        "Draw": false, 
         "EmailAddress": "nicholascklee@gmail.com", 
         "Folder": "D:/Documents/MCAM/Defect Monitor/builds", 
         "Name": "Default", 
-	"Platform": 0,
+        "Platform": 0, 
         "PlatformDimensions": [
             636.0, 
             406.0
@@ -14,6 +15,8 @@
     "CameraCalibration": {
         "DownscalingRatio": 1, 
         "Height": 7, 
+        "HomographyImage": "D:/Documents/MCAM/Defect Monitor/calibration/image_homography.png", 
+        "TestImage": "D:/Documents/MCAM/Defect Monitor/calibration/image_test.png", 
         "Width": 9
     }, 
     "CameraSettings": {
@@ -24,22 +27,70 @@
         "PixelFormat": 0
     }, 
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-24 [12''39'43] ASDF", 
+        "Folder": "D:/Documents/MCAM/Defect Monitor/builds/2017-08-25 [13''44'17] Test Build", 
         "Layer": 0.5, 
         "Phase": 1, 
         "Single": 1, 
         "TriggerTimeout": 5
     }, 
     "ImageCorrection": {
+        "CameraMatrix": [
+            [
+                2573.9702258668435, 
+                0.0, 
+                1920.0
+            ], 
+            [
+                0.0, 
+                2419.939227564816, 
+                1374.0
+            ], 
+            [
+                0.0, 
+                0.0, 
+                1.0
+            ]
+        ], 
         "CropBoundary": [
             1581, 
             3991, 
             398, 
             3868
         ], 
+        "DistortionCoefficients": [
+            [
+                -0.26404645686118916, 
+                0.12380914281304864, 
+                0.0, 
+                0.0, 
+                -0.028563851548739718
+            ]
+        ], 
+        "HomographyMatrix": [
+            [
+                -1.3717514701402647, 
+                -0.029707911312307923, 
+                5349.163109649917
+            ], 
+            [
+                0.8951034277710205, 
+                -1.9053315042198053, 
+                5235.8509593099225
+            ], 
+            [
+                0.00031351994616658, 
+                -2.191676197590638e-05, 
+                1.0
+            ]
+        ], 
         "Offset": [
             39, 
             122
+        ], 
+        "RMS": 1.6641703202354923, 
+        "Resolution": [
+            5605, 
+            5235
         ], 
         "ScaleFactor": 5.333333333333333, 
         "TransformParameters": [
@@ -62,12 +113,20 @@
             10
         ]
     }, 
+    "Notifications": {
+        "Error": false, 
+        "Failure": true, 
+        "Major": true, 
+        "Minor": true, 
+        "Password": "Amaero2017", 
+        "Sender": "donotreply.amaero@gmail.com"
+    }, 
     "SliceConverter": {
         "Files": [
-            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 01.cli", 
-            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 02.cli", 
-            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 04.cli", 
-            "D:/Documents/MCAM/Defect Monitor/slice/09-08-2017/Part 05.cli"
+            "D:/Documents/MCAM/Defect Monitor/slice/18-08-2017/Part 01.cli", 
+            "D:/Documents/MCAM/Defect Monitor/slice/18-08-2017/Part 02.cli", 
+            "D:/Documents/MCAM/Defect Monitor/slice/18-08-2017/Part 03.cli", 
+            "D:/Documents/MCAM/Defect Monitor/slice/18-08-2017/Part 04.cli"
         ]
     }, 
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"

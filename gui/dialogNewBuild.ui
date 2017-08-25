@@ -13,6 +13,18 @@
     <height>435</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>435</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>411</width>
+    <height>435</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>New Build</string>
   </property>
@@ -31,6 +43,9 @@
      <width>261</width>
      <height>26</height>
     </rect>
+   </property>
+   <property name="text">
+    <string>Default</string>
    </property>
    <property name="maxLength">
     <number>99</number>
@@ -80,21 +95,8 @@
    <property name="text">
     <string>Build Platform</string>
    </property>
-  </widget>
-  <widget class="QPushButton" name="buttonBrowseBF">
-   <property name="geometry">
-    <rect>
-     <x>310</x>
-     <y>180</y>
-     <width>91</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Select where the captured images for the current build will be stored.</string>
-   </property>
-   <property name="text">
-    <string>Browse</string>
+   <property name="buddy">
+    <cstring>comboPlatform</cstring>
    </property>
   </widget>
   <widget class="QLabel" name="labelBuildName">
@@ -115,6 +117,9 @@
    </property>
    <property name="text">
     <string>Build Name</string>
+   </property>
+   <property name="buddy">
+    <cstring>lineBuildName</cstring>
    </property>
   </widget>
   <widget class="QLabel" name="labelSliceFile">
@@ -137,30 +142,17 @@
     <string>Slice File(s)</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonBrowseSF">
-   <property name="geometry">
-    <rect>
-     <x>310</x>
-     <y>78</y>
-     <width>91</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Select the slice files to be used to draw the part contours.</string>
-   </property>
-   <property name="text">
-    <string>Browse</string>
-   </property>
-  </widget>
   <widget class="QLineEdit" name="lineBuildFolder">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>180</y>
+     <y>181</y>
      <width>291</width>
      <height>26</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::ClickFocus</enum>
    </property>
    <property name="readOnly">
     <bool>true</bool>
@@ -223,6 +215,9 @@
    <property name="text">
     <string>Username</string>
    </property>
+   <property name="buddy">
+    <cstring>lineUsername</cstring>
+   </property>
   </widget>
   <widget class="QLineEdit" name="lineUsername">
    <property name="geometry">
@@ -261,6 +256,9 @@
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
       <widget class="QCheckBox" name="checkAll">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>All</string>
        </property>
@@ -268,6 +266,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="checkMinor">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>Minor Defects</string>
        </property>
@@ -275,6 +276,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="checkMajor">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>Major Defects</string>
        </property>
@@ -282,6 +286,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="checkFailure">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>Capture Failure</string>
        </property>
@@ -289,6 +296,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="checkError">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>Program Error</string>
        </property>
@@ -315,6 +325,9 @@
    </property>
    <property name="text">
     <string>Email Address</string>
+   </property>
+   <property name="buddy">
+    <cstring>lineEmailAddress</cstring>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEmailAddress">
@@ -404,7 +417,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Close</string>
+    <string>Cancel</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="checkAddAttachment">
@@ -426,7 +439,54 @@
     <string>Add Test Attachment</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="buttonBrowseSF">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>78</y>
+     <width>93</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Select the slice files to be used to draw the part contours.</string>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="buttonBrowseBF">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>180</y>
+     <width>93</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Select where the captured images for the current build will be stored.</string>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
  </widget>
+ <tabstops>
+  <tabstop>lineBuildName</tabstop>
+  <tabstop>comboPlatform</tabstop>
+  <tabstop>listSliceFiles</tabstop>
+  <tabstop>checkConvert</tabstop>
+  <tabstop>checkDraw</tabstop>
+  <tabstop>lineUsername</tabstop>
+  <tabstop>lineEmailAddress</tabstop>
+  <tabstop>buttonSendTestEmail</tabstop>
+  <tabstop>checkAddAttachment</tabstop>
+  <tabstop>buttonBrowseSF</tabstop>
+  <tabstop>buttonBrowseBF</tabstop>
+  <tabstop>buttonCreate</tabstop>
+  <tabstop>buttonClose</tabstop>
+ </tabstops>
  <resources>
   <include location="icons.qrc"/>
  </resources>

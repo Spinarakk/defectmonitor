@@ -19,7 +19,6 @@ class Calibration(QThread):
         # Defines the class as a thread
         QThread.__init__(self)
 
-        # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -27,7 +26,6 @@ class Calibration(QThread):
         self.ratio = self.config['CameraCalibration']['DownscalingRatio']
         self.width = self.config['CameraCalibration']['Width']
         self.height = self.config['CameraCalibration']['Height']
-        self.working_directory = self.config['WorkingDirectory']
 
         # Flags are for whether to save the processed images to a folder
         self.calibration_folder = calibration_folder
@@ -35,15 +33,20 @@ class Calibration(QThread):
         self.save_undistort_flag = save_undistort_flag
 
         # Initialize a few lists to store pertinent data
-        self.images_calibration = []
-        self.images_valid = []
+
+        self.images_calibration = list()
+        self.images_valid = list()
+
+        # Create a copy of the ImageCorrection key of the config.json file to store the calibration results
+        self.results = dict()
+        self.results['ImageCorrection'] = self.config['ImageCorrection'].copy()
 
         # Image points are points in the 2D image plane
         # They are represented by the corners of the squares on the chessboard as found by findChessboardCorners
-        self.image_points_list = []
+        self.image_points_list = list()
         # Object Points are the points in the 3D real world space
         # They are represented as a series of points as relative to each other, and are created like (0,0), (1,0)...
-        self.object_points_list = []
+        self.object_points_list = list()
 
         # Create two folders inside the received calibration folder to store chessboard corner and undistorted images
         if self.save_chess_flag:
@@ -64,11 +67,8 @@ class Calibration(QThread):
 
     def run(self):
 
-        # Load required images into memory
-        # First image used to calculate homography in the chamber
-        # Second image used to test calibration and homography results
-        image_homography = cv2.imread('%s/calibration/image_homography.png' % self.working_directory, 0)
-        image_sample = cv2.imread('%s/calibration/image_sample.png' % self.working_directory)
+        # Load homography images into memory
+        image_homography = cv2.imread(self.config['CameraCalibration']['HomographyImage'], 0)
 
         # Termination Criteria
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -97,8 +97,10 @@ class Calibration(QThread):
                 cv2.calibrateCamera(self.object_points_list, self.image_points_list, self.resolution, None, None, flags=
                 cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
 
-            # Convert the rms into a numpy array so it can be saved
-            self.rms = np.array([(rms)]).astype('float')
+            # Save the calibration results to the results dictionary
+            self.results['ImageCorrection']['RMS'] = rms
+            self.results['ImageCorrection']['CameraMatrix'] = self.camera_matrix.tolist()
+            self.results['ImageCorrection']['DistortionCoefficients'] = self.distortion_coefficients.tolist()
 
             # If the Save Undistorted Images checkbox is checked
             if self.save_undistort_flag:
@@ -114,31 +116,12 @@ class Calibration(QThread):
                         self.progress += self.progress_step
                         self.emit(SIGNAL("update_progress(QString)"), str(int(math.ceil(self.progress))))
 
-            retval = self.find_homography(image_homography)
-            parameters = dict()
-            # If the homography matrix was successfully found
-            if retval:
-                # Save the camera_parameters to a text file camera_parameters.txt with appropriate headers
-                # with open('camera_parameters.txt', 'a+') as camera_parameters:
-                #     # Wipe the file before appending stuff
-                #     camera_parameters.truncate()
-                #
-                #     # Append the data
-                #     np.savetxt(camera_parameters, self.camera_matrix, header='Camera Matrix (3x3)')
-                #     np.savetxt(camera_parameters, self.distortion_coefficients, header='Distortion Coefficients (1x5)')
-                #     np.savetxt(camera_parameters, self.homography_matrix, header='Homography Matrix (3x3)')
-                #     np.savetxt(camera_parameters, self.resolution_output, fmt='%d', header='Output Resolution (1x2)')
-                #     np.savetxt(camera_parameters, self.rms, header='Re-projection Error (Root Mean Square)')
-                parameters['CameraMatrix'] = self.camera_matrix.tolist()
-                parameters['DistortionCoefficients'] = self.distortion_coefficients.tolist()
-                parameters['HomographyMatrix'] = self.homography_matrix.tolist()
-                parameters['Resolution'] = self.resolution_output
-                parameters['RMS'] = self.rms.tolist()
+            # If the homography matrix was successfully found, save the results to a temporary .json file
+            if self.find_homography(image_homography):
+                with open('%s/calibration_results.json' % self.config['WorkingDirectory'], 'w+') as results:
+                    json.dump(self.results, results, indent=4, sort_keys=True)
 
-                with open('camera_parameters.json', 'w+') as param:
-                    json.dump(parameters, param, indent=4, sort_keys=True)
-
-                self.emit(SIGNAL("update_status(QString)"), 'Parameters saved to camera_parameters.txt.')
+                self.emit(SIGNAL("update_status(QString)"), 'Calibration completed successfully.')
         else:
             self.emit(SIGNAL("update_status(QString)"),
                       'No valid chessboard images found. Check images or chessboard dimensions.')
@@ -254,12 +237,12 @@ class Calibration(QThread):
                                       [0, 1, -points_transform[:, 0][:, 1].min()], [0, 0, 1]])
 
             # Modify the homography matrix with the translation matrix using dot product
-            self.homography_matrix = np.dot(points_offset, homography_matrix)
+            self.results['ImageCorrection']['HomographyMatrix'] = np.dot(points_offset, homography_matrix).tolist()
 
             # Figure out the final resolution to crop the image to
             width_output = int(points_transform[:, 0][:, 0].max() - points_transform[:, 0][:, 0].min())
             height_output = int(points_transform[:, 0][:, 1].max() - points_transform[:, 0][:, 1].min())
-            self.resolution_output = (width_output, height_output)
+            self.results['ImageCorrection']['Resolution'] = (width_output, height_output)
 
             self.emit(SIGNAL("update_status(QString)"), 'Homography matrix found.')
 

@@ -29,9 +29,6 @@
    <iconset resource="icons.qrc">
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
-  <property name="modal">
-   <bool>false</bool>
-  </property>
   <widget class="QLabel" name="labelInformation">
    <property name="geometry">
     <rect>
@@ -56,9 +53,6 @@
      <width>151</width>
      <height>28</height>
     </rect>
-   </property>
-   <property name="focusPolicy">
-    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>Done</string>
@@ -1002,6 +996,38 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>buttonDone</tabstop>
+  <tabstop>spinPixels</tabstop>
+  <tabstop>spinDegrees</tabstop>
+  <tabstop>buttonReset</tabstop>
+  <tabstop>buttonUndo</tabstop>
+  <tabstop>buttonTranslateUp</tabstop>
+  <tabstop>buttonTranslateDown</tabstop>
+  <tabstop>buttonTranslateLeft</tabstop>
+  <tabstop>buttonTranslateRight</tabstop>
+  <tabstop>buttonStretchLeftUp</tabstop>
+  <tabstop>buttonStretchRightUp</tabstop>
+  <tabstop>buttonStretchUpLeft</tabstop>
+  <tabstop>buttonStretchNW</tabstop>
+  <tabstop>buttonStretchN</tabstop>
+  <tabstop>buttonStretchNE</tabstop>
+  <tabstop>buttonStretchUpRight</tabstop>
+  <tabstop>buttonStretchW</tabstop>
+  <tabstop>buttonResetStretch</tabstop>
+  <tabstop>buttonStretchE</tabstop>
+  <tabstop>buttonStretchDownLeft</tabstop>
+  <tabstop>buttonStretchSW</tabstop>
+  <tabstop>buttonStretchSE</tabstop>
+  <tabstop>buttonStretchS</tabstop>
+  <tabstop>buttonStretchDownRight</tabstop>
+  <tabstop>buttonStretchLeftDown</tabstop>
+  <tabstop>buttonStretchRightDown</tabstop>
+  <tabstop>buttonRotateACW</tabstop>
+  <tabstop>buttonRotateCW</tabstop>
+  <tabstop>buttonFlipHorizontal</tabstop>
+  <tabstop>buttonFlipVertical</tabstop>
+ </tabstops>
  <resources>
   <include location="icons.qrc"/>
  </resources>
@@ -1010,7 +1036,7 @@
    <sender>buttonDone</sender>
    <signal>clicked()</signal>
    <receiver>dialogOverlayAdjustment</receiver>
-   <slot>accept()</slot>
+   <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>386</x>

@@ -29,9 +29,6 @@
    <iconset resource="icons.qrc">
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
-  <property name="modal">
-   <bool>false</bool>
-  </property>
   <widget class="QLabel" name="labelInformation">
    <property name="geometry">
     <rect>
@@ -64,7 +61,7 @@
     <string>Browse...</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonStartConversion">
+  <widget class="QPushButton" name="buttonStart">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -77,7 +74,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Start Conversion</string>
+    <string>Start</string>
    </property>
   </widget>
   <widget class="QPushButton" name="buttonDone">
@@ -134,17 +131,17 @@
   <widget class="QLabel" name="labelStatusSlice">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>10</x>
      <y>216</y>
-     <width>371</width>
+     <width>391</width>
      <height>28</height>
     </rect>
    </property>
    <property name="text">
-    <string>Current Slice:</string>
+    <string>Current Part: None</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QCheckBox" name="checkDraw">
@@ -182,6 +179,9 @@
      <height>26</height>
     </rect>
    </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
    <property name="readOnly">
     <bool>true</bool>
    </property>
@@ -200,6 +200,14 @@
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>listSliceFiles</tabstop>
+  <tabstop>buttonBrowseSF</tabstop>
+  <tabstop>checkDraw</tabstop>
+  <tabstop>buttonBrowseF</tabstop>
+  <tabstop>buttonStart</tabstop>
+  <tabstop>buttonDone</tabstop>
+ </tabstops>
  <resources>
   <include location="icons.qrc"/>
  </resources>

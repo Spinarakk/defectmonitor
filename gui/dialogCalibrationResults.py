@@ -32,7 +32,7 @@ class Ui_dialogCalibrationResults(object):
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/resources/logo.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogCalibrationResults.setWindowIcon(icon)
         self.buttonDone = QtGui.QPushButton(dialogCalibrationResults)
-        self.buttonDone.setGeometry(QtCore.QRect(280, 370, 121, 28))
+        self.buttonDone.setGeometry(QtCore.QRect(310, 370, 91, 28))
         self.buttonDone.setObjectName(_fromUtf8("buttonDone"))
         self.labelRMS = QtGui.QLabel(dialogCalibrationResults)
         self.labelRMS.setGeometry(QtCore.QRect(10, 370, 271, 28))

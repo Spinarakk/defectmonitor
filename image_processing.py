@@ -17,7 +17,7 @@ class ImageCorrection(QThread):
     CLAHE (E)
     """
 
-    def __init__(self, image):
+    def __init__(self, image, test_flag=False):
 
         # Defines the class as a thread
         QThread.__init__(self)
@@ -28,9 +28,7 @@ class ImageCorrection(QThread):
 
         # Store received arguments as instance variables
         self.image = image
-
-        # Initiate a list to store all the camera parameters
-        self.camera_parameters = []
+        self.parameters = self.config['ImageCorrection']
 
         # # Load camera parameters from specified calibration file
         # with open('%s' % self.config['CalibrationFile']) as camera_parameters:
@@ -43,15 +41,15 @@ class ImageCorrection(QThread):
         # self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
         # self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
 
-        with open('camera_parameters.json') as camera_parameters:
-            self.parameters = json.load(camera_parameters)
+        if test_flag:
+            with open('%s/calibration_results.json' % self.config['WorkingDirectory']) as camera_parameters:
+                self.parameters = json.load(camera_parameters)
+                self.parameters = self.parameters['ImageCorrection']
 
         self.camera_matrix = np.array(self.parameters['CameraMatrix'])
         self.distortion_coefficients = np.array(self.parameters['DistortionCoefficients'])
         self.homography_matrix = np.array(self.parameters['HomographyMatrix'])
         self.output_resolution = tuple(self.parameters['Resolution'])
-
-        print 'asdf'
 
     def run(self):
         self.image_D = self.distortion_fix(self.image)
