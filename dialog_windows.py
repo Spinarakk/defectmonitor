@@ -55,6 +55,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
         if self.open_flag:
             self.setWindowTitle('Open Build')
+            self.buttonCreate.setText('Load')
             self.lineBuildName.setText(self.config['BuildInfo']['Name'])
             self.comboPlatform.setCurrentIndex(self.config['BuildInfo']['Platform'])
             self.slice_file_list = self.config['SliceConverter']['Files']
@@ -397,6 +398,8 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image)
             self.update_status('Test Image successfully processed.')
             self.update_progress(100)
+            # Open the image in the native image viewer for the user to view the results of the calibration
+            os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
 
         # Enable or disable relevant UI elements to prevent concurrent processes
         self.buttonBrowseF.setEnabled(True)
@@ -775,7 +778,7 @@ class ImageCapture(QDialog, dialogImageCapture.Ui_dialogImageCapture):
             json.dump(self.config, config, indent=4, sort_keys=True)
 
     def update_time(self, time_elapsed, time_idle):
-        """Updates the stopwatch label at the bottom of the dialog window with the received time"""
+        """Updates the timers at the bottom of the Dialog Window with the received time"""
         self.labelTimeElapsed.setText('Time Elapsed: %s' % time_elapsed)
         self.labelTimeIdle.setText('Time Idle: %s' % time_idle)
 

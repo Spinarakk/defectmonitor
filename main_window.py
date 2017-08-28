@@ -1,7 +1,7 @@
 # Import external libraries
 import os
 import sys
-import shutil
+import subprocess
 import json
 import cv2
 from PyQt4.QtGui import *
@@ -82,6 +82,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Display Options Group Box
         self.radioOriginal.toggled.connect(self.update_display)
         self.radioCLAHE.toggled.connect(self.update_display)
+        self.radioDefects.toggled.connect(self.update_display)
         self.checkToggleOverlay.toggled.connect(self.toggle_overlay)
 
         # Assorted Tools Group Box
@@ -96,8 +97,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonGo.clicked.connect(self.set_layer)
         self.buttonCheckCT.clicked.connect(self.check_camera_trigger)
 
-        # Display Widget Tabs
+        # Image Capture
+        self.buttonRun.clicked.connect(self.run)
+        self.buttonStop.clicked.connect(self.stop)
+        # self.buttonDisplayVF.clicked.connect(self.display_video)
+
+        # Display Widget
         self.widgetDisplay.currentChanged.connect(self.tab_change)
+        self.labelDisplayCE.customContextMenuRequested.connect(self.context_menu_display)
+        self.labelDisplaySE.customContextMenuRequested.connect(self.context_menu_display)
+        self.labelDisplayPC.customContextMenuRequested.connect(self.context_menu_display)
+        self.labelDisplayIC.customContextMenuRequested.connect(self.context_menu_display)
 
         # Sliders & Buttons
         self.sliderCE.valueChanged.connect(self.slider_change)
@@ -129,12 +139,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Initiate an empty config file name to be used for saving purposes
         self.config_name = None
 
+        # Create a context menu that will appear when the user right-clicks on any of the display labels
+        self.menu_display = QMenu()
+
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding image, list or name
-        self.display = {'Image': [0, 0, 0, 0], 'ImageList': [[], [], [], []],
-                        'LayerRange': [1, 1, 1, 1], 'SliderValue': [1, 1, 1, 1],
+        self.display = {'Image': [0, 0, 0, 0], 'ImageList': [[], [], [], []], 'LayerRange': [1, 1, 1, 1],
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'],
                         'LabelNames': [self.labelDisplayCE, self.labelDisplaySE, self.labelDisplayPC, self.labelDisplayIC],
                         'SliderNames': [self.sliderCE, self.sliderSE, self.sliderPC, self.sliderIC]}
@@ -151,10 +163,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Executes the following if the OK button is clicked, otherwise nothing happens
         if NB_dialog.exec_():
-            # Load configuration settings from config.json file
-            with open('config.json') as config:
-                self.config = json.load(config)
-
             self.setup_build()
 
     def open_build(self):
@@ -177,9 +185,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.config_name = file_name
 
             OB_dialog = dialog_windows.NewBuild(self, open_flag=True)
-            retval = OB_dialog.exec_()
 
-            if retval:
+            if OB_dialog.exec_():
                 self.setup_build(True)
 
     def setup_build(self, open_flag=False):
@@ -203,6 +210,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             # Set the imported module as an instance variable
             self.image_capture_module = image_capture
+
+            with open('config.json') as config:
+                self.config = json.load(config)
 
             # Store config settings as respective variables and update appropriate UI elements
             self.transform = self.config['ImageCorrection']['TransformParameters']
@@ -280,13 +290,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        image_name = QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)',
-                                                                   selectedFilter='*.png')
+        image_name = str(QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)',
+                                                                   selectedFilter='*.png'))
 
         # Checking if user has chosen to save the image or clicked cancel
         if image_name:
-            # Check which tab is currently being displayed on the widgetDisplay and grab the image
-            cv2.imwrite(str(image_name), self.display['Image'][self.widgetDisplay.currentIndex()])
+            # Save the currently displayed image which is saved as an entry in the display dictionary
+            cv2.imwrite(image_name, self.display['DisplayImage'])
 
             # Open a message box with a save confirmation message
             self.export_confirmation = QMessageBox()
@@ -480,6 +490,22 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Changes the displayed slider's value which in turn executes the slider_change method"""
         self.display['SliderNames'][self.widgetDisplay.currentIndex()].setValue(self.spinLayer.value())
 
+    def run(self):
+        self.buttonRun.setEnabled(False)
+        self.buttonStop.setEnabled(True)
+
+        self.stopwatch_instance = extra_functions.Stopwatch()
+        self.connect(self.stopwatch_instance, SIGNAL("update_time(QString, QString)"), self.update_time)
+        self.stopwatch_instance.start()
+
+    def stop(self):
+
+        self.stopwatch_instance.stop()
+
+        self.buttonRun.setEnabled(True)
+        self.buttonStop.setEnabled(False)
+
+
     # TOGGLES AND CHECKBOXES
 
     def toggle_overlay(self):
@@ -513,8 +539,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         for index in xrange(4):
             # Update the current image using the current value of the corresponding slider
             self.update_image(index)
-            # Start an event filter that detects changes in the label
-            self.display['SliderNames'][index].installEventFilter(self)
 
             # Checks if the list is empty or not
             if self.display['ImageList'][index]:
@@ -556,7 +580,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.buttonGo.setEnabled(True)
         self.update_layer_range(self.widgetDisplay.currentIndex())
 
-    def update_display(self):
+    def update_display(self, resize_flag=False):
         """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles"""
 
         # Grab the current tab index (for clearer code purposes)
@@ -570,29 +594,36 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if not self.display['ImageList'][index]:
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
         else:
-            if self.checkToggleOverlay.isChecked():
-                
-                self.update_image(2)
-                overlay = self.display['Image'][2]
-                
-                # Resizes the overlay image if the resolution doesn't match the displayed image
-                if overlay.shape[:2] != image.shape[:2]:
-                    overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
-
-                overlay = image_processing.ImageCorrection(None).transform(overlay, self.transform)
-
-                #self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
-                # Display a status message with the current transformation of the overlay image
-                self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
-                                   (self.transform[1], -self.transform[0], -1 * self.transform[2],
-                                    self.transform[4], self.transform[5]), 10000)
-                
-                image = cv2.add(image, overlay)
-
-            if self.radioCLAHE.isChecked():
-                label.setPixmap(self.convert2pixmap(image_processing.ImageCorrection.clahe(image), label))
+            # If the window was just resized, transform the currently displayed image rather than processing a new one
+            if resize_flag:
+                image = self.display['DisplayImage']
             else:
-                label.setPixmap(self.convert2pixmap(image, label))
+                if self.checkToggleOverlay.isChecked():
+
+                    self.update_image(2)
+                    overlay = self.display['Image'][2]
+
+                    # Resizes the overlay image if the resolution doesn't match the displayed image
+                    if overlay.shape[:2] != image.shape[:2]:
+                        overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
+
+                    overlay = image_processing.ImageCorrection(None).transform(overlay, self.transform)
+
+                    #self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
+                    # Display a status message with the current transformation of the overlay image
+                    self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
+                                       (self.transform[1], -self.transform[0], -1 * self.transform[2],
+                                        self.transform[4], self.transform[5]), 10000)
+
+                    image = cv2.add(image, overlay)
+
+                if self.radioCLAHE.isChecked():
+                    image = image_processing.ImageCorrection.clahe(image)
+
+            # Display the image on the current display label and save a copy of the image to the display dictionary
+            # This image copy will be used for export images and for resize events as it's faster
+            label.setPixmap(self.convert2pixmap(image, label))
+            self.display['DisplayImage'] = image.copy()
 
     def update_overlay(self, transform):
         """Executes the adjustment of the overlay"""
@@ -636,8 +667,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Disable the display options groupbox if there isn't a currently displayed image
             if self.display['ImageList'][index] == []:
                 self.groupDisplayOptions.setEnabled(False)
+                self.menu_display.setEnabled(False)
             else:
                 self.groupDisplayOptions.setEnabled(True)
+                self.menu_display.setEnabled(True)
                 if index > 1 and index < 4:
                     self.buttonDefectProcessing.setEnabled(False)
                     self.checkToggleOverlay.setEnabled(False)
@@ -654,6 +687,37 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # if self.display_flag:
         #     self.widgetDisplay.setCurrentIndex(int(index))
         #     self.display['SliderNames'][int(index)].setValue(int(value))
+
+    def context_menu_display(self, position):
+        """Opens a context menu at the right-clicked position of any of the display labels
+        This method also handles the Open Image functions
+        """
+
+        # Create a QMenu with the respective actions as an instance variable so other methods can modify it
+        self.menu_display = QMenu()
+        action_show_image = self.menu_display.addAction('Show Image in Explorer')
+        action_open_image = self.menu_display.addAction('Open Image in Image Viewer')
+        self.menu_display.addSeparator()
+        action_export = self.menu_display.addAction('Export Image...')
+
+        # Check if a valid image is being displayed, otherwise diable the menu
+        if not self.display['ImageList'][self.widgetDisplay.currentIndex()]:
+            self.menu_display.setEnabled(False)
+
+        # Open the context menu at the received position
+        action = self.menu_display.exec_(self.labelDisplayCE.mapToGlobal(position))
+
+        # Check which action has been clicked and execute the respective methods
+        if action:
+            # Grab the name of the image using the displayed layer number (subtract 1 due to code starting from 0)
+            name = self.display['ImageList'][self.widgetDisplay.currentIndex()][int(self.labelLayerNumber.text()) - 1]
+            if action == action_show_image:
+                # Need to turn the forward slashes into backslash due to windows explorer only working with backslashes
+                subprocess.Popen(r"""explorer /select, %s""" % name.replace('/', '\\'))
+            elif action == action_open_image:
+                os.startfile(name)
+            elif action == action_export:
+                self.export_image()
 
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value
@@ -703,26 +767,32 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Updates the ImageList dictionary with a new list of images"""
 
         # Empty the list via slice assignment
-        self.display['ImageList'][index][:] = []
+        self.display['ImageList'][index][:] = list()
 
         # Checks the returned sorted folder list for actual images (.png or .jpg) while ignoring other files
         for filename in os.listdir(self.display['ImageFolder'][index]):
             if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
-                self.display['ImageList'][index].append(filename)
+                self.display['ImageList'][index].append(self.display['ImageFolder'][index] + '/' + filename)
 
-        # If the list of filenames remains empty (aka no images in folder), set the corresponding image to 0 (nothing)
+        # If the list of filenames remains empty (aka no images in folder), set the corresponding image to None
+        # Also enable/disable certain UI elements if the received index matches the current widgetDisplay's index
         if not self.display['ImageList'][index]:
-            self.display['Image'][index] = 0
+            self.display['Image'][index] = None
             self.display['LayerRange'][index] = 1
-            self.groupDisplayOptions.setEnabled(False)
+            if self.widgetDisplay.currentIndex() == index:
+                self.groupDisplayOptions.setEnabled(False)
+                self.menu_display.setEnabled(False)
         else:
             # Save the ranges in a list whose index corresponds with the tabs
             self.display['LayerRange'][index] = len(self.display['ImageList'][index])
+            if self.widgetDisplay.currentIndex() == index:
+                self.groupDisplayOptions.setEnabled(True)
+                self.menu_display.setEnabled(True)
 
     def update_image(self, index):
         """Updates the Image dictionary with the loaded images"""
 
-        # Check if list isn't empty, otherwise set the corresponding image to 0 (nothing)
+        # Check if list isn't empty, otherwise set the corresponding image to None
         if self.display['ImageList'][index]:
             # Check if the Toggle Overlay checkbox is checked
             # If so, use the current tab's slider value to choose which overlay image to load
@@ -733,12 +803,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 # Load the image into memory and store it in the dictionary
                 # Decrement by 1 because code starts at 0
                 self.display['Image'][index] = \
-                    cv2.imread('%s/%s' % (self.display['ImageFolder'][index], self.display['ImageList'][index]
-                    [self.display['SliderNames'][index_overlay].value() - 1]))
+                    cv2.imread('%s' % self.display['ImageList'][index]
+                    [self.display['SliderNames'][index_overlay].value() - 1])
             except IndexError:
                 self.update_status('Part contours not found.')
         else:
-            self.display['Image'][index] = 0
+            self.display['Image'][index] = None
 
     def update_layer_range(self, index):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the sliders"""
@@ -748,29 +818,31 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def check_camera_trigger(self):
         """Checks for a valid attached camera and trigger"""
+
         camera_flag = self.image_capture_module.ImageCapture().acquire_camera()
         trigger_flag = self.image_capture_module.ImageCapture().acquire_trigger()
+
         if bool(camera_flag):
             self.labelCameraStatus.setText('FOUND')
+            if bool(trigger_flag):
+                self.buttonRun.setEnabled(True)
         else:
             self.labelCameraStatus.setText('NOT FOUND')
+            self.labelTriggerStatus.setText('NOT FOUND')
+            self.buttonRun.setEnabled(False)
         if bool(trigger_flag):
             self.labelTriggerStatus.setText(str(trigger_flag))
-        else:
-            self.labelTriggerStatus.setText('NOT FOUND')
-        if bool(camera_flag) and bool(trigger_flag):
-            self.buttonRun.setEnabled(True)
-        else:
-            self.buttonRun.setEnabled(False)
 
-    def eventFilter(self, label, event):
-        """Executes whenever the currently displayed label changes in size due to resizing the MainWindow
-        All it does is resize the currently displayed image while maintaining the image's aspect ratio
-        """
-        if (event.type() == QEvent.Resize):
-            self.update_display()
-            return True
-        return QMainWindow.eventFilter(self, label, event)
+    def resizeEvent(self, event):
+        """Executes whenever the MainWindow changes in size due to resizing or maximizing the window
+        All it does is resize the currently displayed image while maintaining the image's aspect ratio"""
+        if self.display_flag:
+            self.update_display(True)
+
+    def update_time(self, time_elapsed, time_idle):
+        """Updates the timers at the bottom right of the Main Window with the received time"""
+        self.labelElapsedTime.setText(time_elapsed)
+        self.labelIdleTime.setText(time_idle)
 
     def update_status(self, string, duration=0):
         """Updates the default status bar at the bottom of the Main Window with the received string argument"""
@@ -806,12 +878,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
-        # Delete the created image folder if the Clean Up checkbox is checked
-        if self.checkCleanup.isChecked():
-            try:
-                shutil.rmtree('%s' % self.config['ImageCapture']['Folder'])
-            except (WindowsError, AttributeError):
-                pass
 
 if __name__ == '__main__':
     def main():

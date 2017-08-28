@@ -124,12 +124,13 @@ class Ui_dialogImageCapture(object):
         self.labelTimeIdle.setObjectName(_fromUtf8("labelTimeIdle"))
         self.spinStartingLayer = QtGui.QSpinBox(dialogImageCapture)
         self.spinStartingLayer.setEnabled(False)
-        self.spinStartingLayer.setGeometry(QtCore.QRect(90, 239, 71, 22))
-        self.spinStartingLayer.setMaximum(10000)
-        self.spinStartingLayer.setProperty("value", 1)
+        self.spinStartingLayer.setGeometry(QtCore.QRect(123, 239, 38, 22))
+        self.spinStartingLayer.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
+        self.spinStartingLayer.setMinimum(1)
+        self.spinStartingLayer.setMaximum(9999)
         self.spinStartingLayer.setObjectName(_fromUtf8("spinStartingLayer"))
         self.checkContinue = QtGui.QCheckBox(dialogImageCapture)
-        self.checkContinue.setGeometry(QtCore.QRect(10, 236, 81, 28))
+        self.checkContinue.setGeometry(QtCore.QRect(10, 236, 111, 28))
         self.checkContinue.setObjectName(_fromUtf8("checkContinue"))
 
         self.retranslateUi(dialogImageCapture)
@@ -162,6 +163,6 @@ class Ui_dialogImageCapture(object):
         self.buttonCheckTrigger.setText(_translate("dialogImageCapture", "Check Trigger", None))
         self.labelTimeIdle.setText(_translate("dialogImageCapture", "Time Idle: 00:00:00", None))
         self.checkContinue.setToolTip(_translate("dialogImageCapture", "Check this box to continue layer number labelling from the entered number.", None))
-        self.checkContinue.setText(_translate("dialogImageCapture", "Continue", None))
+        self.checkContinue.setText(_translate("dialogImageCapture", "Continue From", None))
 
 import icons_rc

@@ -1,6 +1,16 @@
+August 28
+- Added right click context menus to the 4 tab labels that allow the user to open the image in their folder or in another image viewer
+- Added another tab that serves as a video feed of the attached camera (no functionality yet)
+- Copied the timer and continue from checkbox from the ImageCapture dialog window to the MainWindow
+- Changed the resizeEvent method from monitoring the label to instead the MainWindow's resizeEvent so that the minimize and maximize buttons cause the picture to resize correctly
+
 August 25
 - Integrated the calibration parameters into the JSON config file
 - Split the image processing transformation sequence into their own individual methods
+- Fixed up the window modality and saves the window state and geometry when closing the windows
+- Closing the MainWindow now prompts the user to save their build if it wasn't saved
+- Fixed the tab order of all the dialog windows
+- Changed a lot of the status messages associated with the SliceConverter
 
 August 24
 - Changed a lot of code to only load the required variables rather than the entire config file
