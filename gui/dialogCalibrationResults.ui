@@ -26,8 +26,8 @@
    <string>Calibration Results</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
+   <iconset>
+    <normaloff>logo.ico</normaloff>logo.ico</iconset>
   </property>
   <widget class="QPushButton" name="buttonDone">
    <property name="geometry">
@@ -110,11 +110,11 @@
    <attribute name="horizontalHeaderVisible">
     <bool>false</bool>
    </attribute>
-   <attribute name="horizontalHeaderDefaultSectionSize">
-    <number>130</number>
-   </attribute>
    <attribute name="verticalHeaderVisible">
     <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>30</number>
    </attribute>
    <row/>
    <row/>
@@ -228,11 +228,11 @@
    <attribute name="horizontalHeaderVisible">
     <bool>false</bool>
    </attribute>
-   <attribute name="horizontalHeaderDefaultSectionSize">
-    <number>130</number>
-   </attribute>
    <attribute name="verticalHeaderVisible">
     <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>30</number>
    </attribute>
    <row/>
    <row/>
@@ -322,11 +322,11 @@
    <attribute name="horizontalHeaderVisible">
     <bool>false</bool>
    </attribute>
-   <attribute name="horizontalHeaderDefaultSectionSize">
-    <number>130</number>
-   </attribute>
    <attribute name="verticalHeaderVisible">
     <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>30</number>
    </attribute>
    <row/>
    <row/>
@@ -353,9 +353,7 @@
    </item>
   </widget>
  </widget>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>buttonDone</sender>

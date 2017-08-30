@@ -7,7 +7,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from PyQt4.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 
 class Stopwatch(QThread):
@@ -29,7 +31,7 @@ class Stopwatch(QThread):
             # Send a formatted time string to the main function
             time_elapsed = self.format_time(self.stopwatch_elapsed)
             time_idle = self.format_time(self.stopwatch_idle)
-            self.emit(SIGNAL("update_time(QString, QString)"), time_elapsed, time_idle)
+            self.emit(pyqtSignal("update_time(QString, QString)"), time_elapsed, time_idle)
 
             # Sleep for one second
             time.sleep(1)
@@ -40,7 +42,7 @@ class Stopwatch(QThread):
 
             # Check if the countdown reaches 5 minutes, if so, send a signal back to the main program
             # if self.countdown == 300:
-            #     self.emit(SIGNAL("send_notification()"))
+            #     self.emit(pyqtSignal("send_notification()"))
 
     def format_time(self, time):
         """Format the individual seconds, minutes and hours into a proper time format"""
@@ -96,13 +98,14 @@ class Notifications(QThread):
         server.quit()
 
 
-class FolderMonitor(QThread):
-    """Module used to constantly poll the given folders and signal back if a change in number of items is detected"""
+class ExtraFunctions():
 
-    def __init__(self, folders):
 
-        # Defines the class as a thread
-        QThread.__init__(self)
+    def poll_folder(self, folders, callback):
+        """Method used to poll the given folders and signal back if a change in number of items is detected"""
+
+
+
 
         # Store received argument as instance variable
         self.folders = folders
@@ -125,7 +128,7 @@ class FolderMonitor(QThread):
                 # Emit a signal with the new length and the folder's index back to the MainWindow if different
                 if not length_new[index] == length_old[index]:
                     # Length is incremented by one to prevent a maximum range of 0
-                    self.emit(SIGNAL("folder_change(QString)"), str(index))
+                    self.emit(pyqtSignal("folder_change(QString)"), str(index))
                     length_old[index] = length_new[index]
 
             # Delay the loop by a second to severely reduce CPU usage

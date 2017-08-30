@@ -2,7 +2,9 @@ import numpy as np
 import cv2
 import json
 import copy
-from PyQt4.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 COLOR_BLACK = np.array((0, 0, 0))
 COLOR_WHITE = np.array((255, 255, 255))

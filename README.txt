@@ -3,37 +3,27 @@ MCAM 3D Printer Software
 
 Installation
 - From the software folder install the following (64-bit Versions)
-	- Python 2.7.13 (Remember to select add python.exe to PATH)
-	- Basler Pylon 5.0.5.8999
-	- PyQt4 4.11.4 GPL Py2.7 Qt4.8.7
-	- PyCharm Professional 2017.1.2
-- Extract OpenCV 3.2.0
-	- Navigate to build/python/2.7/x86
-	- Copy cv2.pyd into Python/Lib/site-packages
-- Install the required Python packages as listed under Required Software
-	- Open a command prompt
-	- Navigate to the python/scripts folder (cd "Folder Name")
-	- Run: pip install name_of_package
-
-Important Note
-- DO NOT MOVE, RENAME OR DELETE CONFIG_DEFAULT.JSON 
+	- Python 3.6.2 (Add python.exe to PATH)
+	- Basler Pylon 5.0.5.8999 (Developer Mode)
+	- (Optional) PyCharm Professional 2017.1.2
+- Open an administrator command prompt and run the following to install modules
+	- pip3 install numpy
+	- pip3 install opencv-python
+	- pip3 install PyQt5
+	- pip3 install pyserial
+	- pip3 install validate_email
+	- pip3 install Cython
+- (Optional) If a pypylon folder isn't in the root directory
+	- Open an admistrator command prompt
+	- cd "random directory"
+	- git clone https://github.com/mabl/PyPylon
+	- cd PyPylon
+	- python setup.py build
+	- Copy the pypylon folder from the build/lib.win-(windowsver)-(pythonver)
+	- To the Defect Monitor root directory
 
 Operation
-- Run main_window.py
-
-Required Software
-- Python 2.7.13
-- OpenCV 3.2.0
-- PyQt 4.11.4
-- Basler Pylon 5.0.5.8999
-	- Install in Developer Mode
-	- Required to create New Build
-- Python Packages:
-	- numpy
-	- pyserial
-	- validate_email
-Optional Software
-- Pycharm 2017.1.2
+- Execute run_program.bat
 
 Hardware
 - Basler Ace acA3800-10gm GigE
@@ -41,7 +31,7 @@ Hardware
 	- 10 FPS at 10 megapixels
 	- 3856 x 2764 resolution
 	- Grayscale
-- Laptop running Windows 10
+- Windows 10 64-bit System
 
 Core Functionality
 - Start/Load a build and change settings as appropriate

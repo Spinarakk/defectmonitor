@@ -4,7 +4,9 @@ import re
 import json
 import cv2
 import numpy as np
-from PyQt4.QtCore import QThread, SIGNAL
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 import image_processing
 
@@ -60,7 +62,7 @@ class SliceConverter(QThread):
     def read_cls(self, file_name):
         """Reads the .cls file and converts the contents into ASCII, then organises the data into a list"""
 
-        self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Reading CLS file...' %
+        self.emit(pyqtSignal("update_status(QString)"), 'Current Part: %s | Reading CLS file...' %
                   os.path.basename(file_name).replace('.cls', ''))
 
         # Set up a few flags, counters and lists
@@ -81,11 +83,11 @@ class SliceConverter(QThread):
             # Split the entire file into a massive list if the following strings are found
             data_binary = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
                                    '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', cls_file.read())
-            self.emit(SIGNAL("update_progress(QString)"), '8')
+            self.emit(pyqtSignal("update_progress(QString)"), '8')
             # Remove any NoneType data in the list
             data_binary = filter(None, data_binary)
             increment = 90.0 / len(data_binary)
-            self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+            self.emit(pyqtSignal("update_progress(QString)"), str(int(round(progress))))
 
             for line in data_binary:
                 if layer_flag or border_flag:
@@ -124,7 +126,7 @@ class SliceConverter(QThread):
                     layer_flag = False
                 # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
                 if int(round(progress)) is not progress_previous:
-                    self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                    self.emit(pyqtSignal("update_progress(QString)"), str(int(round(progress))))
                     progress_previous = int(round(progress))
                 progress += increment
 
@@ -134,9 +136,9 @@ class SliceConverter(QThread):
         """Reads the .cli file and converts the contents into an organised list
         Assume ASCII encoding, but switch to read binary and convert to ASCII if file is encoded in binary"""
 
-        self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Reading CLI (ASCII) file...' %
+        self.emit(pyqtSignal("update_status(QString)"), 'Current Part: %s | Reading CLI (ASCII) file...' %
                   os.path.basename(file_name).replace('.cli', ''))
-        self.emit(SIGNAL("update_progress(QString)"), '0')
+        self.emit(pyqtSignal("update_progress(QString)"), '0')
 
         # Set up a few flags, counters and lists
         binary_flag = False
@@ -172,14 +174,14 @@ class SliceConverter(QThread):
                     data_ascii.append(line.rstrip('\r\n/n'))
 
                 if int(round(progress)) is not progress_previous:
-                    self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                    self.emit(pyqtSignal("update_progress(QString)"), str(int(round(progress))))
                     progress_previous = int(round(progress))
                 progress += increment
 
         if binary_flag:
             # UI Progress and Status Messages
             progress_previous = None
-            self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Reading CLI (Binary) file...' %
+            self.emit(pyqtSignal("update_status(QString)"), 'Current Part: %s | Reading CLI (Binary) file...' %
                       os.path.basename(file_name).replace('.cli', ''))
 
             # Set up a few flags, counters and lists
@@ -237,7 +239,7 @@ class SliceConverter(QThread):
                             polyline_count = 3
 
                         if int(round(progress)) is not progress_previous:
-                            self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                            self.emit(pyqtSignal("update_progress(QString)"), str(int(round(progress))))
                             progress_previous = int(round(progress))
                         progress += increment * 2
 
@@ -257,9 +259,9 @@ class SliceConverter(QThread):
         progress = 0.0
         progress_previous = None
         increment = 100.0 / (len(data_ascii))
-        self.emit(SIGNAL("update_status(QString)"), 'Current Part: %s | Formatting contour data...' %
+        self.emit(pyqtSignal("update_status(QString)"), 'Current Part: %s | Formatting contour data...' %
                   os.path.basename(file_name).replace('_contours.txt', ''))
-        self.emit(SIGNAL("update_progress(QString)"), '0')
+        self.emit(pyqtSignal("update_progress(QString)"), '0')
 
         # Initialize some variables to be used later
         units = data_ascii[0]
@@ -288,7 +290,7 @@ class SliceConverter(QThread):
 
                 # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
                 if int(round(progress)) is not progress_previous:
-                    self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                    self.emit(pyqtSignal("update_progress(QString)"), str(int(round(progress))))
                     progress_previous = int(round(progress))
                 progress += increment
 
@@ -309,7 +311,7 @@ class SliceConverter(QThread):
         # UI Progress and Status Messages
         progress = 0.0
         progress_previous = None
-        self.emit(SIGNAL("update_progress(QString)"), '0')
+        self.emit(pyqtSignal("update_progress(QString)"), '0')
 
         # Initial while loop conditions
         layer = 1
@@ -344,7 +346,7 @@ class SliceConverter(QThread):
                 cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
                                      offset=self.offset, thickness=cv2.FILLED)
 
-            self.emit(SIGNAL("update_status(QString)"), 'Drawing contours %s of %s.' %
+            self.emit(pyqtSignal("update_status(QString)"), 'Drawing contours %s of %s.' %
                       (str(layer).zfill(4), str(layer_max).zfill(4)))
 
             # Flip the image vertically to account for the fact that OpenCV's origin is the top left corner
@@ -361,5 +363,5 @@ class SliceConverter(QThread):
 
             progress += 100.0 / layer_max
             if int(round(progress)) is not progress_previous:
-                self.emit(SIGNAL("update_progress(QString)"), str(int(round(progress))))
+                self.emit(pyqtSignal("update_progress(QString)"), str(int(round(progress))))
                 progress_previous = int(round(progress))

@@ -5,7 +5,9 @@ import math
 import json
 import cv2
 import numpy as np
-from PyQt4.QtCore import QThread, SIGNAL
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 
 class Calibration(QThread):
@@ -78,21 +80,21 @@ class Calibration(QThread):
         self.object_points[:, :2] = np.mgrid[0:self.width, 0:self.height].T.reshape(-1, 2)
 
         # Reset the progress bar
-        self.emit(SIGNAL("update_progress(QString)"), '0')
+        self.emit(pyqtSignal("update_progress(QString)"), '0')
 
         # Go through and find the corners for all the valid images in the folder
         for index, image_calibration in enumerate(self.images_calibration):
             valid_image = self.find_draw_corners(image_calibration, index)
             self.images_valid.append(valid_image)
             self.progress += self.progress_step
-            self.emit(SIGNAL("update_progress(QString)"), str(int(math.ceil(self.progress))))
+            self.emit(pyqtSignal("update_progress(QString)"), str(int(math.ceil(self.progress))))
 
         # Check if there's at least one successful chessboard image before continuing to find camera matrix
         if 1 in self.images_valid:
 
             # Calibrate the camera and output the camera matrix and distortion coefficients
             # RMS is the root mean square re-projection error
-            self.emit(SIGNAL("update_status(QString)"), 'Calculating camera parameters...')
+            self.emit(pyqtSignal("update_status(QString)"), 'Calculating camera parameters...')
             rms, self.camera_matrix, self.distortion_coefficients, _, _ = \
                 cv2.calibrateCamera(self.object_points_list, self.image_points_list, self.resolution, None, None, flags=
                 cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
@@ -105,7 +107,7 @@ class Calibration(QThread):
             # If the Save Undistorted Images checkbox is checked
             if self.save_undistort_flag:
                 # Reset the progress bar and recalculate the progress step
-                self.emit(SIGNAL("update_progress(QString)"), '0')
+                self.emit(pyqtSignal("update_progress(QString)"), '0')
                 self.progress_step = 100.0 / self.images_valid.count(1)
                 self.progress = 0
 
@@ -114,21 +116,21 @@ class Calibration(QThread):
                     if self.images_valid[index]:
                         self.undistort_image(image_calibration)
                         self.progress += self.progress_step
-                        self.emit(SIGNAL("update_progress(QString)"), str(int(math.ceil(self.progress))))
+                        self.emit(pyqtSignal("update_progress(QString)"), str(int(math.ceil(self.progress))))
 
             # If the homography matrix was successfully found, save the results to a temporary .json file
             if self.find_homography(image_homography):
                 with open('%s/calibration_results.json' % self.config['WorkingDirectory'], 'w+') as results:
                     json.dump(self.results, results, indent=4, sort_keys=True)
 
-                self.emit(SIGNAL("update_status(QString)"), 'Calibration completed successfully.')
+                self.emit(pyqtSignal("update_status(QString)"), 'Calibration completed successfully.')
         else:
-            self.emit(SIGNAL("update_status(QString)"),
+            self.emit(pyqtSignal("update_status(QString)"),
                       'No valid chessboard images found. Check images or chessboard dimensions.')
 
     def find_draw_corners(self, image_name, index):
 
-        self.emit(SIGNAL("update_status(QString)"), 'Finding corners in %s...' % image_name)
+        self.emit(pyqtSignal("update_status(QString)"), 'Finding corners in %s...' % image_name)
 
         # Load the image into memory
         image = cv2.imread('%s/%s' % (self.calibration_folder, image_name))
@@ -164,21 +166,21 @@ class Calibration(QThread):
 
                 # Change the name and folder of the calibration image and save it to that folder
                 image_name = image_name.replace('.png', '_corners.png')
-                self.emit(SIGNAL("update_status(QString)"), 'Saving %s...' % image_name)
+                self.emit(pyqtSignal("update_status(QString)"), 'Saving %s...' % image_name)
                 cv2.imwrite('%s/corners/%s' % (self.calibration_folder, image_name), image)
 
-            self.emit(SIGNAL("change_colour(QString, QString)"), str(index), '1')
+            self.emit(pyqtSignal("change_colour(QString, QString)"), str(index), '1')
 
             return 1
         else:
-            self.emit(SIGNAL("update_status(QString)"), 'Failed to detect corners in %s.' % image_name)
-            self.emit(SIGNAL("change_colour(QString, QString)"), str(index), '0')
+            self.emit(pyqtSignal("update_status(QString)"), 'Failed to detect corners in %s.' % image_name)
+            self.emit(pyqtSignal("change_colour(QString, QString)"), str(index), '0')
             time.sleep(0.5)
             return 0
 
     def undistort_image(self, image_name):
 
-        self.emit(SIGNAL("update_status(QString)"), 'Undistorting %s...' % image_name)
+        self.emit(pyqtSignal("update_status(QString)"), 'Undistorting %s...' % image_name)
 
         # Load the image into memory
         image = cv2.imread('%s/%s' % (self.calibration_folder, image_name))
@@ -188,12 +190,12 @@ class Calibration(QThread):
 
         # Change the name and folder of the calibration image and save it to that folder
         image_name = image_name.replace('.png', '_undistorted.png')
-        self.emit(SIGNAL("update_status(QString)"), 'Saving %s...' % image_name)
+        self.emit(pyqtSignal("update_status(QString)"), 'Saving %s...' % image_name)
         cv2.imwrite('%s/undistorted/%s' % (self.calibration_folder, image_name), image)
 
     def find_homography(self, image):
 
-        self.emit(SIGNAL("update_status(QString)"), 'Determining homography matrix...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Determining homography matrix...')
 
         # Set the number of chessboard corners in the homography image here
         width = 9
@@ -244,9 +246,9 @@ class Calibration(QThread):
             height_output = int(points_transform[:, 0][:, 1].max() - points_transform[:, 0][:, 1].min())
             self.results['ImageCorrection']['Resolution'] = (width_output, height_output)
 
-            self.emit(SIGNAL("update_status(QString)"), 'Homography matrix found.')
+            self.emit(pyqtSignal("update_status(QString)"), 'Homography matrix found.')
 
             return 1
         else:
-            self.emit(SIGNAL("update_status(QString)"), 'Corner detection failed. Check homography image.')
+            self.emit(pyqtSignal("update_status(QString)"), 'Corner detection failed. Check homography image.')
             return 0

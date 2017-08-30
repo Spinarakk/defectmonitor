@@ -5,7 +5,9 @@ import time
 import cv2
 import pypylon
 import serial
-from PyQt4.QtCore import QThread, SIGNAL
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 # Import related modules
 import image_processing
@@ -15,7 +17,7 @@ class ImageCapture(QThread):
     """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached
     Images are acquired through either method depending on the raised flags
     If single, only one image is acquired, saved and emitted back to the function caller
-    If run, the while loop waits indefinitely till a serial trigger is detected
+    If run_build, the while loop waits indefinitely till a serial trigger is detected
     It then acquires and saves the image, then sleeps for a predefined time until the next trigger is allowed
     """
 
@@ -42,7 +44,7 @@ class ImageCapture(QThread):
 
     def run(self):
 
-        self.emit(SIGNAL("update_status(QString)"), 'Capturing Image(s)...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Capturing Image(s)...')
         self.acquire_settings()
         self.acquire_camera()
 
@@ -54,26 +56,26 @@ class ImageCapture(QThread):
             self.camera.open()
             self.apply_settings()
         except:
-            # If camera can't be opened, send a status update and initiate the stop method
-            self.emit(SIGNAL("update_status(QString)"), 'Camera in use by other application.')
+            # If camera can't be opened, send a status update and initiate the stop_build method
+            self.emit(pyqtSignal("update_status(QString)"), 'Camera in use by other application.')
             self.stop()
 
         # Single Flag
         if self.single_flag:
-            self.emit(SIGNAL("update_status(QString)"), 'Capturing single image...')
+            self.emit(pyqtSignal("update_status(QString)"), 'Capturing single image...')
             self.acquire_image_single()
         else:
             self.acquire_trigger()
 
         # Run Flag
         while self.run_flag:
-            self.emit(SIGNAL("update_status(QString)"), 'Waiting for trigger.')
+            self.emit(pyqtSignal("update_status(QString)"), 'Waiting for trigger.')
             self.acquire_image_run()
 
         # Close the camera when done to allow other applications to use it
         self.camera.close()
 
-        # Set the following values as the current values to be able to restore same state if run again
+        # Set the following values as the current values to be able to restore same state if run_build again
         self.config['ImageCapture']['Layer'] = self.current_layer
         self.config['ImageCapture']['Phase'] = self.current_phase
 
@@ -102,7 +104,7 @@ class ImageCapture(QThread):
         """
 
         # Create a list of ports as COM1, COM2 etc.
-        ports = ['COM%s' % i for i in xrange(1, 10)]
+        ports = ['COM%s' % i for i in range(1, 10)]
 
         # Checks through all the COM ports for an available connected trigger device
         for port in ports:
@@ -159,16 +161,16 @@ class ImageCapture(QThread):
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            self.emit(SIGNAL("update_status(QString)"), 'Error grabbing image. Try again.')
+            self.emit(pyqtSignal("update_status(QString)"), 'Error grabbing image. Try again.')
             self.camera.close()
         else:
             # Send the image, the current layer and the phase back to the ImageCapture dialog window
-            self.emit(SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
+            self.emit(pyqtSignal("image_correction(PyQt_PyObject, QString, QString)"),
                       image, str(self.config['ImageCapture']['Single']), 'single')
 
             # Update the capture counter which will be saved to the config.json file
             self.config['ImageCapture']['Single'] += 1
-            self.emit(SIGNAL("update_status(QString)"), 'Image captured.')
+            self.emit(pyqtSignal("update_status(QString)"), 'Image captured.')
 
     def acquire_image_run(self):
         """Acquire multiple images from the camera when trigger is detected"""
@@ -179,7 +181,7 @@ class ImageCapture(QThread):
         # Arduino has been programmed to return a 'TRIG' if reed switch has been triggered
         if self.trigger == 'TRIG':
 
-            self.emit(SIGNAL("update_status(QString)"), 'Trigger Detected. Capturing image...')
+            self.emit(pyqtSignal("update_status(QString)"), 'Trigger Detected. Capturing image...')
 
             # Grab the image from the camera, error checking in case image capture fails
             try:
@@ -189,18 +191,18 @@ class ImageCapture(QThread):
                 image = next(self.camera.grab_images(1))
 
             # Send the image, the current layer and the phase back to the ImageCapture dialog window
-            self.emit(SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
+            self.emit(pyqtSignal("image_correction(PyQt_PyObject, QString, QString)"),
                       image, str(int(self.current_layer)), self.phases[self.current_phase])
 
             # Emit a signal that resets the internal countdown saying that an image has been successfully captured
-            self.emit(SIGNAL("reset_time_idle()"))
+            self.emit(pyqtSignal("reset_time_idle()"))
 
             # Loop used to disallow triggering for additional images for however many seconds
             # Also displays remaining timeout on the status bar
             for seconds in range(self.config['ImageCapture']['TriggerTimeout'], 0, -1):
                 # If statement used to suppress the status update if the Stop button is pressed
                 if self.run_flag:
-                    self.emit(SIGNAL("update_status(QString)"), 'Image saved. %s second timeout...' % seconds)
+                    self.emit(pyqtSignal("update_status(QString)"), 'Image saved. %s second timeout...' % seconds)
                 time.sleep(1)
 
             # Increment the layer (by 1) every second image, and toggle the phase
@@ -213,6 +215,6 @@ class ImageCapture(QThread):
     def stop(self):
         """Method that happens if the Stop button is pressed, which terminates the QThread"""
 
-        # Toggle the relevant flags to stop running loops
+        # Toggle the relevant flags to stop_build running loops
         self.single_flag = False
         self.run_flag = False

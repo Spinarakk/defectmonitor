@@ -26,8 +26,8 @@
    <string>Camera Settings</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
+   <iconset>
+    <normaloff>logo.ico</normaloff>logo.ico</iconset>
   </property>
   <widget class="QPushButton" name="buttonApply">
    <property name="enabled">
@@ -301,9 +301,7 @@
    </property>
   </widget>
  </widget>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>buttonOK</sender>

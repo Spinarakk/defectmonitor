@@ -1,0 +1,50 @@
+import sys
+import traceback
+from PyQt5.QtCore import *
+
+
+class WorkerSignals(QObject):
+    """Signals available from a running worker thread are defined here"""
+
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    callback = pyqtSignal(object)
+    status = pyqtSignal(str)
+    progress = pyqtSignal(int)
+
+
+class Worker(QRunnable):
+    """Worker thread that inherits from QRunnable to handle worker thread setup, signaps and wrap-up"""
+
+    def __init__(self, function, *args, **kwargs):
+        super(Worker, self).__init__()
+
+        # Store constructor arguments as instance variables that will be re-used for processing
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals
+
+        # Add any signal keywords to the kwargs here
+        kwargs['callback'] = self.signals.callback
+        kwargs['status'] = self.signals.status
+        kwargs['progress'] = self.signals.progress
+
+    @pyqtSlot()
+    def run(self):
+        """Initialize the runner function with the received args and kwargs"""
+
+        try:
+            result = self.function(*self.args, **self.kwargs)
+        except:
+            # Emit back an error if the function fails in any way
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signal.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            # Emit the result of the function
+            self.signals.result.emit(result)
+        finally:
+            # Emit the done signal
+            self.signals.finished.emit()

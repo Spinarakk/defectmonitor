@@ -1,4 +1,4 @@
-# Import external libraries
+# Import libraries and modules
 import os
 import time
 import cv2
@@ -6,8 +6,11 @@ import numpy as np
 import json
 from datetime import datetime
 from validate_email import validate_email
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+
+# Import PyQt modules
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 # Import related modules
 import slice_converter
@@ -18,7 +21,7 @@ import defect_analysis
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogImageCapture, dialogCameraSettings, dialogOverlayAdjustment
+    dialogSliceConverter, dialogCameraSettings, dialogOverlayAdjustment
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -72,7 +75,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
 
-        file_names = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        file_names, _ = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         # Turn the received QFileList into a Python list of file names using list comprehension
         file_list = [str(item).replace('\\', '/') for item in file_names]
@@ -85,7 +88,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
 
-        folder_name = str(QFileDialog.getExistingDirectory(self, 'Browse...', '')).replace('\\', '/')
+        folder_name, _ = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if folder_name:
             # Display just the file name on the line box
@@ -125,10 +128,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 else:
                     attachment = None
 
-                # Instantiate and run a Notifications instance
+                # Instantiate and run_build a Notifications instance
                 self.N_instance = extra_functions.Notifications(subject, message, attachment)
                 self.N_instance.start()
-                self.connect(self.N_instance, SIGNAL("finished()"), self.send_test_finished)
+                self.connect(self.N_instance, pyqtSignal("finished()"), self.send_test_finished)
             else:
                 # Opens a message box indicating that the entered email address is invalid
                 invalid_email_error = QMessageBox()
@@ -261,7 +264,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', '').toByteArray())
+        self.restoreGeometry(self.window_settings.value('geometry', ''))
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowseF.clicked.connect(self.browse_folder)
@@ -321,7 +324,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
     def browse_homography(self):
         """Opens a File Dialog, allowing the user to select an homography image"""
 
-        file_name = str(QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')).replace('\\', '/')
+        file_name, _ = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')
 
         if file_name:
             self.config['CameraCalibration']['HomographyImage'] = file_name
@@ -330,7 +333,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
     def browse_test_image(self):
         """Opens a File Dialog, allowing the user to select a test image"""
 
-        file_name = str(QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')).replace('\\', '/')
+        file_name, _ = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')
 
         if file_name:
             self.config['CameraCalibration']['TestImage'] = file_name
@@ -354,18 +357,18 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         # Reset the colours of the items in the list widget
         # Try exception causes this function to be skipped the first time
         try:
-            for index in xrange(self.listImages.count()):
+            for index in range(self.listImages.count()):
                 self.listImages.item(index).setBackground(QColor('white'))
         except AttributeError:
             pass
 
-        # Instantiate and run a CameraCalibration instance
+        # Instantiate and run_build a CameraCalibration instance
         self.CC_instance = camera_calibration.Calibration(self.calibration_folder, self.checkSaveC.isChecked(),
                                                           self.checkSaveU.isChecked())
-        self.connect(self.CC_instance, SIGNAL("change_colour(QString, QString)"), self.change_colour)
-        self.connect(self.CC_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.CC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.CC_instance, SIGNAL("finished()"), self.calibration_finished)
+        self.connect(self.CC_instance, pyqtSignal("change_colour(QString, QString)"), self.change_colour)
+        self.connect(self.CC_instance, pyqtSignal("update_status(QString)"), self.update_status)
+        self.connect(self.CC_instance, pyqtSignal("update_progress(QString)"), self.update_progress)
+        self.connect(self.CC_instance, pyqtSignal("finished()"), self.calibration_finished)
         self.CC_instance.start()
 
     def change_colour(self, index, valid):
@@ -462,347 +465,6 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.window_settings.setValue('geometry', self.saveGeometry())
 
 
-class ImageCapture(QDialog, dialogImageCapture.Ui_dialogImageCapture):
-    """Opens a Modeless Dialog Window when the Image Capture button is clicked
-    Or when Tools -> Camera -> Image Capture is clicked
-    Allows the user to capture images from an attached camera, either a single shot or continuously using a trigger
-    """
-
-    def __init__(self, parent=None, image_folder=None):
-
-        # Setup Dialog UI with MainWindow as parent and restore the previous window state
-        super(ImageCapture, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-        self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', '').toByteArray())
-
-        # Import module and set as instance variable only within this class so that the other classes can run without it
-        import image_capture
-        self.image_capture = image_capture
-
-        # Set and display the default image folder name to be used to store all acquired images
-        self.image_folder = image_folder
-        self.lineImageFolder.setText(self.image_folder)
-
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonBrowse.clicked.connect(self.browse)
-        self.buttonCameraSettings.clicked.connect(self.camera_settings)
-        self.buttonCheckCamera.clicked.connect(self.check_camera)
-        self.buttonCheckTrigger.clicked.connect(self.check_trigger)
-        self.buttonCapture.clicked.connect(self.capture)
-        self.buttonRun.clicked.connect(self.run)
-        self.buttonStop.clicked.connect(self.stop)
-
-        # Flags to check if the camera and/or trigger is detected
-        self.camera_flag = False
-        self.trigger_flag = False
-
-        # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
-        self.CS_dialog = None
-
-    def browse(self):
-
-        # Opens a folder select dialog, allowing the user to choose a folder
-        self.image_folder = QFileDialog.getExistingDirectory(self, 'Browse...')
-
-        # Checks if a folder is actually selected
-        if self.image_folder:
-            # Display the folder name
-            self.lineImageFolder.setText(self.image_folder)
-            if bool(self.camera_flag):
-                self.buttonCapture.setEnabled(True)
-            if bool(self.camera_flag) & bool(self.trigger_flag):
-                self.buttonRun.setEnabled(True)
-
-    def camera_settings(self):
-        """Opens a Modeless Dialog Window when the Camera Settings button is clicked
-        Allows the user to change camera settings which will be sent to the camera before images are taken
-        """
-
-        if self.CS_dialog is None:
-            self.CS_dialog = CameraSettings(self)
-            self.connect(self.CS_dialog, SIGNAL("destroyed()"), self.camera_settings_closed)
-            self.CS_dialog.show()
-        else:
-            self.CS_dialog.activateWindow()
-
-    def camera_settings_closed(self):
-        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
-        self.CS_dialog = None
-
-    def check_camera(self):
-        """Checks that a camera is found and available"""
-
-        self.camera_flag = self.image_capture.ImageCapture().acquire_camera()
-
-        if bool(self.camera_flag):
-            self.labelCameraStatus.setText('FOUND')
-            self.camera_flag = str(self.camera_flag).replace('DeviceInfo ', '')
-            self.update_status(str(self.camera_flag))
-            if bool(self.camera_flag):
-                self.buttonCapture.setEnabled(True)
-            if bool(self.camera_flag) & bool(self.trigger_flag):
-                self.buttonRun.setEnabled(True)
-        else:
-            self.labelCameraStatus.setText('NOT FOUND')
-
-    def check_trigger(self):
-        """Checks that a triggering device is found and available"""
-        self.trigger_flag = self.image_capture.ImageCapture().acquire_trigger()
-
-        if bool(self.trigger_flag):
-            self.labelTriggerStatus.setText(str(self.trigger_flag))
-            self.update_status('Trigger detected on %s' % str(self.trigger_flag) + '.')
-            if bool(self.camera_flag) & bool(self.trigger_flag):
-                self.buttonRun.setEnabled(True)
-        else:
-            self.labelTriggerStatus.setText('NOT FOUND')
-
-    def capture(self):
-        """Captures and saves a single image to the save location"""
-
-        self.set_start_layer()
-
-        # Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonBrowse.setEnabled(False)
-        self.buttonCameraSettings.setEnabled(False)
-        self.buttonCapture.setEnabled(False)
-        self.buttonCheckCamera.setEnabled(False)
-        self.buttonCheckTrigger.setEnabled(False)
-        self.buttonDone.setEnabled(False)
-
-        # Instantiate and run an ImageCapture instance that will only take one image
-        self.ICS_instance = self.image_capture.ImageCapture(single_flag=True)
-        self.connect(self.ICS_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICS_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
-                     self.image_correction)
-        self.connect(self.ICS_instance, SIGNAL("finished()"), self.capture_finished)
-        self.ICS_instance.start()
-
-    def capture_finished(self):
-        """Executes when the ImageCapture instance has finished"""
-
-        # Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonBrowse.setEnabled(True)
-        self.buttonCameraSettings.setEnabled(True)
-        self.buttonCapture.setEnabled(True)
-        self.buttonCheckCamera.setEnabled(True)
-        self.buttonCheckTrigger.setEnabled(True)
-        self.buttonDone.setEnabled(True)
-
-    def run(self):
-        """Wait indefinitely until trigger device sends a signal
-        An image is captured and saved to the save location, and goes back to waiting after a pre-determined timeout
-        """
-
-        self.set_start_layer()
-
-        ## Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonBrowse.setEnabled(False)
-        self.buttonCameraSettings.setEnabled(False)
-        self.buttonCapture.setEnabled(False)
-        self.buttonRun.setEnabled(False)
-        self.buttonCheckCamera.setEnabled(False)
-        self.buttonCheckTrigger.setEnabled(False)
-        self.buttonDone.setEnabled(False)
-        self.buttonStop.setEnabled(True)
-
-        # Instantiate and run a new Stopwatch instance to have a running timer
-        self.stopwatch_instance = extra_functions.Stopwatch()
-        self.connect(self.stopwatch_instance, SIGNAL("update_time(QString, QString)"), self.update_time)
-        # self.connect(self.stopwatch_instance, SIGNAL("send_notification()"), self.send_notification)
-        self.stopwatch_instance.start()
-
-        # Instantiate and run an ImageCapture instance that will run indefinitely until the stop button is pressed
-        self.ICR_instance = self.image_capture.ImageCapture(run_flag=True)
-        self.connect(self.ICR_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.ICR_instance, SIGNAL("image_correction(PyQt_PyObject, QString, QString)"),
-                     self.image_correction)
-        self.connect(self.ICR_instance, SIGNAL("reset_time_idle()"), self.reset_time_idle)
-        self.connect(self.ICR_instance, SIGNAL("finished()"), self.run_finished)
-        self.ICR_instance.start()
-
-    def run_finished(self):
-        """Executes when the ImageCapture Run instance has finished"""
-
-        # Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonBrowse.setEnabled(True)
-        self.buttonCameraSettings.setEnabled(True)
-        self.buttonCapture.setEnabled(True)
-        self.buttonRun.setEnabled(True)
-        self.buttonCheckCamera.setEnabled(True)
-        self.buttonCheckTrigger.setEnabled(True)
-        self.buttonDone.setEnabled(True)
-        self.buttonStop.setEnabled(False)
-
-        self.update_status('Stopped.')
-
-    def image_correction(self, image, layer, phase):
-        """Apply distortion fix, perspective fix and crop to the captured image and save it to the processed folder
-        Then send it back to the MainWindow to be displayed if Display Image checkbox is checked
-        """
-
-        # Store the received arguments as instance variables
-        self.layer = str(layer)
-        self.phase = str(phase)
-
-        self.update_status('Saving raw image.')
-
-        # Save the raw image to the stated folder
-        cv2.imwrite('%s/raw/%s/image_%s_%s.png' %
-                    (self.image_folder, self.phase, self.phase, self.layer.zfill(4)), image)
-
-        # Instantiate and run an ImageCorrection instance
-        self.IC_instance = image_processing.ImageCorrection(image)
-        self.connect(self.IC_instance, SIGNAL("finished()"), self.image_correction_finished)
-        self.IC_instance.start()
-
-    def image_correction_finished(self):
-        """Executes when the ImageCorrection instance has finished
-        """
-
-        self.update_status('Image correction applied. Saving image')
-
-        # Grab the corrected image from the instance variable
-        image = self.IC_instance.image_DPC
-
-        # Save the corrected image to the stated folder
-        cv2.imwrite('%s/processed/%s/imageC_%s_%s.png' %
-                    (self.image_folder, self.phase, self.phase, self.layer.zfill(4)), image)
-
-        self.update_status('Image saved.')
-
-        # Setting the appropriate tab index to send depending on which phase the image is
-        if self.phase == 'coat':
-            index = '0'
-        elif self.phase == 'scan':
-            index = '1'
-        else:
-            index = '4'
-
-        time.sleep(1)
-
-        self.emit(SIGNAL("tab_focus(QString, QString)"), index, self.layer)
-
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-
-        # Defect Analysis (To be modified)
-        try:
-            overlay = cv2.imread('%s/contours/image_contours_%s.png' % (self.image_folder, self.layer.zfill(4)))
-        except:
-            overlay = cv2.imread('%s/contours.png' % self.config['WorkingDirectory'])
-
-        if self.phase == 'coat':
-            detector = defect_analysis.DefectDetection(image, overlay, self.layer)
-            detector.run()
-        elif self.phase == 'scan':
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (27, 27), 0)
-            edge = cv2.Laplacian(gray, cv2.CV_64F)
-            for i in xrange(3):
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * i + 1, 2 * i + 1))
-                edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel)
-                edge = cv2.morphologyEx(edge, cv2.MORPH_OPEN, kernel)
-
-            edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel, iterations=3)
-            kernel = cv2.getStructuringElement(cv2.MORPH_ERODE, (5, 5))
-            edge = cv2.erode(edge, kernel, iterations=1)
-            edge = cv2.convertScaleAbs(edge)
-            out, contours, hierarchy = cv2.findContours(edge, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-            cont = []
-            for cnt in contours:
-                if cv2.contourArea(cnt) > 1000:
-                    cont.append(cnt)
-
-            cv2.drawContours(image, cont, -1, (0, 255, 0), thickness=5)
-            cv2.imwrite('%s/defects/scan/scan_contours_%s.jpg' % (self.image_folder, self.layer), image)
-        else:
-            detector = defect_analysis.DefectDetection(image, overlay, self.layer)
-            detector.run()
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (27, 27), 0)
-            edge = cv2.Laplacian(gray, cv2.CV_64F)
-            for i in xrange(3):
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * i + 1, 2 * i + 1))
-                edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel)
-                edge = cv2.morphologyEx(edge, cv2.MORPH_OPEN, kernel)
-
-            edge = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, kernel, iterations=3)
-            kernel = cv2.getStructuringElement(cv2.MORPH_ERODE, (5, 5))
-            edge = cv2.erode(edge, kernel, iterations=1)
-            edge = cv2.convertScaleAbs(edge)
-            out, contours, hierarchy = cv2.findContours(edge, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-            cont = []
-            for cnt in contours:
-                if cv2.contourArea(cnt) > 1000:
-                    cont.append(cnt)
-
-            cv2.drawContours(image, cont, -1, (0, 255, 0), thickness=5)
-            cv2.imwrite('%s/defects/single/single_contours_%s.jpg' % (self.image_folder, self.layer), image)
-
-        self.update_status('Defects analyzed.')
-
-    def reset_time_idle(self):
-        """Resets the internal countdown that checks if a new image has been captured within a preset period of time"""
-        self.stopwatch_instance.reset_time_idle()
-
-    def send_notification(self):
-        """Sends a notification to a user if a certain criteria is met
-        In this case, this method executes if a picture hasn't been taken in a preset period of time
-        Depends if the Notification checkbox is checked or not
-        """
-
-        if self.checkNotifications.isChecked():
-            self.update_status('Sending email notification.')
-
-            # Instantiate and run a Notifications instance
-            self.N_instance = extra_functions.Notifications()
-            self.N_instance.start()
-
-    def stop(self):
-        """Terminates running QThreads, most notably the Stopwatch and ImageCapture instances"""
-
-        self.update_status('Stopped. Waiting for timeout to end.')
-        self.stopwatch_instance.stop()
-        self.ICR_instance.stop()
-
-    def set_start_layer(self):
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        self.config['ImageCapture']['Single'] = self.spinStartingLayer.value()
-        self.config['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
-
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
-
-    def update_time(self, time_elapsed, time_idle):
-        """Updates the timers at the bottom of the Dialog Window with the received time"""
-        self.labelTimeElapsed.setText('Time Elapsed: %s' % time_elapsed)
-        self.labelTimeIdle.setText('Time Idle: %s' % time_idle)
-
-    def update_status(self, string):
-        self.labelStatusBar.setText('Status: ' + string)
-
-    def update_progress(self, percentage):
-        self.progressBar.setValue(int(percentage))
-
-    def closeEvent(self, event):
-        """Executes when the window is closed"""
-
-        self.window_settings.setValue('geometry', self.saveGeometry())
-
-        # Stop any running QThreads cleanly before closing the dialog window
-        # Try statement in case the ICR_instance doesn't exist
-        try:
-            if self.ICR_instance.isRunning:
-                self.stopwatch_instance.stop()
-                self.ICR_instance.stop()
-        except (AttributeError, RuntimeError):
-            pass
-
-
 class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
     """Opens a Modeless Dialog Window when Tools -> Camera -> Settings is clicked
     Or when the Camera Settings button in the Image Capture Dialog Window is clicked
@@ -816,7 +478,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', '').toByteArray())
+        self.restoreGeometry(self.window_settings.value('geometry', ''))
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -890,7 +552,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', '').toByteArray())
+        self.restoreGeometry(self.window_settings.value('geometry', ''))
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -904,12 +566,19 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.lineFolder.setText(self.contours_folder)
 
+
+        # Alternate QThread testing
+        self.threadpool = QThreadPool()
+
+
+
+
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files
         The slice files are displayed on the ListWidget and saved to the config file
         """
 
-        file_names = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        file_names, _ = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
         file_list = [str(item).replace('\\', '/') for item in file_names]
 
@@ -929,7 +598,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def browse_folder(self):
         # Opens a folder select dialog, allowing the user to select a folder
-        self.contours_folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        self.contours_folder, _ = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if self.contours_folder:
             self.lineFolder.setText(self.contours_folder)
@@ -942,11 +611,11 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonDone.setEnabled(False)
         self.update_progress(0)
 
-        # Instantiate and run a SliceConverter instance
+        # Instantiate and run_build a SliceConverter instance
         self.SC_instance = slice_converter.SliceConverter(self.slice_list, self.checkDraw.isChecked(), self.contours_folder)
-        self.connect(self.SC_instance, SIGNAL("update_status(QString)"), self.update_status)
-        self.connect(self.SC_instance, SIGNAL("update_progress(QString)"), self.update_progress)
-        self.connect(self.SC_instance, SIGNAL("finished()"), self.start_conversion_finished)
+        self.connect(self.SC_instance, pyqtSignal("update_status(QString)"), self.update_status)
+        self.connect(self.SC_instance, pyqtSignal("update_progress(QString)"), self.update_progress)
+        self.connect(self.SC_instance, pyqtSignal("finished()"), self.start_conversion_finished)
         self.SC_instance.start()
 
     def start_conversion_finished(self):
@@ -984,7 +653,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', '').toByteArray())
+        self.restoreGeometry(self.window_settings.value('geometry', ''))
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -1145,7 +814,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
     def save(self, undo_flag=False):
 
-        self.emit(SIGNAL("update_overlay(PyQt_PyObject)"), self.transform)
+        self.emit(pyqtSignal("update_overlay(PyQt_PyObject)"), self.transform)
 
         if not undo_flag:
             self.transform_states.append(self.transform[:])
@@ -1176,7 +845,7 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', '').toByteArray())
+        self.restoreGeometry(self.window_settings.value('geometry', ''))
 
         # Split camera parameters into their own respective values to be used in OpenCV functions
         camera_matrix = np.array(results['CameraMatrix'])
@@ -1184,8 +853,8 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         homography_matrix = np.array(results['HomographyMatrix'])
 
         # Nested for loops to access each of the table boxes in order
-        for row in xrange(3):
-            for column in xrange(3):
+        for row in range(3):
+            for column in range(3):
 
                 # Setting the item using the corresponding index of the matrix arrays
                 self.tableCameraMatrix.setItem(row, column, QTableWidgetItem(

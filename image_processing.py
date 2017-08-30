@@ -2,7 +2,9 @@
 import json
 import cv2
 import numpy as np
-from PyQt4.QtCore import QThread, SIGNAL
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 
 class ImageCorrection(QThread):
@@ -70,7 +72,7 @@ class ImageCorrection(QThread):
             image = cv2.undistort(image, camera_matrix, self.distortion_coefficients)
             return image
         except:
-            print 'Image Distortion fix failed.'
+            print('Image Distortion fix failed.')
             return False
 
     def perspective_fix(self, image):
@@ -80,7 +82,7 @@ class ImageCorrection(QThread):
             image = cv2.warpPerspective(image, self.homography_matrix, tuple(self.output_resolution))
             return image
         except:
-            print 'Image Perspective Fix failed.'
+            print('Image Perspective Fix failed.')
             return False
 
     def crop(self, image):
@@ -179,29 +181,29 @@ class DefectDetection(QThread):
         self.original_image = image_raw
 
     def run(self):
-        self.emit(SIGNAL("update_progress(QString)"), '0')
+        self.emit(pyqtSignal("update_progress(QString)"), '0')
 
-        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 1...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 1...')
         self.image_1 = self.test_code_1(self.original_image)
-        self.emit(SIGNAL("update_progress(QString)"), '20')
+        self.emit(pyqtSignal("update_progress(QString)"), '20')
 
-        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 2...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 2...')
         self.image_2 = self.test_code_2(self.original_image)
-        self.emit(SIGNAL("update_progress(QString)"), '40')
+        self.emit(pyqtSignal("update_progress(QString)"), '40')
 
-        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 3...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 3...')
         self.image_3 = self.test_code_3(self.original_image)
-        self.emit(SIGNAL("update_progress(QString)"), '60')
+        self.emit(pyqtSignal("update_progress(QString)"), '60')
 
-        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 4...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 4...')
         self.image_4 = self.test_code_4(self.original_image)
-        self.emit(SIGNAL("update_progress(QString)"), '80')
+        self.emit(pyqtSignal("update_progress(QString)"), '80')
 
-        self.emit(SIGNAL("update_status(QString)"), 'Running OpenCV Process 5...')
+        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 5...')
         self.image_5 = self.test_code_5(self.original_image)
-        self.emit(SIGNAL("update_progress(QString)"), '100')
+        self.emit(pyqtSignal("update_progress(QString)"), '100')
 
-        self.emit(SIGNAL("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, "
+        self.emit(pyqtSignal("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, "
                          "PyQt_PyObject)"), self.image_1, self.image_2, self.image_3, self.image_4, self.image_5)
 
     @staticmethod

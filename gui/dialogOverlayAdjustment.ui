@@ -26,8 +26,8 @@
    <string>Overlay Adjustment</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
+   <iconset>
+    <normaloff>logo.ico</normaloff>logo.ico</iconset>
   </property>
   <widget class="QLabel" name="labelInformation">
    <property name="geometry">
@@ -140,7 +140,7 @@
        <string>Shifts the display image up by the given pixels.</string>
       </property>
       <property name="text">
-       <string>▲</string>
+       <string>U</string>
       </property>
      </widget>
     </item>
@@ -158,7 +158,7 @@
        <string>Shifts the display image down by the given pixels.</string>
       </property>
       <property name="text">
-       <string>▼</string>
+       <string>D</string>
       </property>
      </widget>
     </item>
@@ -176,7 +176,7 @@
        <string>Shifts the display image left by the given pixels.</string>
       </property>
       <property name="text">
-       <string>◄</string>
+       <string>L</string>
       </property>
      </widget>
     </item>
@@ -194,7 +194,7 @@
        <string>Shifts the display image right by the given pixels.</string>
       </property>
       <property name="text">
-       <string>►</string>
+       <string>R</string>
       </property>
      </widget>
     </item>
@@ -239,7 +239,7 @@
        <string>Clocwise rotates the display image by the given degrees.</string>
       </property>
       <property name="text">
-       <string>↶</string>
+       <string>ACW</string>
       </property>
      </widget>
     </item>
@@ -272,7 +272,7 @@
        <string>Anti-Clocwise rotates the display image by the given degrees.</string>
       </property>
       <property name="text">
-       <string>↷</string>
+       <string>CW</string>
       </property>
      </widget>
     </item>
@@ -302,7 +302,7 @@
        <string>Clocwise rotates the display image by the given degrees.</string>
       </property>
       <property name="text">
-       <string>↔</string>
+       <string>H</string>
       </property>
      </widget>
     </item>
@@ -332,7 +332,7 @@
        <string>Clocwise rotates the display image by the given degrees.</string>
       </property>
       <property name="text">
-       <string>↕</string>
+       <string>V</string>
       </property>
      </widget>
     </item>
@@ -377,7 +377,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↿</string>
+       <string>LU</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -410,7 +410,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↾</string>
+       <string>RU</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -443,7 +443,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↼</string>
+       <string>UL</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -476,7 +476,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↖</string>
+       <string>NW</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -509,7 +509,7 @@
        <string>Click to move the overlay boundary.</string>
       </property>
       <property name="text">
-       <string>↑</string>
+       <string>N</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -542,7 +542,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↗ </string>
+       <string>NE</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -575,7 +575,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>⇀</string>
+       <string>UR</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -608,7 +608,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>←</string>
+       <string>W</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -674,7 +674,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>→</string>
+       <string>E</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -707,7 +707,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↽</string>
+       <string>DL</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -740,7 +740,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↙</string>
+       <string>SW</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -773,7 +773,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↓</string>
+       <string>S</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -806,7 +806,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>↘</string>
+       <string>SE</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -839,7 +839,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>⇁</string>
+       <string>DR</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -872,7 +872,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>⇃</string>
+       <string>LD</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -905,7 +905,7 @@
        <string>Click to move the crop boundary.</string>
       </property>
       <property name="text">
-       <string>⇂</string>
+       <string>RD</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -956,7 +956,7 @@
        <string>Resets the overlay image.</string>
       </property>
       <property name="text">
-       <string>®</string>
+       <string>R</string>
       </property>
      </widget>
     </item>
@@ -1028,9 +1028,7 @@
   <tabstop>buttonFlipHorizontal</tabstop>
   <tabstop>buttonFlipVertical</tabstop>
  </tabstops>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>buttonDone</sender>

@@ -1,6 +1,19 @@
+August 30
+- Continued porting forward the code and testing for stability and for bugs
+- Started remodifying and finalizing the design of the UI starting with the MainWindow
+- Consolidated the four separate sliders and buttons into one master slider that controls the currently displayed tab's display
+- Completely integrated the image capture window into the MainWindow and removed the dialog
+- Rejigged the code to work on the new modified window
+- Reimplemented the image viewer using an image viewer from the internet as a basis
+
+August 29
+- Started porting the code forward from Python 2.7.13 to Python 3.6.2
+- Ported the code forward from PyQt4 4.11.4 to PyQt5 5.9 
+- Investigated ways to streamline the installation process by limiting installation to just the Python language executable and a bunch of pip installation wheels
+- Started looking into improving the multithreading by using qThreadpool
+
 August 28
 - Added right click context menus to the 4 tab labels that allow the user to open the image in their folder or in another image viewer
-- Added another tab that serves as a video feed of the attached camera (no functionality yet)
 - Copied the timer and continue from checkbox from the ImageCapture dialog window to the MainWindow
 - Changed the resizeEvent method from monitoring the label to instead the MainWindow's resizeEvent so that the minimize and maximize buttons cause the picture to resize correctly
 
