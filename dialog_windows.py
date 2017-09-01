@@ -38,9 +38,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         # Setup event listeners for all the relevent UI components, and connect them to specific functions
         # Buttons
-        self.buttonBrowseSF.clicked.connect(self.browse_slice)
-        self.buttonBrowseBF.clicked.connect(self.browse_build_folder)
-        self.buttonSendTestEmail.clicked.connect(self.send_test)
+        self.pushBrowseSF.clicked.connect(self.browse_slice)
+        self.pushBrowseBF.clicked.connect(self.browse_build_folder)
+        self.pushSendTestEmail.clicked.connect(self.send_test)
         self.lineEmailAddress.textChanged.connect(self.enable_button)
 
         with open('config.json') as config:
@@ -58,7 +58,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
         if self.open_flag:
             self.setWindowTitle('Open Build')
-            self.buttonCreate.setText('Load')
+            self.pushCreate.setText('Load')
             self.lineBuildName.setText(self.config['BuildInfo']['Name'])
             self.comboPlatform.setCurrentIndex(self.config['BuildInfo']['Platform'])
             self.slice_file_list = self.config['SliceConverter']['Files']
@@ -77,13 +77,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         file_names, _ = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        # Turn the received QFileList into a Python list of file names using list comprehension
-        file_list = [str(item).replace('\\', '/') for item in file_names]
-
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
-        if file_list:
-            self.set_list(file_list)
-            self.slice_file_list = file_list
+        if file_names:
+            self.set_list(file_names)
+            self.slice_file_list = file_names
 
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
@@ -113,7 +110,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         if retval == 16384:
             if validate_email(self.lineEmailAddress.text()):
                 # Disable the Send Test Email button to prevent SPAM
-                self.buttonSendTestEmail.setEnabled(False)
+                self.pushSendTestEmail.setEnabled(False)
 
                 self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
                 self.config['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
@@ -165,10 +162,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         """(Re-)Enables the Send Test Email button if the email address box is changed and not empty"""
 
         if self.lineEmailAddress.text():
-            self.buttonSendTestEmail.setEnabled(True)
+            self.pushSendTestEmail.setEnabled(True)
             self.checkAddAttachment.setEnabled(True)
         else:
-            self.buttonSendTestEmail.setEnabled(False)
+            self.pushSendTestEmail.setEnabled(False)
             self.checkAddAttachment.setEnabled(False)
 
     def accept(self):

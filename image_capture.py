@@ -5,6 +5,7 @@ import time
 import cv2
 import pypylon
 import serial
+import serial.tools.list_ports
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -103,28 +104,28 @@ class ImageCapture(QThread):
         Returns accessed COM port if found and creates the serial trigger variable, else False
         """
 
-        # Create a list of ports as COM1, COM2 etc.
-        ports = ['COM%s' % i for i in range(1, 10)]
+        # List all the available serial ports
+        port_list = list(serial.tools.list_ports.comports())
 
-        # Checks through all the COM ports for an available connected trigger device
-        for port in ports:
-            try:
+        # Check the list for the port description that matches the trigger being used
+        for port in port_list:
+            if 'CH340' in port.description:
                 # Open the COM port with a baud rate of 9600 and a 1 second timeout
-                self.serial_trigger = serial.Serial(port, 9600, timeout=1)
+                self.serial_trigger = serial.Serial(port.device, 9600, timeout=1)
 
-                # Read the serial line
-                self.serial_trigger_read = self.serial_trigger.readline().strip()
+                try:
+                    # Read the serial line
+                    self.serial_trigger_read = str(self.serial_trigger.readline())
+                except (OSError, serial.SerialException):
+                    return False
 
                 # The Arduino has been programmed to send back tildes by default
                 if '~' in self.serial_trigger_read:
-                    return port
+                    return port.device
                 else:
                     self.serial_trigger.close()
-            except (OSError, serial.SerialException, serial.SerialTimeoutException):
-                # Move on to the next COM port
-                pass
 
-        # Returns false if the for loop iterates through all the COM ports and can't find an attached device
+        # Return false if the specific trigger isn't found
         return False
 
     def acquire_settings(self):

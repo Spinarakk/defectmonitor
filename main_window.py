@@ -11,6 +11,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 
+uic.compileUiDir('gui')
 # # Import related modules
 import dialog_windows
 import extra_functions
@@ -18,9 +19,9 @@ import image_capture
 import image_processing
 import defect_analysis
 import slice_converter
+import ui_elements
 
 # Import PyQt GUIs
-uic.compileUiDir('gui')
 from gui import mainWindow
 
 
@@ -139,11 +140,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding image, list or name
         self.display = {'Image': [0, 0, 0, 0], 'ImageList': [[], [], [], []], 'LayerRange': [1, 1, 1, 1],
-                        'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'],
-                        'CurrentLayer': [0, 0, 0, 0],
-                        'LengthOld': [None, None, None, None], 'LengthNew': [None, None, None, None]}
-                        # 'LabelNames': [self.labelDisplayCE, self.labelDisplaySE, self.labelDisplayPC,
-                        #                self.labelDisplayIC]}
+                        'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'], 'CurrentLayer': [1, 1, 1, 1],
+                        'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
+                        'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
+                        'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC]}
 
     # MENUBAR -> FILE
 
@@ -196,7 +196,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Enable certain UI elements
         self.actionSave.setEnabled(True)
         self.actionSaveAs.setEnabled(True)
-        self.pushImageCapture.setEnabled(True)
         self.pushAcquireCT.setEnabled(True)
 
         # Store the names of the four folders to be monitored in the display dictionary
@@ -205,10 +204,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                                        '%s/contours' % self.config['ImageCapture']['Folder'],
                                        '%s/processed/single' % self.config['ImageCapture']['Folder']]
 
-        # Instantiate and run a QTimer that will poll the image folders for changes every second
-        self.poll_timer = QTimer()
-        self.poll_timer.timeout.connect(self.poll_folder)
-        self.poll_timer.start(1000)
+        # Instantiate a QFileSystemWatcher that will monitor the given folders and emit a signal if changes are detected
+        self.folder_monitor = QFileSystemWatcher()
+        self.folder_monitor.addPaths(self.display['ImageFolder'])
+        self.folder_monitor.directoryChanged.connect(self.folder_change)
 
         self.start_display()
 
@@ -251,8 +250,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Opens a File Dialog when File -> Save As... is clicked
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
-        config_name, _ = QFileDialog.getSaveFileName(self, 'Save Build As', '', 'JSON File (*.json)',
-                                                                   selectedFilter='*.json')
+
+        config_name, _ = QFileDialog.getSaveFileName(self, 'Save Build As', '', 'JSON File (*.json)')
 
         # Checking if user has chosen to save the build or clicked cancel
         if config_name:
@@ -265,8 +264,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        image_name, _ = QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)',
-                                                                   selectedFilter='*.png')
+        image_name, _ = QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)')
 
         # Checking if user has chosen to save the image or clicked cancel
         if image_name:
@@ -279,6 +277,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.export_confirmation.setText('The image has been saved to %s.' % image_name)
             self.export_confirmation.setWindowTitle('Export Image')
             self.export_confirmation.exec_()
+
+    def close_build(self):
+        """Closes the current build when File -> Close is clicked or when a new build is created/opened"""
+
+        # Remove the paths from the QFileSystemWatcher
+        self.folder_monitor.removePaths(self.display['ImageFolder'])
+
+        for index in range(4):
+            self.display['StackNames'][index].setCurrentIndex(0)
+            self.display['LabelNames'][index].setText('Create or Open a Build to View Images')
+
+        #TODO
 
     # MENUBAR -> VIEW
     def zoom_in(self):
@@ -415,7 +425,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def set_layer(self):
         """Changes the displayed slider's value which in turn executes the slider_change method"""
-        self.display['SliderNames'][self.widgetDisplay.currentIndex()].setValue(self.spinLayer.value())
+        self.sliderDisplay.setValue(self.spinLayer.value())
 
     # IMAGE CAPTURE
 
@@ -429,9 +439,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.labelCameraStatus.setText('FOUND')
             if bool(trigger_flag):
                 self.pushRun.setEnabled(True)
+            else:
+                self.labelTriggerStatus.setText('NOT FOUND')
         else:
             self.labelCameraStatus.setText('NOT FOUND')
-            self.labelTriggerStatus.setText('NOT FOUND')
             self.pushRun.setEnabled(False)
         if bool(trigger_flag):
             self.labelTriggerStatus.setText(str(trigger_flag))
@@ -486,6 +497,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         for index in range(4):
             # Update the current image using the current value of the corresponding slider
+            self.update_image_list(index)
             self.update_image(index)
 
             # Checks if the list is empty or not
@@ -506,29 +518,20 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.display_flag = True
 
-        # Display the image on the label
+        self.update_layer_range(self.widgetDisplay.currentIndex())
+
+        # Display the image on the graphics scene
         self.update_display()
 
         # Enable all the sliders and up/down buttons in all five tabs
-        self.sliderCE.setEnabled(True)
-        self.pushSliderUpCE.setEnabled(True)
-        self.pushSliderDownCE.setEnabled(True)
-        self.sliderSE.setEnabled(True)
-        self.pushSliderUpSE.setEnabled(True)
-        self.pushSliderDownSE.setEnabled(True)
-        self.sliderPC.setEnabled(True)
-        self.pushSliderUpPC.setEnabled(True)
-        self.pushSliderDownPC.setEnabled(True)
-        self.sliderIC.setEnabled(True)
-        self.pushSliderUpIC.setEnabled(True)
-        self.pushSliderDownIC.setEnabled(True)
+        self.frameSlider.setEnabled(True)
 
         # Enable and set the currently displayed tab's layer range
         self.spinLayer.setEnabled(True)
         self.pushGo.setEnabled(True)
-        self.update_layer_range(self.widgetDisplay.currentIndex())
 
-    def update_display(self, resize_flag=False):
+
+    def update_display(self):
         """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles"""
 
         # Grab the current tab index (for clearer code purposes)
@@ -536,42 +539,41 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Grab the names of certain elements (for clearer code purposes)
         label = self.display['LabelNames'][index]
+        graphics = self.display['GraphicsNames'][index]
+        stack = self.display['StackNames'][index]
         image = self.display['Image'][index]
 
         # Check if the image folder has an actual image to display
         if not self.display['ImageList'][index]:
+            stack.setCurrentIndex(0)
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
         else:
-            # If the window was just resized, transform the currently displayed image rather than processing a new one
-            if resize_flag:
-                image = self.display['DisplayImage']
-            else:
-                if self.checkOverlay.isChecked():
+            stack.setCurrentIndex(1)
+            if self.checkOverlay.isChecked():
 
-                    self.update_image(2)
-                    overlay = self.display['Image'][2]
+                # Update and grab the current overlay image
+                self.update_image(2)
+                overlay = self.display['Image'][2]
 
-                    # Resizes the overlay image if the resolution doesn't match the displayed image
-                    if overlay.shape[:2] != image.shape[:2]:
-                        overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
+                # Resizes the overlay image if the resolution doesn't match the displayed image
+                if overlay.shape[:2] != image.shape[:2]:
+                    overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
-                    overlay = image_processing.ImageCorrection(None).transform(overlay, self.transform)
+                overlay = image_processing.ImageCorrection(None).transform(overlay, self.transform)
 
-                    #self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
-                    # Display a status message with the current transformation of the overlay image
-                    self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
-                                       (self.transform[1], -self.transform[0], -1 * self.transform[2],
-                                        self.transform[4], self.transform[5]), 10000)
+                # self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
+                # Display a status message with the current transformation of the overlay image
+                self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
+                                   (self.transform[1], -self.transform[0], -1 * self.transform[2],
+                                    self.transform[4], self.transform[5]), 10000)
 
-                    image = cv2.add(image, overlay)
+                image = cv2.add(image, overlay)
 
-                if self.radioCLAHE.isChecked():
-                    image = image_processing.ImageCorrection.clahe(image)
+            if self.radioCLAHE.isChecked():
+                image = image_processing.ImageCorrection.clahe(image)
 
-            # Display the image on the current display label and save a copy of the image to the display dictionary
-            # This image copy will be used for export images and for resize events as it's faster
-            label.setPixmap(self.convert2pixmap(image, label))
-            self.display['DisplayImage'] = image.copy()
+            # Display the image on the current GraphicsView
+            graphics.set_image(self.convert2pixmap(image))
 
     def update_overlay(self, transform):
         """Executes the adjustment of the overlay"""
@@ -583,20 +585,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_display()
 
     @staticmethod
-    def convert2pixmap(image, label):
+    def convert2pixmap(image):
         """Converts the received image into Pixmap format that can be displayed on the label in Qt"""
 
         # If the image is a BGR image, convert to RGB so that colours can be displayed properly
-        if (len(image.shape)==3):
+        if (len(image.shape) == 3):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Convert to pixmap using in-built Qt functions
         q_image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1],
-                               QImage.Format_RGB888)
-        q_pixmap = QPixmap.fromImage(q_image)
-
-        return q_pixmap.scaled(label.frameSize().width(), label.frameSize().height(),
-                               aspectRatioMode=Qt.KeepAspectRatio)
+                         QImage.Format_RGB888)
+        return QPixmap.fromImage(q_image)
 
     # MISCELlANEOUS UI ELEMENT FUNCTIONALITY
 
@@ -604,15 +603,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Executes when the focused tab on widgetDisplay changes to enable/disable buttons and change layer values"""
 
         if self.display_flag:
-            self.update_display()
-
+            # Set the layer spinbox's range depending on the currently displayed tab
+            self.update_layer_range(index)
             self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
 
             # Set the current layer number depending on the currently displayed tab
-            self.labelLayerNumber.setText(str(self.display['SliderNames'][index].value()).zfill(4))
+            self.labelLayerNumber.setText(str(self.display['CurrentLayer'][index]).zfill(4))
 
-            # Set the layer spinbox's range depending on the currently displayed tab
-            self.update_layer_range(index)
             # Disable the display options groupbox if there isn't a currently displayed image
             if self.display['ImageList'][index] == []:
                 self.groupDisplayOptions.setEnabled(False)
@@ -620,13 +617,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             else:
                 self.groupDisplayOptions.setEnabled(True)
                 self.menu_display.setEnabled(True)
-                if index > 1 and index < 4:
-                    self.pushDefectProcessing.setEnabled(False)
+                if index == 2:
                     self.checkOverlay.setEnabled(False)
                     self.checkOverlay.setChecked(False)
                 else:
-                    self.pushDefectProcessing.setEnabled(True)
                     self.checkOverlay.setEnabled(True)
+
+            self.update_display()
 
     def tab_focus(self, index, value):
         """Changes the tab focus to the received index's tab and sets the slider value to the received value
@@ -676,6 +673,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Updates the label number and slider tooltip with the currently displayed tab's slider's value
         self.labelLayerNumber.setText(str(value).zfill(4))
         self.sliderDisplay.setToolTip(str(value))
+        self.display['CurrentLayer'][self.widgetDisplay.currentIndex()] = value
 
         # Reloads the current image using the current value of the corresponding slider
         self.update_image(self.widgetDisplay.currentIndex())
@@ -691,26 +689,23 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Decrements the slider by 1"""
         self.sliderDisplay.setValue(self.sliderDisplay.value() - 1)
 
-    def poll_folder(self):
-        """Polls the given folders and executes the folder change if a change in the number of items is detected"""
-
-        for index, folder in enumerate(self.display['ImageFolder']):
-            # Acquire the new length of the folder in question
-            self.display['LengthNew'][index] = len(os.walk(folder).next()[2])
-
-            # Check if the new length is different from the old length and execute a folder change if so
-            if not self.display['LengthNew'][index] == self.display['LengthOld'][index]:
-                self.folder_change(index)
-                # Save the new length as the old length
-                self.display['LengthOld'][index] = self.display['LengthNew'][index]
-
-    def folder_change(self, index):
+    def folder_change(self, folder):
         """Executes whenever a change of items in any of the image folders is detected
         Updates the Layer spinBox and the Sliders with a new range of acceptable values
         """
 
+        # Correlate the received folder to an index value
+        if 'coat' in os.path.basename(folder):
+            index = 0
+        elif 'scan' in os.path.basename(folder):
+            index = 1
+        elif 'contour' in os.path.basename(folder):
+            index = 2
+        elif 'single' in os.path.basename(folder):
+            index = 3
+
         # Updates various UI elements with updated values
-        self.update_image_list(int(index))
+        self.update_image_list(index)
         self.update_layer_range(self.widgetDisplay.currentIndex())
 
         if self.display_flag:
@@ -750,31 +745,21 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.display['ImageList'][index]:
             # Check if the Toggle Overlay checkbox is checked
             # If so, use the current tab's slider value to choose which overlay image to load
-            index_overlay = index
-            if self.checkOverlay.isChecked():
-                index_overlay = self.widgetDisplay.currentIndex()
             try:
                 # Load the image into memory and store it in the dictionary
                 # Decrement by 1 because code starts at 0
-                self.display['Image'][index] = \
-                    cv2.imread('%s' % self.display['ImageList'][index]
-                    [self.display['SliderNames'][index_overlay].value() - 1])
+                self.display['Image'][index] = cv2.imread(
+                    self.display['ImageList'][index][self.sliderDisplay.value() - 1])
             except IndexError:
                 self.update_status('Part contours not found.')
         else:
             self.display['Image'][index] = None
 
     def update_layer_range(self, index):
-        """Updates the layer spinbox's maximum acceptable range, tooltip, and the sliders"""
+        """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
         self.spinLayer.setMaximum(self.display['LayerRange'][index])
         self.spinLayer.setToolTip('1 - %s' % self.display['LayerRange'][index])
-        self.display['SliderNames'][index].setMaximum(self.display['LayerRange'][index])
-
-    def resizeEvent(self, event):
-        """Executes whenever the MainWindow changes in size due to resizing or maximizing the window
-        All it does is resize the currently displayed image while maintaining the image's aspect ratio"""
-        if self.display_flag:
-            self.update_display(True)
+        self.sliderDisplay.setMaximum(self.display['LayerRange'][index])
 
     def update_time(self, time_elapsed, time_idle):
         """Updates the timers at the bottom right of the Main Window with the received time"""
@@ -805,20 +790,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.config['ImageCapture']['Phase'] = 1
         self.config['ImageCapture']['Single'] = 1
 
-        # Terminates running FolderMonitor QThread if running
-        try:
-            self.FM_instance.stop_build()
-        except AttributeError:
-            pass
-
         # Save configuration settings to config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
+        exit()
 
 if __name__ == '__main__':
     def main():
         application = QApplication(sys.argv)
+        application.setAttribute(Qt.AA_Use96Dpi)
         interface = MainWindow()
         interface.show()
         sys.exit(application.exec_())
