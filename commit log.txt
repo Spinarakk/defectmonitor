@@ -1,3 +1,12 @@
+September 6
+- Fixed up the capture code to work with taking single shots and with the trigger
+- Changed the camera and trigger acquisition to use the QThreadPool as it takes a bit of time to execute
+- Fixed the capture single image function
+- Fixed the run capture image function
+- Moved the constant polling of the trigger to its own worker thread to keep the main GUI functional
+- Repurposed the image converter to also use the QThreadPool and to also open the folder when finished 
+- Added a pause button that just stops the timer but doesn't outright reset it
+
 September 1
 - Reimplemented the image viewer using QGraphicsView as a basis
 - Consolidated 4 separate image views for each tab into one that just changes image

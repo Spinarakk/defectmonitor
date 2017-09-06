@@ -109,8 +109,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         # If the user clicked Yes
         if retval == 16384:
             if validate_email(self.lineEmailAddress.text()):
-                # Disable the Send Test Email button to prevent SPAM
+                # Disable the Send Test Email button to prevent SPAM and other buttons until the thread is finished
                 self.pushSendTestEmail.setEnabled(False)
+                self.pushCreate.setEnabled(False)
+                self.pushClose.setEnabled(False)
 
                 self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
                 self.config['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
@@ -128,7 +130,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 # Instantiate and run_build a Notifications instance
                 self.N_instance = extra_functions.Notifications(subject, message, attachment)
                 self.N_instance.start()
-                self.connect(self.N_instance, pyqtSignal("finished()"), self.send_test_finished)
+                self.N_instance.finished.connect(self.send_test_finished)
             else:
                 # Opens a message box indicating that the entered email address is invalid
                 invalid_email_error = QMessageBox()
@@ -139,6 +141,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
     def send_test_finished(self):
         """Open a message box with a send test confirmation message"""
+
+        self.pushCreate.setEnabled(True)
+        self.pushClose.setEnabled(True)
+
         send_test_confirmation = QMessageBox()
         send_test_confirmation.setIcon(QMessageBox.Information)
         send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
@@ -349,7 +355,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.buttonDone.setEnabled(False)
 
         # Save calibration settings
-        self.save()
+        self.save_settings()
 
         # Reset the colours of the items in the list widget
         # Try exception causes this function to be skipped the first time
@@ -433,11 +439,11 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         with open('%s/calibration_results.json' % self.config['WorkingDirectory']) as file:
             results = json.load(file)
         self.config.update(results)
-        self.save()
+        self.save_settings()
         self.update_status('Calibration results saved to the config file.')
         self.buttonSave.setEnabled(False)
 
-    def save(self):
+    def save_settings(self):
         """Save the spinxBox values to the config.json file"""
 
         self.config['CameraCalibration']['Width'] = self.spinWidth.value()
@@ -456,7 +462,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
     def closeEvent(self, event):
         """Executes when the window is closed"""
 
-        self.save()
+        self.save_settings()
 
         # Save the current position of the Dialog Window before the window is closed
         self.window_settings.setValue('geometry', self.saveGeometry())
@@ -562,13 +568,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.contours_folder = '%s/contours' % self.config['WorkingDirectory']
 
         self.lineFolder.setText(self.contours_folder)
-
-
-        # Alternate QThread testing
-        self.threadpool = QThreadPool()
-
-
-
 
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files
@@ -698,118 +697,118 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
     def reset(self):
         self.transform = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.save()
+        self.save_settings()
 
     def undo(self):
         del self.transform_states[-1]
         self.transform = self.transform_states[-1]
-        self.save(True)
+        self.save_settings(True)
 
     def translate_up(self):
         self.transform[0] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def translate_down(self):
         self.transform[0] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def translate_left(self):
         self.transform[1] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def translate_right(self):
         self.transform[1] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def rotate_acw(self):
         self.transform[2] += self.spinDegrees.value()
-        self.save()
+        self.save_settings()
 
     def rotate_cw(self):
         self.transform[2] -= self.spinDegrees.value()
-        self.save()
+        self.save_settings()
 
     def flip_horizontal(self):
         self.transform[3] ^= 1
-        self.save()
+        self.save_settings()
 
     def flip_vertical(self):
         self.transform[4] ^= 1
-        self.save()
+        self.save_settings()
 
     def stretch_reset(self):
         self.transform[5:] = [0] * (len(self.transform) - 5)
-        self.save()
+        self.save_settings()
 
     def stretch_n(self):
         self.transform[5] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_ne(self):
         self.transform[5] -= self.spinPixels.value()
         self.transform[6] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_e(self):
         self.transform[6] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_se(self):
         self.transform[7] += self.spinPixels.value()
         self.transform[6] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_s(self):
         self.transform[7] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_sw(self):
         self.transform[7] += self.spinPixels.value()
         self.transform[8] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_w(self):
         self.transform[8] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_nw(self):
         self.transform[5] -= self.spinPixels.value()
         self.transform[8] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_ul(self):
         self.transform[9] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_lu(self):
         self.transform[10] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_ur(self):
         self.transform[11] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_ru(self):
         self.transform[12] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_dl(self):
         self.transform[13] -= self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_ld(self):
         self.transform[14] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_dr(self):
         self.transform[15] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
     def stretch_rd(self):
         self.transform[16] += self.spinPixels.value()
-        self.save()
+        self.save_settings()
 
-    def save(self, undo_flag=False):
+    def save_settings(self, undo_flag=False):
 
         self.emit(pyqtSignal("update_overlay(PyQt_PyObject)"), self.transform)
 

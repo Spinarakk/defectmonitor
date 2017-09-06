@@ -1,35 +1,40 @@
+# Import external libraries
 import sys
 import traceback
 from PyQt5.QtCore import *
 
-
 class WorkerSignals(QObject):
     """Signals available from a running worker thread are defined here"""
-
     finished = pyqtSignal()
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
-    callback = pyqtSignal(object)
     status = pyqtSignal(str)
+    layer = pyqtSignal(int)
+    phase = pyqtSignal(str)
     progress = pyqtSignal(int)
 
 
 class Worker(QRunnable):
-    """Worker thread that inherits from QRunnable to handle worker thread setup, signaps and wrap-up"""
+    """Worker thread that inherits from QRunnable to handle worker thread setup, signals and wrap-up"""
 
-    def __init__(self, function, *args, **kwargs):
+    def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
 
         # Store constructor arguments as instance variables that will be re-used for processing
-        self.function = function
+        self.function = fn
         self.args = args
         self.kwargs = kwargs
-        self.signals = WorkerSignals
+        self.signals = WorkerSignals()
 
-        # Add any signal keywords to the kwargs here
-        kwargs['callback'] = self.signals.callback
-        kwargs['status'] = self.signals.status
-        kwargs['progress'] = self.signals.progress
+        # Add any signal keywords to the kwargs here depending on the sent function
+        if 'acquire_image' in str(self.function):
+            kwargs['status'] = self.signals.status
+            kwargs['layer'] = self.signals.layer
+            kwargs['phase'] = self.signals.phase
+
+        if 'image_converter_function' in str(self.function):
+            kwargs['status'] = self.signals.status
+            kwargs['progress'] = self.signals.progress
 
     @pyqtSlot()
     def run(self):

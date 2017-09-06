@@ -48,6 +48,11 @@ class ImageViewer(QGraphicsView):
         # Update the viewer
         self.update_viewer()
 
+    def reset_image(self):
+        """Reset the image back to its original state (no zoom or pan)"""
+        self.zoom_list = list()
+        self.update_viewer()
+
     def remove_image(self):
         """Removes the current image from the scene if it exists"""
 
@@ -99,6 +104,5 @@ class ImageViewer(QGraphicsView):
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.RightButton:
             if self.zoom_flag:
-                self.zoom_list = list()
-                self.update_viewer()
+                self.reset_image()
         QGraphicsView.mouseDoubleClickEvent(self, event)

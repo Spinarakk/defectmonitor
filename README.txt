@@ -18,7 +18,7 @@ Installation
 	- cd "random directory"
 	- git clone https://github.com/mabl/PyPylon
 	- cd PyPylon
-	- python setup.py build
+	- python setup.py install
 	- Copy the pypylon folder from the build/lib.win-(windowsver)-(pythonver)
 	- To the Defect Monitor root directory
 

@@ -4,6 +4,7 @@ import sys
 import subprocess
 import json
 import cv2
+import serial
 
 # Import PyQt modules
 from PyQt5.QtGui import *
@@ -14,12 +15,11 @@ from PyQt5 import uic
 uic.compileUiDir('gui')
 # # Import related modules
 import dialog_windows
-import extra_functions
 import image_capture
 import image_processing
 import defect_analysis
 import slice_converter
-import ui_elements
+import qt_multithreading
 
 # Import PyQt GUIs
 from gui import mainWindow
@@ -62,6 +62,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSave.triggered.connect(self.save_build)
         self.actionSaveAs.triggered.connect(self.save_as_build)
         self.actionExportImage.triggered.connect(self.export_image)
+        self.actionClose.triggered.connect(self.close_build)
         self.actionQuit.triggered.connect(self.closeEvent)
 
         # Menubar -> View
@@ -100,9 +101,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushGo.clicked.connect(self.set_layer)
 
         # Image Capture
-        self.pushAcquireCT.clicked.connect(self.acquire_camera_trigger)
-        self.pushCapture.clicked.connect(self.capture_single_image)
+        self.pushAcquireCT.clicked.connect(self.acquire_ct)
+        self.pushCapture.clicked.connect(self.capture_single)
         self.pushRun.clicked.connect(self.run_build)
+        self.pushPauseResume.clicked.connect(self.pause_build)
         self.pushStop.clicked.connect(self.stop_build)
 
         # Display Widget
@@ -120,7 +122,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Flags for various conditions
         self.display_flag = False
 
-        # Instantiate any instances that cannot be run_build simultaneously
+        # Instantiate any instances that cannot be run simultaneously
         self.FM_instance = None
 
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
@@ -144,6 +146,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC]}
+
+        # Create a threadpool which contains an amount of threads that can be used to simultaneously run functions
+        self.threadpool = QThreadPool()
 
     # MENUBAR -> FILE
 
@@ -209,15 +214,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.folder_monitor.addPaths(self.display['ImageFolder'])
         self.folder_monitor.directoryChanged.connect(self.folder_change)
 
+        # Start the display image viewer to start showing images
         self.start_display()
 
-        # Checks for a valid attached camera and trigger
-        self.update_status('Checking for valid camera and trigger...')
-        self.acquire_camera_trigger()
+        # Check and acquire an attached camera and trigger
+        self.acquire_ct()
 
         # Converts and draws the contours
         if self.config['BuildInfo']['Convert']:
-            # Instantiate and run_build a SliceConverter instance
+            # Instantiate and run a SliceConverter instance
             self.SC_instance = slice_converter.SliceConverter(self.config['SliceConverter']['Files'],
                                                               self.config['BuildInfo']['Draw'])
             self.connect(self.SC_instance, pyqtSignal("update_status(QString)"), self.update_status)
@@ -358,7 +363,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.SC_dialog = None
 
     def image_converter(self):
-        """Opens a FileDialog when Image Converter button is pressed
+        """Opens a FileDialog when the Image Converter button is clicked
         Allows the user to select an image to apply image correction on and saves the processed image in the same folder
         """
 
@@ -367,31 +372,47 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Checking if user has selected a file or clicked cancel
         if image_name:
-            self.update_progress(0)
-            self.update_status('Processing image...')
+            # Process and save the image using a thread by passing the function to a worker
+            worker = qt_multithreading.Worker(self.image_converter_function, image_name)
+            worker.signals.status.connect(self.update_status)
+            worker.signals.progress.connect(self.update_progress)
+            worker.signals.result.connect(self.image_converter_finished)
+            self.threadpool.start(worker)
 
-            # Read the image
-            image_raw = cv2.imread('%s' % image_name)
+    @staticmethod
+    def image_converter_function(image_name, status, progress):
+        """Applies the distortion, perspective, crop and CLAHE processes to the received image
+        Also subsequently saves the image after every process"""
 
-            # Apply the image processing techniques in order
-            image_undistort = image_processing.ImageCorrection(None).distortion_fix(image_raw)
-            self.update_progress(20)
-            image_perspective = image_processing.ImageCorrection(None).perspective_fix(image_undistort)
-            self.update_progress(40)
-            image_crop = image_processing.ImageCorrection(None).crop(image_perspective)
-            self.update_progress(60)
-            image_clahe = image_processing.ImageCorrection(None).clahe(image_crop)
-            self.update_progress(80)
+        image = cv2.imread('%s' % image_name)
+        image_name = image_name.replace('.png', '')
 
-            # Save the cropped image and CLAHE applied image in the same folder after removing .png from the file name
-            image_name.replace('.png', '')
-            cv2.imwrite('%s_undistort.png' % image_name, image_undistort)
-            cv2.imwrite('%s_perspective.png' % image_name, image_perspective)
-            cv2.imwrite('%s_crop.png' % image_name, image_crop)
-            cv2.imwrite('%s_clahe.png' % image_name, image_clahe)
+        # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
+        progress.emit(0)
+        status.emit('Undistorting image...')
+        image = image_processing.ImageCorrection().distortion_fix(image)
+        cv2.imwrite('%s_undistort.png' % image_name, image)
+        progress.emit(25)
+        status.emit('Fixing perspective warp...')
+        image = image_processing.ImageCorrection().perspective_fix(image)
+        cv2.imwrite('%s_perspective.png' % image_name, image)
+        progress.emit(50)
+        status.emit('Cropping image to size...')
+        image = image_processing.ImageCorrection().crop(image)
+        cv2.imwrite('%s_crop.png' % image_name, image)
+        progress.emit(75)
+        status.emit('Applying CLAHE equalization...')
+        image = image_processing.ImageCorrection().clahe(image)
+        cv2.imwrite('%s_clahe.png' % image_name, image)
+        progress.emit(100)
+        status.emit('Image successfully processed and saved to same folder as input image.')
 
-            self.update_progress(100)
-            self.update_status('Image successfully processed.')
+        return os.path.dirname(image_name).replace('/', '\\')
+
+    @staticmethod
+    def image_converter_finished(image_folder):
+        """Open the folder containing the processed images for the user to view after conversion is finished"""
+        subprocess.Popen('explorer %s' % image_folder)
 
     # MENUBAR -> SETTINGS
 
@@ -402,7 +423,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         if self.CS_dialog is None:
             self.CS_dialog = dialog_windows.CameraSettings(self)
-            self.connect(self.CS_dialog, pyqtSignal("destroyed()"), self.camera_settings_closed)
+            self.CS_dialog.destroyed.connect(self.camera_settings_closed)
             self.CS_dialog.show()
         else:
             self.CS_dialog.activateWindow()
@@ -429,57 +450,160 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     # IMAGE CAPTURE
 
-    def acquire_camera_trigger(self):
-        """Checks for a valid attached camera and trigger"""
+    def acquire_ct(self):
+        """Executes after setting up a new or loading a build, or when the Acquire Camera / Trigger button is clicked
+        Checks for a valid attached camera and trigger and enables/disables the Run button accordingly"""
 
-        camera_flag = image_capture.ImageCapture().acquire_camera()
-        trigger_flag = image_capture.ImageCapture().acquire_trigger()
+        self.labelCameraStatus.setText('ACQUIRING...')
+        self.labelTriggerStatus.setText('ACQUIRING...')
 
-        if bool(camera_flag):
-            self.labelCameraStatus.setText('FOUND')
-            if bool(trigger_flag):
-                self.pushRun.setEnabled(True)
-            else:
-                self.labelTriggerStatus.setText('NOT FOUND')
-        else:
-            self.labelCameraStatus.setText('NOT FOUND')
-            self.pushRun.setEnabled(False)
-        if bool(trigger_flag):
-            self.labelTriggerStatus.setText(str(trigger_flag))
+        # Checks for a valid attached camera and trigger using the threadpool by passing the function to a worker
+        worker = qt_multithreading.Worker(self.acquire_ct_function)
+        worker.signals.result.connect(self.update_ct)
+        self.threadpool.start(worker)
 
-    def capture_single_image(self):
-        pass
+    @staticmethod
+    def acquire_ct_function():
+        """Function that will be passed to the QThreadPool to be executed"""
+        camera = image_capture.ImageCapture().acquire_camera()
+        trigger = image_capture.ImageCapture().acquire_trigger()
+
+        # Functions can only return one object, so the two results are combined into a list and returned
+        return [camera, trigger]
+
+    def capture_single(self):
+        """Executes when the Capture Single Image button is clicked
+        Captures and saves a single image by using a worker thread to perform the capture function"""
+        self.pushCapture.setEnabled(False)
+
+        # Takes a single image using a thread by passing the function to the worker
+        worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_single)
+        worker.signals.status.connect(self.update_status)
+        worker.signals.finished.connect(self.capture_single_finished)
+        self.threadpool.start(worker)
+
+    def capture_single_finished(self):
+        self.pushCapture.setEnabled(True)
 
     def run_build(self):
-        self.pushRun.setEnabled(False)
-        self.pushStop.setEnabled(True)
+        """Executes when the Run button is clicked
+        Polls the trigger device for a trigger, subsequently capturing and saving an image if triggered
+        """
 
-        self.stopwatch_instance = extra_functions.Stopwatch()
-        self.connect(self.stopwatch_instance, pyqtSignal("update_time(QString, QString)"), self.update_time)
-        self.stopwatch_instance.start()
+        # Enable / disable certain UI elements to prevent concurrent processes
+        self.update_status('Running build.')
+        self.pushRun.setEnabled(False)
+        self.pushPauseResume.setEnabled(True)
+        self.pushStop.setEnabled(True)
+        self.pushAcquireCT.setEnabled(False)
+        self.pushCapture.setEnabled(False)
+        self.checkResume.setEnabled(False)
+
+        # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
+        # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
+        if self.checkResume.isChecked():
+            self.spinStartingLayer.setEnabled(False)
+            self.config['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
+            self.config['ImageCapture']['Phase'] = 1
+
+            with open('config.json', 'w+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
+
+        # Open the COM port associated with the attached trigger device
+        self.serial_trigger = serial.Serial(self.labelTriggerStatus.text(), 9600, timeout=1)
+
+        # Reset the elapsed time and idle time counters
+        self.stopwatch_elapsed = 0
+        self.stopwatch_idle = 0
+
+        # Create a QTimer that will increment the two running timers
+        self.timer_stopwatch = QTimer()
+
+        # Connect the timeout of the QTimer to the corresponding function
+        self.timer_stopwatch.timeout.connect(self.update_time)
+
+        # Start the QTimer which will timeout and execute the connected slot every given milliseconds
+        self.timer_stopwatch.start(1000)
+
+        # See docstring of the following function for an explanation of how the trigger polling works
+        # self.worker_trigger = qt_multithreading.Worker(self.poll_trigger)
+        # self.worker_trigger.signals.result.connect(self.capture_run)
+
+        self.capture_run('')
+
+    def capture_run(self, result):
+        """Because reading from the serial trigger takes a little bit of time, it temporarily freezes the main UI
+        As such, the serial read is turned into a QRunnable function that is passed to a worker using the QThreadPool
+        The current method works as a sort of recursive loop, where the result of the trigger poll is checked
+        If a trigger is detected, the corresponding image capture function is executed as a worker to the QThreadPool
+        Otherwise, another trigger polling worker is started and the loop keeps repeating
+        The loop is broken if the Pause button is pressed or the build is stopped outright
+        """
+
+        if 'PAUSE' in self.pushPauseResume.text() and self.pushPauseResume.isEnabled():
+            if 'TRIG' in result:
+                self.pushPauseResume.setEnabled(False)
+                self.pushStop.setEnabled(False)
+                worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_run)
+                worker.signals.status.connect(self.update_status)
+                worker.signals.finished.connect(self.capture_run_finished)
+                self.threadpool.start(worker)
+            else:
+                self.update_status('Waiting for trigger.')
+                worker = qt_multithreading.Worker(self.poll_trigger)
+                worker.signals.result.connect(self.capture_run)
+                self.threadpool.start(worker)
+
+    def poll_trigger(self):
+        """Function that will be passed to the QThreadPool to be executed"""
+        return str(self.serial_trigger.readline())
+
+    def capture_run_finished(self):
+        """Reset the time idle counter and restart the trigger polling after resetting the serial input"""
+        self.serial_trigger.reset_input_buffer()
+        self.stopwatch_idle = 0
+        self.pushPauseResume.setEnabled(True)
+        self.pushStop.setEnabled(True)
+        self.capture_run('')
+
+    def pause_build(self):
+        """Executes when the Pause/Resume button is clicked"""
+
+        # Pause function, stop the timer and the trigger polling loop
+        if 'PAUSE' in self.pushPauseResume.text():
+            self.pushPauseResume.setStyleSheet('QPushButton {color: #00aa00;}')
+            self.pushPauseResume.setText('RESUME')
+            self.timer_stopwatch.stop()
+            self.update_status('Current build paused.')
+
+        # Resume function, start the timer and restart the trigger polling loop
+        elif 'RESUME' in self.pushPauseResume.text():
+            self.pushPauseResume.setStyleSheet('QPushButton {color: #ffaa00;}')
+            self.pushPauseResume.setText('PAUSE')
+            self.timer_stopwatch.start(1000)
+            self.capture_run_finished()
+            self.update_status('Current build resumed.')
 
     def stop_build(self):
+        """Executes when the Stop button is clicked"""
 
-        self.stopwatch_instance.stop()
-
+        # Enable / disable certain UI elements
+        # Disabling the Pause button stops the trigger polling loop
+        self.update_status('Build stopped.', 10000)
         self.pushRun.setEnabled(True)
+        self.pushPauseResume.setEnabled(False)
         self.pushStop.setEnabled(False)
+        self.pushAcquireCT.setEnabled(True)
+        self.pushCapture.setEnabled(True)
+        self.checkResume.setEnabled(True)
 
-    # TOGGLES AND CHECKBOXES
+        # Stop the stopwatch timer and close the serial port
+        self.timer_stopwatch.stop()
+        self.serial_trigger.close()
 
-    def toggle_overlay(self):
-        """Overlay process is done in the update_display method
-        This method is mostly to show the appropriate status message"""
-
-        if self.checkOverlay.isChecked():
-            # Display the message for 5 seconds
-            self.update_status('Displaying part contours.')
-            self.pushOverlayAdjustment.setEnabled(True)
-        else:
-            self.update_status('Hiding part contours.')
-            self.pushOverlayAdjustment.setEnabled(False)
-
-        self.update_display()
+    def reset_idle(self):
+        """Resets the stopwatch idle counter whenever an image has been captured"""
+        self.stopwatch_idle = 0
 
     # DISPLAY
 
@@ -518,24 +642,25 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.display_flag = True
 
-        self.update_layer_range(self.widgetDisplay.currentIndex())
+        self.update_ranges(self.widgetDisplay.currentIndex())
 
         # Display the image on the graphics scene
-        self.update_display()
+        for index in range(4):
+            self.update_display(index)
 
-        # Enable all the sliders and up/down buttons in all five tabs
+        # Enable the slider and its up and down buttons
         self.frameSlider.setEnabled(True)
 
         # Enable and set the currently displayed tab's layer range
         self.spinLayer.setEnabled(True)
         self.pushGo.setEnabled(True)
 
-
-    def update_display(self):
+    def update_display(self, index=None):
         """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles"""
 
         # Grab the current tab index (for clearer code purposes)
-        index = self.widgetDisplay.currentIndex()
+        if index is None:
+            index = self.widgetDisplay.currentIndex()
 
         # Grab the names of certain elements (for clearer code purposes)
         label = self.display['LabelNames'][index]
@@ -575,6 +700,20 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Display the image on the current GraphicsView
             graphics.set_image(self.convert2pixmap(image))
 
+    def toggle_overlay(self):
+        """Overlay process is done in the update_display method
+        This method is mostly to show the appropriate status message"""
+
+        if self.checkOverlay.isChecked():
+            # Display the message for 5 seconds
+            self.update_status('Displaying part contours.')
+            self.pushOverlayAdjustment.setEnabled(True)
+        else:
+            self.update_status('Hiding part contours.')
+            self.pushOverlayAdjustment.setEnabled(False)
+
+        self.update_display(self.widgetDisplay.currentIndex())
+
     def update_overlay(self, transform):
         """Executes the adjustment of the overlay"""
         with open('config.json') as config:
@@ -582,30 +721,31 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.transform = transform
 
-        self.update_display()
+        self.update_display(self.widgetDisplay.currentIndex())
 
     @staticmethod
     def convert2pixmap(image):
         """Converts the received image into Pixmap format that can be displayed on the label in Qt"""
 
         # If the image is a BGR image, convert to RGB so that colours can be displayed properly
-        if (len(image.shape) == 3):
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if (len(image.shape) == 3): image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Convert to pixmap using in-built Qt functions
-        q_image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1],
-                         QImage.Format_RGB888)
-        return QPixmap.fromImage(q_image)
+        qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
+        return QPixmap.fromImage(qimage)
 
     # MISCELlANEOUS UI ELEMENT FUNCTIONALITY
 
     def tab_change(self, index):
         """Executes when the focused tab on widgetDisplay changes to enable/disable buttons and change layer values"""
 
+        self.sliderDisplay.blockSignals(True)
+
         if self.display_flag:
             # Set the layer spinbox's range depending on the currently displayed tab
-            self.update_layer_range(index)
+            self.update_ranges(index)
             self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
+            self.display['GraphicsNames'][index].reset_image()
 
             # Set the current layer number depending on the currently displayed tab
             self.labelLayerNumber.setText(str(self.display['CurrentLayer'][index]).zfill(4))
@@ -623,11 +763,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 else:
                     self.checkOverlay.setEnabled(True)
 
-            self.update_display()
+        self.sliderDisplay.blockSignals(False)
 
     def tab_focus(self, index, value):
         """Changes the tab focus to the received index's tab and sets the slider value to the received value
-        Used for when an image has been captured and focus is given to the new image
+        Used for when an image has been captured and focus is to be given to the new image
         """
         pass
         # if self.display_flag:
@@ -674,12 +814,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.labelLayerNumber.setText(str(value).zfill(4))
         self.sliderDisplay.setToolTip(str(value))
         self.display['CurrentLayer'][self.widgetDisplay.currentIndex()] = value
+        self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
         # Reloads the current image using the current value of the corresponding slider
         self.update_image(self.widgetDisplay.currentIndex())
 
         # Display the image on the label
-        self.update_display()
+        self.update_display(self.widgetDisplay.currentIndex())
 
     def slider_up(self):
         """Increments the slider by 1"""
@@ -690,7 +831,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderDisplay.setValue(self.sliderDisplay.value() - 1)
 
     def folder_change(self, folder):
-        """Executes whenever a change of items in any of the image folders is detected
+        """Executes whenever a change of items in any of the image folders is detected by the QFileSystemWatcher
         Updates the Layer spinBox and the Sliders with a new range of acceptable values
         """
 
@@ -706,11 +847,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Updates various UI elements with updated values
         self.update_image_list(index)
-        self.update_layer_range(self.widgetDisplay.currentIndex())
+        self.update_ranges(self.widgetDisplay.currentIndex())
 
         if self.display_flag:
-            self.update_image(int(index))
-            self.update_display()
+            self.update_image(index)
+            self.update_display(index)
 
     def update_image_list(self, index):
         """Updates the ImageList dictionary with a new list of images"""
@@ -755,16 +896,51 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.display['Image'][index] = None
 
-    def update_layer_range(self, index):
+    def update_ranges(self, index):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
         self.spinLayer.setMaximum(self.display['LayerRange'][index])
         self.spinLayer.setToolTip('1 - %s' % self.display['LayerRange'][index])
         self.sliderDisplay.setMaximum(self.display['LayerRange'][index])
 
-    def update_time(self, time_elapsed, time_idle):
-        """Updates the timers at the bottom right of the Main Window with the received time"""
-        self.labelElapsedTime.setText(time_elapsed)
-        self.labelIdleTime.setText(time_idle)
+    def update_ct(self, status):
+        """Updates the status boxes for the acquisition of the camera and trigger with the received status details
+        Also enables or disables the Run and Capture Single Image buttons depending on the result"""
+
+        # Camera status
+        if bool(status[0]):
+            self.labelCameraStatus.setText('FOUND')
+            self.pushCapture.setEnabled(True)
+            if bool(status[1]):
+                self.pushRun.setEnabled(True)
+        else:
+            self.labelCameraStatus.setText('NOT FOUND')
+            self.pushRun.setEnabled(False)
+            self.pushCapture.setEnabled(False)
+
+        # Trigger status
+        if bool(status[1]):
+            self.labelTriggerStatus.setText(status[1])
+        else:
+            self.labelTriggerStatus.setText('NOT FOUND')
+            self.pushRun.setEnabled(False)
+
+    def update_time(self):
+        """Updates the timers at the bottom right of the Main Window with an incremented formatted timestamp"""
+
+        self.stopwatch_elapsed += 1
+        self.stopwatch_idle += 1
+
+        self.labelElapsedTime.setText(self.format_time(self.stopwatch_elapsed))
+        self.labelIdleTime.setText(self.format_time(self.stopwatch_idle))
+
+    @staticmethod
+    def format_time(time):
+        """Format the individual seconds, minutes and hours into proper string time format"""
+        seconds = str(time % 60).zfill(2)
+        minutes = str(int((time % 3600) / 60)).zfill(2)
+        hours = str(int(time / 3600)).zfill(2)
+
+        return '%s:%s:%s' % (hours, minutes, seconds)
 
     def update_status(self, string, duration=0):
         """Updates the default status bar at the bottom of the Main Window with the received string argument"""
@@ -779,29 +955,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def closeEvent(self, event):
         """Executes when Menu -> Exit is clicked or the top-right X is clicked"""
 
-        # For some reason it isn't possible to load and dump within the same open function so they're split
-        # Load configuration settings from config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Reset the following values back to 'default' values
-        self.config['BuildInfo']['Name'] = 'Default'
-        self.config['ImageCapture']['Layer'] = 0.5
-        self.config['ImageCapture']['Phase'] = 1
-        self.config['ImageCapture']['Single'] = 1
-
-        # Save configuration settings to config.json file
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
-
-        exit()
 
 if __name__ == '__main__':
-    def main():
         application = QApplication(sys.argv)
         application.setAttribute(Qt.AA_Use96Dpi)
         interface = MainWindow()
         interface.show()
         sys.exit(application.exec_())
-
-    main()

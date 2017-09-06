@@ -1,88 +1,32 @@
 # Import external libraries
-import os
 import json
 import time
 import cv2
 import pypylon
 import serial
 import serial.tools.list_ports
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 
 # Import related modules
 import image_processing
 
 
-class ImageCapture(QThread):
-    """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached
-    Images are acquired through either method depending on the raised flags
-    If single, only one image is acquired, saved and emitted back to the function caller
-    If run_build, the while loop waits indefinitely till a serial trigger is detected
-    It then acquires and saves the image, then sleeps for a predefined time until the next trigger is allowed
-    """
+class ImageCapture:
+    """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached"""
 
-    def __init__(self, single_flag=False, run_flag=False):
-
-        # Defines the class as a thread
-        QThread.__init__(self)
+    def __init__(self):
 
         # Load configuration settings from config.json file
-        self.acquire_settings()
+        with open('config.json') as config:
+            self.config = json.load(config)
 
-        # Store received arguments as instance variables
-        self.single_flag = single_flag
-        self.run_flag = run_flag
-
-        # For CurrentPhase, 0 corresponds to Coat, 1 corresponds to Scan
+        # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
         self.current_layer = self.config['ImageCapture']['Layer']
         self.current_phase = self.config['ImageCapture']['Phase']
-        self.capture_count = self.config['ImageCapture']['Single']
+        self.single_layer = self.config['ImageCapture']['Single']
         self.phases = ['coat', 'scan']
 
         # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
         self.pixel_format_list = ['Mono8', 'Mono12', 'Mono12Packed']
-
-    def run(self):
-
-        self.emit(pyqtSignal("update_status(QString)"), 'Capturing Image(s)...')
-        self.acquire_settings()
-        self.acquire_camera()
-
-        self.image_folder = self.config['ImageCapture']['Folder']
-
-        # Opens up the camera and sends it the stored settings to be used for capturing images
-        # Put in a try loop in case the camera cannot be opened for some reason (like another program using it)
-        try:
-            self.camera.open()
-            self.apply_settings()
-        except:
-            # If camera can't be opened, send a status update and initiate the stop_build method
-            self.emit(pyqtSignal("update_status(QString)"), 'Camera in use by other application.')
-            self.stop()
-
-        # Single Flag
-        if self.single_flag:
-            self.emit(pyqtSignal("update_status(QString)"), 'Capturing single image...')
-            self.acquire_image_single()
-        else:
-            self.acquire_trigger()
-
-        # Run Flag
-        while self.run_flag:
-            self.emit(pyqtSignal("update_status(QString)"), 'Waiting for trigger.')
-            self.acquire_image_run()
-
-        # Close the camera when done to allow other applications to use it
-        self.camera.close()
-
-        # Set the following values as the current values to be able to restore same state if run_build again
-        self.config['ImageCapture']['Layer'] = self.current_layer
-        self.config['ImageCapture']['Phase'] = self.current_phase
-
-        # Save configuration settings to config.json file
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def acquire_camera(self):
         """Accesses the pypylon wrapper and checks the ethernet ports for a connected camera
@@ -100,8 +44,8 @@ class ImageCapture(QThread):
             return False
 
     def acquire_trigger(self):
-        """Accesses a range of COM ports on the computer for an attached USB2 device
-        Returns accessed COM port if found and creates the serial trigger variable, else False
+        """Grabs a list of all the available COM ports on the current computer
+        Returns the COM port if attached triggering device is found, else False
         """
 
         # List all the available serial ports
@@ -110,6 +54,7 @@ class ImageCapture(QThread):
         # Check the list for the port description that matches the trigger being used
         for port in port_list:
             if 'CH340' in port.description:
+
                 # Open the COM port with a baud rate of 9600 and a 1 second timeout
                 self.serial_trigger = serial.Serial(port.device, 9600, timeout=1)
 
@@ -119,24 +64,18 @@ class ImageCapture(QThread):
                 except (OSError, serial.SerialException):
                     return False
 
+                self.serial_trigger.close()
+
                 # The Arduino has been programmed to send back tildes by default
                 if '~' in self.serial_trigger_read:
                     return port.device
-                else:
-                    self.serial_trigger.close()
 
-        # Return false if the specific trigger isn't found
+        # Return false if the specific trigger device isn't found at all
         return False
-
-    def acquire_settings(self):
-        """Load the camera settings which are saved to the config.json file"""
-
-        with open('config.json') as config:
-            self.config = json.load(config)
 
     def apply_settings(self):
         """Applies the stored camera settings from the config.json file to the connected camera
-        The settings are saved as an index value as the pylon wrapper only accepts strings for some properties
+        Some settings are saved as an index value as the pylon wrapper only accepts strings for some properties
         The strings are saved in their respective lists and the index is used to call the respective one
         """
 
@@ -155,67 +94,94 @@ class ImageCapture(QThread):
         self.camera.properties['AcquisitionFrameRateEnable'] = 'False'
         self.camera.properties['AcquisitionFrameCount'] = 1
 
-    def acquire_image_single(self):
+    def acquire_image_single(self, status, layer, phase):
         """Acquire a single image from the camera"""
+
+        status.emit('Capturing single image...')
+
+        # Acquire and open the camera and apply the entered settings to it
+        self.acquire_camera()
+        self.camera.open()
+        self.apply_settings()
 
         # Grab the image from the camera, error checking in case image capture fails
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            self.emit(pyqtSignal("update_status(QString)"), 'Error grabbing image. Try again.')
-            self.camera.close()
+            status.emit('Error grabbing image. Please try again.')
         else:
-            # Send the image, the current layer and the phase back to the ImageCapture dialog window
-            self.emit(pyqtSignal("image_correction(PyQt_PyObject, QString, QString)"),
-                      image, str(self.config['ImageCapture']['Single']), 'single')
+            # Save the raw image to the single folder
+            cv2.imwrite('%s/raw/single/image_single_%s.png' %
+                        (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
-            # Update the capture counter which will be saved to the config.json file
-            self.config['ImageCapture']['Single'] += 1
-            self.emit(pyqtSignal("update_status(QString)"), 'Image captured.')
+            status.emit('Processing captured image...')
 
-    def acquire_image_run(self):
-        """Acquire multiple images from the camera when trigger is detected"""
+            # # Process the image
+            # image = image_processing.ImageCorrection().apply_fixes(image)
+            #
+            # # Save the processed image to the processed folder
+            # cv2.imwrite('%s/processed/single/image_single_processed_%s.png' %
+            #             (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
-        # Read from the serial interface
-        self.trigger = self.serial_trigger.readline().strip()
+            # Increment the capture counter
+            self.single_layer += 1
+            status.emit('Image captured.')
+        finally:
+            # Close the camera and save any changed counters to the config.json file
+            self.camera.close()
+            self.save_settings()
 
-        # Arduino has been programmed to return a 'TRIG' if reed switch has been triggered
-        if self.trigger == 'TRIG':
+    def acquire_image_run(self, status, layer, phase):
+        """Acquire an images from the camera when trigger is detected, and sleep for a certain amount of time"""
 
-            self.emit(pyqtSignal("update_status(QString)"), 'Trigger Detected. Capturing image...')
+        status.emit('Trigger detected. Capturing image...')
 
-            # Grab the image from the camera, error checking in case image capture fails
-            try:
-                image = next(self.camera.grab_images(1))
-            except RuntimeError:
-                time.sleep(1)
-                image = next(self.camera.grab_images(1))
+        # Acquire and open the camera and apply the entered settings to it
+        self.acquire_camera()
+        self.camera.open()
+        self.apply_settings()
 
-            # Send the image, the current layer and the phase back to the ImageCapture dialog window
-            self.emit(pyqtSignal("image_correction(PyQt_PyObject, QString, QString)"),
-                      image, str(int(self.current_layer)), self.phases[self.current_phase])
+        # Grab the image from the camera, error checking in case image capture fails
+        try:
+            image = next(self.camera.grab_images(1))
+        except RuntimeError:
+            time.sleep(1)
+            image = next(self.camera.grab_images(1))
 
-            # Emit a signal that resets the internal countdown saying that an image has been successfully captured
-            self.emit(pyqtSignal("reset_time_idle()"))
+        # Save the raw image to the single folder
+        cv2.imwrite('%s/raw/%s/image_%s_%s.png' %
+                    (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
+                     self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
-            # Loop used to disallow triggering for additional images for however many seconds
-            # Also displays remaining timeout on the status bar
-            for seconds in range(self.config['ImageCapture']['TriggerTimeout'], 0, -1):
-                # If statement used to suppress the status update if the Stop button is pressed
-                if self.run_flag:
-                    self.emit(pyqtSignal("update_status(QString)"), 'Image saved. %s second timeout...' % seconds)
-                time.sleep(1)
+        status.emit('Processing captured image...')
 
-            # Increment the layer (by 1) every second image, and toggle the phase
-            self.current_layer += 0.5
-            self.current_phase = (self.current_phase + 1) % 2
+        # # Process the image
+        # image = image_processing.ImageCorrection().apply_fixes(image)
+        #
+        # # Save the processed image to the processed folder
+        # cv2.imwrite('%s/processed/%s/image_%s_processed_%s.png' %
+        #             (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
+        #              self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
-            # Reset the serial input buffer to prevent triggers within the timeout window causing another image save
-            self.serial_trigger.reset_input_buffer()
+        # Loop used to delay triggering for additional images for however many seconds
+        # Also displays remaining timeout on the status bar
+        for seconds in range(self.config['ImageCapture']['TriggerTimeout'], 0, -1):
+            status.emit('Image saved. %s second timeout...' % seconds)
+            time.sleep(1)
 
-    def stop(self):
-        """Method that happens if the Stop button is pressed, which terminates the QThread"""
+        # Increment the layer (by 1) every second image, and toggle the phase
+        self.current_layer += 0.5
+        self.current_phase = (self.current_phase + 1) % 2
 
-        # Toggle the relevant flags to stop_build running loops
-        self.single_flag = False
-        self.run_flag = False
+        # Close the camera and save any changed counters to the config.json file
+        self.camera.close()
+        self.save_settings()
+
+    def save_settings(self):
+
+        self.config['ImageCapture']['Layer'] = self.current_layer
+        self.config['ImageCapture']['Phase'] = self.current_phase
+        self.config['ImageCapture']['Single'] = self.single_layer
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)

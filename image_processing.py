@@ -1,4 +1,5 @@
 # Import external libraries
+import os
 import json
 import cv2
 import numpy as np
@@ -7,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 
-class ImageCorrection(QThread):
+class ImageCorrection:
     """Module used to correct the raw (or any sent) images taken by the camera for various optical related issues
     Processed images to then be scanned for any particular defects using the DefectDetection module
     Applies the following OpenCV processes in order:
@@ -19,57 +20,40 @@ class ImageCorrection(QThread):
     CLAHE (E)
     """
 
-    def __init__(self, image, test_flag=False):
-
-        # Defines the class as a thread
-        QThread.__init__(self)
+    def __init__(self, test_flag=False):
 
         # Load configuration settings from config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Store received arguments as instance variables
-        self.image = image
-        self.parameters = self.config['ImageCorrection']
-
-        # # Load camera parameters from specified calibration file
-        # with open('%s' % self.config['CalibrationFile']) as camera_parameters:
-        #     for line in camera_parameters.readlines():
-        #         self.camera_parameters.append(line.split(' '))
-        #
-        # # Split camera parameters into their own respective values to be used in OpenCV functions
-        # self.camera_matrix = np.array(self.camera_parameters[1:4]).astype('float64')
-        # self.distortion_coefficients = np.array(self.camera_parameters[5]).astype('float64')
-        # self.homography_matrix = np.array(self.camera_parameters[7:10]).astype('float64')
-        # self.output_resolution = np.array(self.camera_parameters[11]).astype('int32')
-
+        # Checks whether to use the temporary results of the camera calibration, or the ones saved in the config file
         if test_flag:
             with open('%s/calibration_results.json' % self.config['WorkingDirectory']) as camera_parameters:
                 self.parameters = json.load(camera_parameters)
                 self.parameters = self.parameters['ImageCorrection']
+        else:
+            self.parameters = self.config['ImageCorrection']
 
-        self.camera_matrix = np.array(self.parameters['CameraMatrix'])
-        self.distortion_coefficients = np.array(self.parameters['DistortionCoefficients'])
-        self.homography_matrix = np.array(self.parameters['HomographyMatrix'])
-        self.output_resolution = tuple(self.parameters['Resolution'])
+    def apply_fixes(self, image):
+        """Applies the distortion, perspective and crop processes to the received image"""
 
-    def run(self):
-        self.image_D = self.distortion_fix(self.image)
-        self.image_DP = self.perspective_fix(self.image_D)
-        self.image_DPC = self.crop(self.image_DP)
-        self.image_DPCE = self.clahe(self.image_DPC)
+        image = self.distortion_fix(image)
+        image = self.perspective_fix(image)
+        image = self.crop(image)
+
+        return image
 
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
 
         # Store the camera's intrinsic values as a 2x2 matrix
-        camera_matrix = self.camera_matrix
+        camera_matrix = np.array(self.parameters['CameraMatrix'])
         camera_matrix[0, 2] = image.shape[1] / 2.0  # Half image width
         camera_matrix[1, 2] = image.shape[0] / 2.0  # Half image height
 
         # OpenCV distortion fix function
         try:
-            image = cv2.undistort(image, camera_matrix, self.distortion_coefficients)
+            image = cv2.undistort(image, camera_matrix, np.array(self.parameters['DistortionCoefficients']))
             return image
         except:
             print('Image Distortion fix failed.')
@@ -79,7 +63,7 @@ class ImageCorrection(QThread):
         """Fixes the perspective warp due to the off-centre position of the camera"""
 
         try:
-            image = cv2.warpPerspective(image, self.homography_matrix, tuple(self.output_resolution))
+            image = cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']), tuple(self.parameters['Resolution']))
             return image
         except:
             print('Image Perspective Fix failed.')
