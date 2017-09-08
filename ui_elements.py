@@ -9,6 +9,10 @@ class ImageViewer(QGraphicsView):
     Allows the user to zoom and pan an image with the mouse
     """
 
+    # Signal that will be emitted after the zoom in action has been completed
+    # Just used to toggle the Zoom In action unchecked
+    zoom_done = pyqtSignal()
+
     def __init__(self, parent):
 
         super(ImageViewer, self).__init__()
@@ -24,8 +28,7 @@ class ImageViewer(QGraphicsView):
         self.zoom_list = list()
 
         # Flags for enabling or disabling mouse interaction
-        self.zoom_flag = True
-        self.pan_flag = True
+        self.zoom_flag = False
 
     def set_image(self, image):
         """Set the scene's current image pixmap to the input QImage or QPixmap"""
@@ -78,31 +81,30 @@ class ImageViewer(QGraphicsView):
         """"""
 
         if event.button() == Qt.LeftButton:
-            if self.pan_flag:
-                self.setDragMode(QGraphicsView.ScrollHandDrag)
-        elif event.button() == Qt.RightButton:
             if self.zoom_flag:
                 self.setDragMode(QGraphicsView.RubberBandDrag)
+            else:
+                self.setDragMode(QGraphicsView.ScrollHandDrag)
+
         QGraphicsView.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event):
 
         QGraphicsView.mouseReleaseEvent(self, event)
 
-        if event.button() == Qt.LeftButton:
-            self.setDragMode(QGraphicsView.NoDrag)
-        elif event.button() == Qt.RightButton:
-            if self.zoom_flag:
-                viewBBox = self.zoom_list[-1] if len(self.zoom_list) else self.sceneRect()
-                selectionBBox = self.scene.selectionArea().boundingRect().intersected(viewBBox)
-                self.scene.setSelectionArea(QPainterPath())
-                if selectionBBox.isValid() and (selectionBBox != viewBBox):
-                    self.zoom_list.append(selectionBBox)
-                    self.update_viewer()
+        if event.button() == Qt.LeftButton and self.zoom_flag:
+            view_box = self.zoom_list[-1] if len(self.zoom_list) else self.sceneRect()
+            selection_box = self.scene.selectionArea().boundingRect().intersected(view_box)
+            self.scene.setSelectionArea(QPainterPath())
+            if selection_box.isValid() and (selection_box != view_box):
+                self.zoom_list.append(selection_box)
+                self.update_viewer()
+
+            self.zoom_done.emit()
             self.setDragMode(QGraphicsView.NoDrag)
 
     def mouseDoubleClickEvent(self, event):
-        if event.button() == Qt.RightButton:
-            if self.zoom_flag:
-                self.reset_image()
+        if event.button() == Qt.LeftButton:
+            self.reset_image()
+
         QGraphicsView.mouseDoubleClickEvent(self, event)

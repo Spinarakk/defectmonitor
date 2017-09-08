@@ -92,6 +92,9 @@
            <layout class="QGridLayout" name="gridLayout_13">
             <item row="0" column="0">
              <widget class="ImageViewer" name="graphicsCE">
+              <property name="contextMenuPolicy">
+               <enum>Qt::CustomContextMenu</enum>
+              </property>
               <property name="frameShape">
                <enum>QFrame::NoFrame</enum>
               </property>
@@ -153,6 +156,9 @@
            <layout class="QGridLayout" name="gridLayout_7">
             <item row="0" column="0">
              <widget class="ImageViewer" name="graphicsSE">
+              <property name="contextMenuPolicy">
+               <enum>Qt::CustomContextMenu</enum>
+              </property>
               <property name="frameShape">
                <enum>QFrame::NoFrame</enum>
               </property>
@@ -211,6 +217,9 @@
            <layout class="QGridLayout" name="gridLayout_14">
             <item row="0" column="0">
              <widget class="ImageViewer" name="graphicsPC">
+              <property name="contextMenuPolicy">
+               <enum>Qt::CustomContextMenu</enum>
+              </property>
               <property name="frameShape">
                <enum>QFrame::NoFrame</enum>
               </property>
@@ -269,6 +278,9 @@
            <layout class="QGridLayout" name="gridLayout_15">
             <item row="0" column="0">
              <widget class="ImageViewer" name="graphicsIC">
+              <property name="contextMenuPolicy">
+               <enum>Qt::CustomContextMenu</enum>
+              </property>
               <property name="frameShape">
                <enum>QFrame::NoFrame</enum>
               </property>
@@ -310,18 +322,6 @@
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushTester">
-         <property name="font">
-          <font>
-           <pointsize>9</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Tester</string>
          </property>
         </widget>
        </item>
@@ -1052,6 +1052,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="pushProcessDefects">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Process Defects</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1184,9 +1194,6 @@
     </property>
     <addaction name="actionZoomIn"/>
     <addaction name="actionZoomOut"/>
-    <addaction name="actionOriginalSize"/>
-    <addaction name="separator"/>
-    <addaction name="actionFitScreen"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1237,8 +1244,6 @@
    <addaction name="separator"/>
    <addaction name="actionZoomIn"/>
    <addaction name="actionZoomOut"/>
-   <addaction name="actionOriginalSize"/>
-   <addaction name="actionFitScreen"/>
    <addaction name="separator"/>
    <addaction name="actionCameraCalibration"/>
    <addaction name="actionOverlayAdjustment"/>
@@ -1328,11 +1333,17 @@
    </property>
   </action>
   <action name="actionZoomIn">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
     <string>Zoom In</string>
+   </property>
+   <property name="toolTip">
+    <string>Allows using the left mouse button to drag an area to zoom in to.</string>
    </property>
   </action>
   <action name="actionZoomOut">
@@ -1342,21 +1353,8 @@
    <property name="text">
     <string>Zoom Out</string>
    </property>
-  </action>
-  <action name="actionFitScreen">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Fit to Screen</string>
-   </property>
-  </action>
-  <action name="actionOriginalSize">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Original Size</string>
+   <property name="toolTip">
+    <string>Zooms out the image back to its original size. Double left-clicking the image does the same thing.</string>
    </property>
   </action>
   <action name="actionClearMenu">
@@ -1405,7 +1403,6 @@
   <tabstop>graphicsSE</tabstop>
   <tabstop>graphicsPC</tabstop>
   <tabstop>graphicsIC</tabstop>
-  <tabstop>pushTester</tabstop>
  </tabstops>
  <resources>
   <include location="icons.qrc"/>
@@ -1418,12 +1415,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1054</x>
-     <y>735</y>
+     <x>930</x>
+     <y>657</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1098</x>
-     <y>737</y>
+     <x>974</x>
+     <y>659</y>
     </hint>
    </hints>
   </connection>

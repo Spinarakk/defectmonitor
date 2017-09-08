@@ -68,8 +68,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Menubar -> View
         self.actionZoomIn.triggered.connect(self.zoom_in)
         self.actionZoomOut.triggered.connect(self.zoom_out)
-        self.actionOriginalSize.triggered.connect(self.original_size)
-        self.actionFitScreen.triggered.connect(self.fit_to_screen)
 
         # Menubar -> Tools
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
@@ -109,10 +107,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Display Widget
         self.widgetDisplay.currentChanged.connect(self.tab_change)
-        # self.labelDisplayCE.customContextMenuRequested.connect(self.context_menu_display)
-        # self.labelDisplaySE.customContextMenuRequested.connect(self.context_menu_display)
-        # self.labelDisplayPC.customContextMenuRequested.connect(self.context_menu_display)
-        # self.labelDisplayIC.customContextMenuRequested.connect(self.context_menu_display)
+        self.graphicsCE.zoom_done.connect(self.zoom_in_reset)
+        self.graphicsSE.zoom_done.connect(self.zoom_in_reset)
+        self.graphicsPC.zoom_done.connect(self.zoom_in_reset)
+        self.graphicsIC.zoom_done.connect(self.zoom_in_reset)
+        self.graphicsCE.customContextMenuRequested.connect(self.context_menu_display)
+        self.graphicsSE.customContextMenuRequested.connect(self.context_menu_display)
+        self.graphicsPC.customContextMenuRequested.connect(self.context_menu_display)
+        self.graphicsIC.customContextMenuRequested.connect(self.context_menu_display)
 
         # Sliders
         self.sliderDisplay.valueChanged.connect(self.slider_change)
@@ -145,7 +147,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'], 'CurrentLayer': [1, 1, 1, 1],
                         'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
-                        'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC]}
+                        'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
+                        'DisplayImage': [0, 0, 0, 0]}
 
         # Create a threadpool which contains an amount of threads that can be used to simultaneously run functions
         self.threadpool = QThreadPool()
@@ -274,7 +277,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Checking if user has chosen to save the image or clicked cancel
         if image_name:
             # Save the currently displayed image which is saved as an entry in the display dictionary
-            cv2.imwrite(image_name, self.display['DisplayImage'])
+            cv2.imwrite(image_name, self.display['DisplayImage'][self.widgetDisplay.currentIndex()])
 
             # Open a message box with a save confirmation message
             self.export_confirmation = QMessageBox()
@@ -297,16 +300,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     # MENUBAR -> VIEW
     def zoom_in(self):
-        pass
+        if self.actionZoomIn.isChecked():
+            self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = True
+        else:
+            self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = False
+
+    def zoom_in_reset(self):
+        self.actionZoomIn.setChecked(False)
+        self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = False
 
     def zoom_out(self):
-        pass
-
-    def original_size(self):
-        pass
-
-    def fit_to_screen(self):
-        pass
+        self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
     # MENUBAR -> TOOLS
 
@@ -641,6 +645,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                                (status_empty[:-1], status_display[:-1]))
 
         self.display_flag = True
+        self.actionZoomIn.setEnabled(True)
+        self.actionZoomOut.setEnabled(True)
 
         self.update_ranges(self.widgetDisplay.currentIndex())
 
@@ -699,6 +705,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Display the image on the current GraphicsView
             graphics.set_image(self.convert2pixmap(image))
+
+            # Save the current (modified) image so that it can be exported if need be
+            self.display['DisplayImage'][index] = image
 
     def toggle_overlay(self):
         """Overlay process is done in the update_display method
@@ -786,12 +795,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.menu_display.addSeparator()
         action_export = self.menu_display.addAction('Export Image...')
 
-        # Check if a valid image is being displayed, otherwise diable the menu
-        if not self.display['ImageList'][self.widgetDisplay.currentIndex()]:
-            self.menu_display.setEnabled(False)
-
         # Open the context menu at the received position
-        action = self.menu_display.exec_(self.labelDisplayCE.mapToGlobal(position))
+        action = self.menu_display.exec_(self.graphicsCE.mapToGlobal(position))
 
         # Check which action has been clicked and execute the respective methods
         if action:

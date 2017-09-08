@@ -85,7 +85,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
 
-        folder_name, _ = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        folder_name = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if folder_name:
             # Display just the file name on the line box
@@ -609,9 +609,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Instantiate and run_build a SliceConverter instance
         self.SC_instance = slice_converter.SliceConverter(self.slice_list, self.checkDraw.isChecked(), self.contours_folder)
-        self.connect(self.SC_instance, pyqtSignal("update_status(QString)"), self.update_status)
-        self.connect(self.SC_instance, pyqtSignal("update_progress(QString)"), self.update_progress)
-        self.connect(self.SC_instance, pyqtSignal("finished()"), self.start_conversion_finished)
+        self.SC_instance.status.connect(self.update_status)
+        self.SC_instance.progress.connect(self.update_progress)
+        self.SC_instance.finished.connect(self.start_conversion_finished)
         self.SC_instance.start()
 
     def start_conversion_finished(self):
@@ -629,7 +629,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.labelStatusSlice.setText(string[0])
 
     def update_progress(self, percentage):
-        self.progressBar.setValue(int(percentage))
+        self.progressBar.setValue(percentage)
 
     def closeEvent(self, event):
         """Executes when the window is closed"""

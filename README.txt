@@ -19,7 +19,8 @@ Installation
 	- git clone https://github.com/mabl/PyPylon
 	- cd PyPylon
 	- python setup.py install
-	- Copy the pypylon folder from the build/lib.win-(windowsver)-(pythonver)
+	- Pypylon should be installed in the site-packages folder of Python
+	- Otherwise, copy the pypylon folder from the build/lib.win-(windowsver)-(pythonver)
 	- To the Defect Monitor root directory
 
 Operation
