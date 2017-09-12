@@ -225,13 +225,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Converts and draws the contours
         if self.config['BuildInfo']['Convert']:
-            # Instantiate and run a SliceConverter instance
-            self.SC_instance = slice_converter.SliceConverter(self.config['SliceConverter']['Files'],
-                                                              self.config['BuildInfo']['Draw'])
-            self.connect(self.SC_instance, pyqtSignal("update_status(QString)"), self.update_status)
-            self.connect(self.SC_instance, pyqtSignal("update_progress(QString)"), self.update_progress)
-            self.connect(self.SC_instance, pyqtSignal("finished()"), self.setup_build_finished)
-            self.SC_instance.start()
+            worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
+            worker.signals.status.connect(self.update_status)
+            if not self.checkSuppress.isChecked():
+                worker.signals.progress.connect(self.update_progress)
+            worker.signals.finished.connect(self.setup_build_finished)
+            self.threadpool.start(worker)
         else:
             self.setup_build_finished()
 

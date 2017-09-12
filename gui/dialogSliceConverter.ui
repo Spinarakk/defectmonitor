@@ -199,6 +199,22 @@
     <string>Browse...</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="checkSuppress">
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>150</y>
+     <width>111</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Suppress Progress</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
  </widget>
  <tabstops>
   <tabstop>listSliceFiles</tabstop>

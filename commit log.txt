@@ -1,3 +1,19 @@
+September 12
+- Figured out why the slice conversion wasn't working and rewrote it to now work correctly in Python 3
+- Re-implemented the status and progress indicators, however the progress readout causes lag due to too many signals emitted and thus a suppress progress checkbox has been added temporarily
+- QFileSystemWatcher has been found to lock the watched directories which means that imwrite cannot save images to the watched folders
+- As such this functionality needs to be reverted back to using QTimer to constantly poll the folder for changes
+
+September 8
+- Changed the actions you can perform on the image viewer
+- Left click pans the image (if zoomed)
+- Enabling zoom in allows the user to drag a bounding box to zoom into
+- Double left click zooms out the image back to its original size (and the Zoom Out action)
+- Right click opens the same context menu that allows the user to view image in file explorer or export the currently displayed image
+- Encounted a huge problem with the slice converter
+- Python 3 changed the way files are read and how binary encoded data is read
+- As such the entire cli binary read code is in the process of being revamped to work with Python 3
+
 September 6
 - Fixed up the capture code to work with taking single shots and with the trigger
 - Changed the camera and trigger acquisition to use the QThreadPool as it takes a bit of time to execute

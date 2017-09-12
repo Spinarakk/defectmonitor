@@ -1,8 +1,8 @@
 {
     "BuildInfo": {
-        "Convert": false,
-        "Draw": false,
-        "EmailAddress": "",
+        "Convert": true,
+        "Draw": true,
+        "EmailAddress": "asdf@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
         "Name": "Default",
         "Platform": 0,
@@ -10,7 +10,34 @@
             636.0,
             406.0
         ],
-        "Username": ""
+        "SliceFiles": [
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 01.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 02.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 04.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 05.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 06.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 07.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 08.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 09.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 10.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 11.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 12.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 13.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 14.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 15.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 16.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 17.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 18.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 19.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 20.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 21.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 22.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 23.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 24.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 25.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 26.cli"
+        ],
+        "Username": "asdf"
     },
     "CameraCalibration": {
         "DownscalingRatio": 1,
@@ -27,7 +54,7 @@
         "PixelFormat": 0
     },
     "ImageCapture": {
-        "Folder": "",
+        "Folder": "D:/Documents/MCAM/Builds/2017-09-12 [12-05-10] Default",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
@@ -114,15 +141,17 @@
         ]
     },
     "Notifications": {
-        "Error": true,
-        "Failure": true,
-        "Major": true,
-        "Minor": true,
+        "Error": false,
+        "Failure": false,
+        "Major": false,
+        "Minor": false,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Files": []
+        "Draw": false,
+        "Files": [],
+        "Folder": ""
     },
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
 }

@@ -17,6 +17,7 @@ import slice_converter
 import image_processing
 import extra_functions
 import camera_calibration
+import qt_multithreading
 import defect_analysis
 
 # Import PyQt GUIs
@@ -61,8 +62,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.pushCreate.setText('Load')
             self.lineBuildName.setText(self.config['BuildInfo']['Name'])
             self.comboPlatform.setCurrentIndex(self.config['BuildInfo']['Platform'])
-            self.slice_file_list = self.config['SliceConverter']['Files']
-            self.set_list(self.config['SliceConverter']['Files'])
+            self.slice_file_list = self.config['BuildInfo']['SliceFiles']
+            self.set_list(self.slice_file_list)
             self.lineUsername.setText(self.config['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.config['BuildInfo']['EmailAddress'])
             self.checkConvert.setChecked(self.config['BuildInfo']['Convert'])
@@ -207,7 +208,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             if self.checkConvert.isChecked():
                 self.config['BuildInfo']['Draw'] = self.checkDraw.isChecked()
             self.config['BuildInfo']['Folder'] = self.build_folder_name
-            self.config['SliceConverter']['Files'] = self.slice_file_list
+            self.config['BuildInfo']['SliceFiles'] = self.slice_file_list
             self.config['Notifications']['Minor'] = self.checkMinor.isChecked()
             self.config['Notifications']['Major'] = self.checkMajor.isChecked()
             self.config['Notifications']['Failure'] = self.checkFailure.isChecked()
@@ -569,6 +570,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.lineFolder.setText(self.contours_folder)
 
+        self.threadpool = QThreadPool()
+
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files
         The slice files are displayed on the ListWidget and saved to the config file
@@ -576,12 +579,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         file_names, _ = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
 
-        file_list = [str(item).replace('\\', '/') for item in file_names]
-
-        for item in file_list:
-            self.slice_list.append(str(item).replace('\\', '/'))
-
-        if self.slice_list:
+        if file_names:
+            self.slice_list = file_names
             self.listSliceFiles.clear()
             self.buttonStart.setEnabled(True)
             self.update_status('Current Part: None | Waiting to start conversion.')
@@ -607,12 +606,18 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonDone.setEnabled(False)
         self.update_progress(0)
 
-        # Instantiate and run_build a SliceConverter instance
-        self.SC_instance = slice_converter.SliceConverter(self.slice_list, self.checkDraw.isChecked(), self.contours_folder)
-        self.SC_instance.status.connect(self.update_status)
-        self.SC_instance.progress.connect(self.update_progress)
-        self.SC_instance.finished.connect(self.start_conversion_finished)
-        self.SC_instance.start()
+        # Save the slice file list and the draw state to the config.json file
+        self.config['SliceConverter']['Draw'] = self.checkDraw.isChecked()
+        self.config['SliceConverter']['Folder'] = self.contours_folder
+        self.config['SliceConverter']['Files'] = self.slice_list
+        self.save_settings()
+
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
+        worker.signals.status.connect(self.update_status)
+        if not self.checkSuppress.isChecked():
+            worker.signals.progress.connect(self.update_progress)
+        worker.signals.finished.connect(self.start_conversion_finished)
+        self.threadpool.start(worker)
 
     def start_conversion_finished(self):
         """Executes when the SliceConverter instance has finished"""
@@ -622,6 +627,11 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonBrowseF.setEnabled(True)
         self.buttonDone.setEnabled(True)
         self.update_status('Current Part: None | Conversion completed successfully.')
+
+    def save_settings(self):
+        """Save any changed values to the config.json file"""
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def update_status(self, string):
         string = string.split(' | ')
@@ -633,6 +643,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
+
+        self.config['SliceConverter']['Folder'] = ''
+        self.config['SliceConverter']['Files'] = []
+        self.save_settings()
         self.window_settings.setValue('geometry', self.saveGeometry())
 
 

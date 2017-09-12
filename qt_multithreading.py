@@ -36,6 +36,10 @@ class Worker(QRunnable):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
 
+        if 'convert' in str(self.function):
+            kwargs['status'] = self.signals.status
+            kwargs['progress'] = self.signals.progress
+
     @pyqtSlot()
     def run(self):
         """Initialize the runner function with the received args and kwargs"""

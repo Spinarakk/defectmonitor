@@ -62,6 +62,10 @@ class Ui_dialogSliceConverter(object):
         self.buttonBrowseF = QtWidgets.QPushButton(dialogSliceConverter)
         self.buttonBrowseF.setGeometry(QtCore.QRect(290, 182, 111, 28))
         self.buttonBrowseF.setObjectName("buttonBrowseF")
+        self.checkSuppress = QtWidgets.QCheckBox(dialogSliceConverter)
+        self.checkSuppress.setGeometry(QtCore.QRect(290, 150, 111, 16))
+        self.checkSuppress.setChecked(True)
+        self.checkSuppress.setObjectName("checkSuppress")
 
         self.retranslateUi(dialogSliceConverter)
         self.buttonDone.clicked.connect(dialogSliceConverter.close)
@@ -83,4 +87,5 @@ class Ui_dialogSliceConverter(object):
         self.labelStatusSlice.setText(_translate("dialogSliceConverter", "Current Part: None"))
         self.checkDraw.setText(_translate("dialogSliceConverter", "Draw Contours"))
         self.buttonBrowseF.setText(_translate("dialogSliceConverter", "Browse..."))
+        self.checkSuppress.setText(_translate("dialogSliceConverter", "Suppress Progress"))
 
