@@ -111,17 +111,17 @@ class ImageCapture:
             status.emit('Error grabbing image. Please try again.')
         else:
             # Save the raw image to the single folder
-            cv2.imwrite('%s/raw/single/image_single_%s.png' %
+            cv2.imwrite('%s/raw/single/singleR_%s.png' %
                         (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
             status.emit('Processing captured image...')
 
-            # # Process the image
-            # image = image_processing.ImageCorrection().apply_fixes(image)
-            #
-            # # Save the processed image to the processed folder
-            # cv2.imwrite('%s/processed/single/image_single_processed_%s.png' %
-            #             (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
+            # Process the image
+            image = image_processing.ImageCorrection().apply_fixes(image)
+
+            # Save the processed image to the processed folder
+            cv2.imwrite('%s/processed/single/singleP_%s.png' %
+                        (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
             # Increment the capture counter
             self.single_layer += 1
@@ -149,19 +149,19 @@ class ImageCapture:
             image = next(self.camera.grab_images(1))
 
         # Save the raw image to the single folder
-        cv2.imwrite('%s/raw/%s/image_%s_%s.png' %
+        cv2.imwrite('%s/raw/%s/%sR_%s.png' %
                     (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
                      self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
         status.emit('Processing captured image...')
 
-        # # Process the image
-        # image = image_processing.ImageCorrection().apply_fixes(image)
-        #
-        # # Save the processed image to the processed folder
-        # cv2.imwrite('%s/processed/%s/image_%s_processed_%s.png' %
-        #             (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
-        #              self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
+        # Process the image
+        image = image_processing.ImageCorrection().apply_fixes(image)
+
+        # Save the processed image to the processed folder
+        cv2.imwrite('%s/processed/%s/%sP_%s.png' %
+                    (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
+                     self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
         # Loop used to delay triggering for additional images for however many seconds
         # Also displays remaining timeout on the status bar

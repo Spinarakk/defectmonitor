@@ -55,6 +55,7 @@ class ImageViewer(QGraphicsView):
         """Reset the image back to its original state (no zoom or pan)"""
         self.zoom_list = list()
         self.update_viewer()
+        self.setDragMode(QGraphicsView.NoDrag)
 
     def remove_image(self):
         """Removes the current image from the scene if it exists"""
@@ -83,7 +84,7 @@ class ImageViewer(QGraphicsView):
         if event.button() == Qt.LeftButton:
             if self.zoom_flag:
                 self.setDragMode(QGraphicsView.RubberBandDrag)
-            else:
+            elif self.zoom_list:
                 self.setDragMode(QGraphicsView.ScrollHandDrag)
 
         QGraphicsView.mousePressEvent(self, event)

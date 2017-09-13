@@ -2,6 +2,7 @@
 import os
 import re
 import json
+import time
 import cv2
 import numpy as np
 from PyQt5.QtGui import *
@@ -19,8 +20,12 @@ class SliceConverter:
 
     def __init__(self):
 
-        with open('config.json') as config:
-            self.config = json.load(config)
+        # Flags that will be dictated from the config.json file that control whether to run/stop or pause/resume
+        self.run_flag = True
+        self.pause_flag = False
+
+        # Method that loads the config.json file and checks the run and pause keys
+        self.check_flags()
 
         # Save respective values to be used to draw contours and polygons
         # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
@@ -34,14 +39,14 @@ class SliceConverter:
         # Part names are taken from the config.json file, depending if this method was run from the Slice Converter
         # Or as part of a new build, different files will be read and used
 
-        if self.config['SliceConverter']['Files']:
-            self.part_names = self.config['SliceConverter']['Files']
-            self.draw_flag = self.config['SliceConverter']['Draw']
-            self.contours_folder = self.config['SliceConverter']['Folder']
-        else:
+        if self.config['SliceConverter']['Build']:
             self.part_names = self.config['BuildInfo']['SliceFiles']
             self.draw_flag = self.config['BuildInfo']['Draw']
             self.contours_folder = '%s/contours' % self.config['ImageCapture']['Folder']
+        else:
+            self.part_names = self.config['SliceConverter']['Files']
+            self.draw_flag = self.config['SliceConverter']['Draw']
+            self.contours_folder = self.config['SliceConverter']['Folder']
 
     def convert(self, status, progress):
 
@@ -52,14 +57,30 @@ class SliceConverter:
         for part_name in self.part_names:
             # Executes if the sent file is a .cls file
             if '.cls' in part_name:
-                # Look for an already converted contours file
+                # Look for an already converted contours file, otherwise convert the cls file
                 if not os.path.isfile(part_name.replace('.cls', '_contours.txt')):
-                    self.format_contours(part_name.replace('.cli', '_contours.txt'), self.read_cls(part_name))
+                    # The conditionals for the run flags are to check if the user has cancelled the operation
+                    if self.run_flag:
+                        data = self.read_cls(part_name)
+                    else:
+                        # Break out of the entire for loop, set draw flag to false and finish the entire thread
+                        return
+                    if self.run_flag:
+                        self.format_contours(part_name.replace('.cli', '_contours.txt'), data)
+                    else:
+                        return
             # Executes if the sent file is a .cli file
             elif '.cli' in part_name:
-                # Look for an already converted contours file
+                # Look for an already converted contours file, otherwise convert the cli file
                 if not os.path.isfile(part_name.replace('.cli', '_contours.txt')):
-                    self.format_contours(part_name.replace('.cli', '_contours.txt'), self.read_cli(part_name))
+                    if self.run_flag:
+                        data = self.read_cli(part_name)
+                    else:
+                        return
+                    if self.run_flag:
+                        self.format_contours(part_name.replace('.cli', '_contours.txt'), data)
+                    else:
+                        return
 
         if self.draw_flag:
             # Create a dictionary of colours (different shades of teal) for each part's contours
@@ -70,8 +91,13 @@ class SliceConverter:
             # Draw and save the contours to an image file
             self.draw_contours(self.part_names, colours, self.contours_folder)
 
+            if not self.run_flag:
+                return
+
+        self.update_status('Current Part: None | Conversion completed successfully.')
+
     def read_cls(self, file_name):
-        """Reads the .cls file and converts the contents into ASCII, then organises the data into a list"""
+        """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
         self.status.emit('Current Part: %s | Reading CLS file...' % os.path.basename(file_name).replace('.cls', ''))
 
@@ -146,11 +172,11 @@ class SliceConverter:
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
         # UI Progress and Status Messages
-        progress = 0.0
+        progress_count = 0.0
         progress_previous = None
         self.status.emit('Current Part: %s | Reading CLI (BINARY) file...' %
                          os.path.basename(file_name).replace('.cli', ''))
-        self.progress.emit(int(round(progress)))
+        self.progress.emit(0)
 
         # Set up a few lists, flags, counters
         data_ascii = list()
@@ -160,9 +186,10 @@ class SliceConverter:
         vector_count = 0
         header_length = 0
 
+        # Grab the file size of the cli file in bytes
         file_size = os.path.getsize(file_name)
 
-        # File needs to be read as binary as it is encoded in binary
+        # File needs to be opened and read as binary as it is encoded in binary
         with open(file_name, 'rb') as cli_file:
 
             # Get pertinent information from the header by reading the lines and storing them in the final data list
@@ -184,7 +211,7 @@ class SliceConverter:
 
             # Calculate the increment to use to display progress for the rest of the file data
             increment = 100 / (file_size - header_length)
-            progress = header_length * increment
+            progress_count = header_length * increment
 
             # Read the rest of the data
             data = cli_file.read()
@@ -212,43 +239,64 @@ class SliceConverter:
                     line_ascii = '$$POLYLINE/'
                     polyline_count = 3
 
-                progress += increment * 2
-                if int(round(progress)) is not progress_previous:
-                    self.progress.emit(int(round(progress)))
-                    progress_previous = int(round(progress))
+                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+                progress_count += increment * 2
+                progress = int(5 * round(progress_count / 5))
+                if not progress == progress_previous:
+                    self.progress.emit(progress)
+                    progress_previous = progress
+
+                    # Check if the user has paused/resumed the conversion
+                    # Put in the progress conditional so as to not slow down the conversion process
+                    # If paused, sleep here indefinitely while constantly checking if the user has resumed operation
+                    self.check_flags()
+                    while self.pause_flag:
+                        self.status.emit('Current Part: %s | Conversion paused.' %
+                                         os.path.basename(file_name).replace('.cli', ''))
+                        time.sleep(1)
+                        self.check_flags()
+                    if not self.run_flag:
+                        self.status.emit('Current Part: %s | Conversion stopped.' %
+                                         os.path.basename(file_name).replace('.cli', ''))
+                        self.draw_flag = False
+                        return None
+
+                    self.status.emit('Current Part: %s | Reading CLI (BINARY) file...' %
+                                     os.path.basename(file_name).replace('.cli', ''))
 
         return data_ascii
 
-        # # Open the .cli file
-        # with open(file_name, 'r') as cli_file:
-        #     # print(len(cli_file.read()))
-        #     increment = 0.001
-        #     # increment = 100.0 / sum(1 for _ in cli_file.read())
-        #     # # Go back to the start of the file as getting the length of the file put the seek head to the EOF
-        #     # cli_file.seek(0)
-        #     for line in cli_file.read():
-        #         # Check if the file is actually encoded in binary, if so, break from this loop
-        #         if 'BINARY' in line.strip():
-        #             binary_flag = True
-        #             break
-        #         # Extract pertinent information from the header and store them in the dictionary
-        #         elif 'UNITS' in line.strip():
-        #             data_ascii.append(float(line[8:-2]))
-        #         elif 'GEOMETRYSTART' in line.strip():
-        #             break
-        #         progress += increment
-        #
-        #     for line in cli_file:
-        #         if binary_flag:
-        #             break
-        #         # Check if the line is empty or not (because of the removal of random newline characters)
-        #         if line.rstrip('\r\n/n'):
-        #             data_ascii.append(line.rstrip('\r\n/n'))
-        #
-        #         if int(round(progress)) is not progress_previous:
-        #             self.progress.emit(int(round(progress)))
-        #             progress_previous = int(round(progress))
-        #         progress += increment
+    def read_cli_ascii(self, file_name):
+        # Open the .cli file
+        with open(file_name, 'r') as cli_file:
+            # print(len(cli_file.read()))
+            increment = 0.001
+            # increment = 100.0 / sum(1 for _ in cli_file.read())
+            # # Go back to the start of the file as getting the length of the file put the seek head to the EOF
+            # cli_file.seek(0)
+            for line in cli_file.read():
+                # Check if the file is actually encoded in binary, if so, break from this loop
+                if 'BINARY' in line.strip():
+                    binary_flag = True
+                    break
+                # Extract pertinent information from the header and store them in the dictionary
+                elif 'UNITS' in line.strip():
+                    data_ascii.append(float(line[8:-2]))
+                elif 'GEOMETRYSTART' in line.strip():
+                    break
+                progress += increment
+
+            for line in cli_file:
+                if binary_flag:
+                    break
+                # Check if the line is empty or not (because of the removal of random newline characters)
+                if line.rstrip('\r\n/n'):
+                    data_ascii.append(line.rstrip('\r\n/n'))
+
+                if int(round(progress)) is not progress_previous:
+                    self.progress.emit(int(round(progress)))
+                    progress_previous = int(round(progress))
+                progress += increment
 
     def format_contours(self, file_name, data_ascii):
         """Formats the data from the slice file into an organized scaled list of contours
@@ -259,7 +307,7 @@ class SliceConverter:
         """
 
         # UI Progress and Status Messages
-        progress = 0.0
+        progress_count = 0.0
         progress_previous = None
         increment = 100.0 / (len(data_ascii))
         self.status.emit('Current Part: %s | Formatting contour data...' %
@@ -292,10 +340,26 @@ class SliceConverter:
                     contours_file.write('%s\n' % line)
 
                 # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-                if int(round(progress)) is not progress_previous:
-                    self.progress.emit(int(round(progress)))
-                    progress_previous = int(round(progress))
-                progress += increment
+                progress_count += increment
+                progress = int(5 * round(progress_count / 5))
+                if not progress == progress_previous:
+                    self.progress.emit(progress)
+                    progress_previous = progress
+
+                    self.check_flags()
+                    while self.pause_flag:
+                        self.status.emit('Current Part: %s | Conversion paused.' %
+                                         os.path.basename(file_name).replace('_contours.txt', ''))
+                        time.sleep(1)
+                        self.check_flags()
+                    if not self.run_flag:
+                        self.status.emit('Current Part: %s | Conversion stopped.' %
+                                         os.path.basename(file_name).replace('_contours.txt', ''))
+                        self.draw_flag = False
+                        return None
+
+                    self.status.emit('Current Part: %s | Formatting contour data...' %
+                                     os.path.basename(file_name).replace('_contours.txt', ''))
 
             # Write the final ENDLAYER to the contours file
             contours_file.write('%s\n' % ['ENDLAYER'])
@@ -317,6 +381,17 @@ class SliceConverter:
         layer_max = 10
 
         while layer < layer_max:
+
+            self.check_flags()
+            while self.pause_flag:
+                self.status.emit('Current Part: All | Drawing contours %s of %s paused.' %
+                                 (str(layer).zfill(4), str(layer_max).zfill(4)))
+                time.sleep(1)
+                self.check_flags()
+            if not self.run_flag:
+                self.status.emit('Current Part: All | Conversion stopped.')
+                return None
+
             # Create a black RGB image to draw contours on
             image_contours = np.zeros(self.image_resolution, np.uint8)
 
@@ -343,7 +418,7 @@ class SliceConverter:
 
                 # Draw the contours onto the image_contours canvas
                 cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
-                                     offset=self.offset, thickness=cv2.FILLED)
+                                 offset=self.offset, thickness=cv2.FILLED)
 
             self.status.emit('Current Part: All | Drawing contours %s of %s.' %
                              (str(layer).zfill(4), str(layer_max).zfill(4)))
@@ -355,7 +430,7 @@ class SliceConverter:
             image_contours = image_processing.ImageCorrection(None).transform(image_contours, self.transform)
 
             # Save the image to the selected image folder
-            cv2.imwrite('%s/image_contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)
+            cv2.imwrite('%s/contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)
 
             # Increment to the next layer
             layer += 1
@@ -364,3 +439,16 @@ class SliceConverter:
             if int(round(progress)) is not progress_previous:
                 self.progress.emit(int(round(progress)))
                 progress_previous = int(round(progress))
+
+    def check_flags(self):
+        """Checks the respective Run and Pause keys from the config.json file"""
+
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        if self.config['SliceConverter']['Build']:
+            self.run_flag = self.config['BuildInfo']['Run']
+            self.pause_flag = self.config['BuildInfo']['Pause']
+        else:
+            self.run_flag = self.config['SliceConverter']['Run']
+            self.pause_flag = self.config['SliceConverter']['Pause']

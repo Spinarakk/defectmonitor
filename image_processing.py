@@ -7,6 +7,11 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
+COLOUR_BLACK = np.array((0, 0, 0))
+COLOUR_WHITE = np.array((255, 255, 255))
+COLOUR_RED = np.array((0, 0, 255))
+COLOUR_BLUE = np.array((255, 0, 0))
+
 
 class ImageCorrection:
     """Module used to correct the raw (or any sent) images taken by the camera for various optical related issues
@@ -129,15 +134,13 @@ class ImageCorrection:
     
     @staticmethod
     def clahe(image):
-        """
-        Applies a Contrast Limited Adaptive Histogram Equalization to the image
+        """Applies a Contrast Limited Adaptive Histogram Equalization to the image
         Used to improve the contrast of the image to make it clearer/visible
         """
 
         # Algorithm requires the image to be in grayscale colorspace to function
         # This line checks if the image is already grayscale or in RGB (BGR)
-        rgb_flag = len(image.shape)
-        if (rgb_flag == 3):
+        if (len(image.shape) == 3):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # CLAHE filter functions
@@ -150,70 +153,111 @@ class ImageCorrection:
         return image
 
 
-class DefectDetection(QThread):
+class DefectDetection:
     """Module used to process the corrected images using OpenCV to detect a variety of different defects
     Defects as outlined in the README.txt file
-    PUT ALL OPENCV CODE TO BE TESTED HERE IN ONE OF THE FIVE METHODS
-    TRY NOT TO MODIFY TOO MUCH OF THE CODE OUTSIDE OF THESE METHODS
+    Mainly analyzes the received image for the follow defects:
+    Bright Spots
+    Blade Streaks
+    Blade Chatter
+    Contrast Differences
     """
 
-    def __init__(self, image_raw):
-        # Defines the class as a thread
-        QThread.__init__(self)
+    def __init__(self):
 
-        # Save the received argument as an instance variable
-        self.original_image = image_raw
+        # Load configuration settings from config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
 
-    def run(self):
-        self.emit(pyqtSignal("update_progress(QString)"), '0')
+        # Initialize some dictionaries to store the results
+        # Defects on refers to the defects that intersect the overlay, Defects off is the opposite
+        self.defects_on = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
+        self.defects_off = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 1...')
-        self.image_1 = self.test_code_1(self.original_image)
-        self.emit(pyqtSignal("update_progress(QString)"), '20')
+    def analyze_coat(self):
+        # Load the original image and the corresponding overlay into memory
+        self.image = cv2.imread(self.config['DefectDetection']['Image'])
+        self.image_overlay = cv2.imread(self.config['DefectDetection']['Overlay'])
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 2...')
-        self.image_2 = self.test_code_2(self.original_image)
-        self.emit(pyqtSignal("update_progress(QString)"), '40')
+        # Save respective values to be used in defect detection
+        self.layer = self.config['DefectDetection']['Layer']
+        self.phase = self.config['DefectDetection']['Phase']
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 3...')
-        self.image_3 = self.test_code_3(self.original_image)
-        self.emit(pyqtSignal("update_progress(QString)"), '60')
+        self.detect_bright_spots(self.image)
+        self.detect_blade_streaks(self.image)
+        self.detect_blade_chatter(self.image)
+        self.detect_contrast(self.image)
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 4...')
-        self.image_4 = self.test_code_4(self.original_image)
-        self.emit(pyqtSignal("update_progress(QString)"), '80')
+    def detect_brightspots(self, image):
+        image_defects = image.copy()
+        image_clahe = ImageCorrection.clahe(image_defects)
+        image_clahe = cv2.cvtColor(image_clahe, cv2.COLOR_BGR2GRAY)
+        retval = cv2.threshold(image_clahe, 0, 255, cv2.THRESH_OTSU)[0]
+        _, threshold = cv2.threshold(image_clahe, retval * 1.85, 255, cv2.THRESH_BINARY)
+        image_defects[threshold == 255] = COLOUR_RED
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Running OpenCV Process 5...')
-        self.image_5 = self.test_code_5(self.original_image)
-        self.emit(pyqtSignal("update_progress(QString)"), '100')
+        if self.defect_size(image_defects) > 0:
+            coordinates_on, coordinates_off = self.find_coordinates
 
-        self.emit(pyqtSignal("defect_processing_finished(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, "
-                         "PyQt_PyObject)"), self.image_1, self.image_2, self.image_3, self.image_4, self.image_5)
+    def detect_blade_streaks(self):
+        pass
 
-    @staticmethod
-    def test_code_1(image):
-        processed_image = cv2.bilateralFilter(image, 9, 75, 75)
-        return processed_image
+    def detect_blade_chatter(self):
+        pass
 
-    @staticmethod
-    def test_code_2(image):
-        processed_image = cv2.erode(image, (5, 5))
-        return processed_image
-
-    @staticmethod
-    def test_code_3(image):
-        processed_image = cv2.blur(image, (10, 10))
-        return processed_image
+    def detect_contrast(self):
+        pass
 
     @staticmethod
-    def test_code_4(image):
-        kernel = np.ones((5, 5), np.float32) / 25
-        processed_image = cv2.filter2D(image, -1, kernel)
-        return processed_image
+    def find_coordinates(defects, overlay, colour):
+        mask = cv2.inRange(overlay, colour, colour)
+        roi = cv2.bitwise_and(defects, defects, mask=mask)
+
 
     @staticmethod
-    def test_code_5(image):
-        rows, columns, _ = image.shape
-        rotation_matrix = cv2.getRotationMatrix2D((columns / 2, rows / 2), 90, 1)
-        processed_image = cv2.warpAffine(image, rotation_matrix, (columns, rows))
-        return processed_image
+    def detect_blob(threshold):
+        contours = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+        coordinates = list()
+        for contour in contours:
+            if cv2.contourArea(contour) > 50:
+                (x, y) = cv2.minEnclosingCircle(contour)[0]
+                coordinates.append((int(x), int(y)))
+        return coordinates.sort()
+
+    @staticmethod
+    def defect_size(image):
+        return cv2.countNonZero(cv2.inRange(image, np.array([0, 0, 200]), np.array([100, 100, 255])))
+
+    @staticmethod
+    def split_otsu(image):
+        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        retval, threshold = cv2.threshold(image_gray, 0, 255, cv2.THRESH_OTSU)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ERODE, (5, 5))
+        cv2.erode(threshold, kernel, dst=threshold, iterations=3)
+
+        for index in range(7):
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * index + 1, 2 * index + 1))
+            threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, kernel, iterations=3)
+            threshold = cv2.morphologyEx(threshold, cv2.MORPH_OPEN, kernel, iterations=3)
+
+        dark = cv2.bitwise_and(image, image, mask=cv2.bitwise_not(threshold))
+        light = cv2.bitwise_and(image, image, mask=threshold)
+
+        return retval, dark, light
+
+
+    @staticmethod
+    def split_colour(image, colour):
+        """Returns two images, one of just the received colour and one of the background without the colour"""
+
+        mask = cv2.inRange(image, colour, colour)
+        mask_inverse = cv2.bitwise_not(mask)
+
+        foreground = cv2.bitwise_and(image, image, mask=mask)
+        background = cv2.bitwise_and(image, image, mask=mask_inverse)
+
+        return background, foreground
+
+
+
+

@@ -69,7 +69,7 @@
     <rect>
      <x>10</x>
      <y>318</y>
-     <width>271</width>
+     <width>131</width>
      <height>28</height>
     </rect>
    </property>
@@ -199,20 +199,20 @@
     <string>Browse...</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkSuppress">
+  <widget class="QPushButton" name="buttonStop">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>150</y>
-     <width>111</width>
-     <height>16</height>
+     <x>150</x>
+     <y>318</y>
+     <width>131</width>
+     <height>28</height>
     </rect>
    </property>
    <property name="text">
-    <string>Suppress Progress</string>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
+    <string>Stop</string>
    </property>
   </widget>
  </widget>

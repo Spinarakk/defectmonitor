@@ -10,7 +10,9 @@
             636.0,
             406.0
         ],
-"SliceFiles": [],
+	"Pause": false,
+	"Run": false,
+	"SliceFiles": [],
         "Username": ""
     },
     "CameraCalibration": {
@@ -26,6 +28,12 @@
         "InterPacketDelay": 500,
         "PacketSize": 1500,
         "PixelFormat": 0
+    },
+    "DefectDetection": {
+	"Image": "",
+	"Overlay": "",
+	"Layer": 0,
+	"Phase": 0
     },
     "ImageCapture": {
         "Folder": "",
@@ -123,9 +131,12 @@
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Files": [],
-	"Draw": false,
-	"Folder": ""
+	"Build": false,
+	"Draw": false,        
+	"Files": [],
+	"Folder": "",
+	"Pause": false,
+	"Run": false
     },
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
 }

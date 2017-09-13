@@ -564,6 +564,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
         self.buttonBrowseF.clicked.connect(self.browse_folder)
         self.buttonStart.clicked.connect(self.start)
+        self.buttonStop.clicked.connect(self.start_finished)
 
         self.slice_list = list()
         self.contours_folder = '%s/contours' % self.config['WorkingDirectory']
@@ -599,34 +600,59 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.lineFolder.setText(self.contours_folder)
 
     def start(self):
-        # Disable all buttons to prevent user from doing other tasks
-        self.buttonStart.setEnabled(False)
-        self.buttonBrowseSF.setEnabled(False)
-        self.buttonBrowseF.setEnabled(False)
-        self.buttonDone.setEnabled(False)
-        self.update_progress(0)
+        """Executes when the Start/Pause/Resume button is clicked and does one of the following depending on the text"""
 
-        # Save the slice file list and the draw state to the config.json file
-        self.config['SliceConverter']['Draw'] = self.checkDraw.isChecked()
-        self.config['SliceConverter']['Folder'] = self.contours_folder
-        self.config['SliceConverter']['Files'] = self.slice_list
-        self.save_settings()
+        if 'Start' in self.buttonStart.text():
+            # Disable all buttons to prevent user from doing other tasks
+            self.buttonStop.setEnabled(True)
+            self.buttonBrowseSF.setEnabled(False)
+            self.buttonBrowseF.setEnabled(False)
+            self.buttonDone.setEnabled(False)
+            self.checkDraw.setEnabled(False)
+            self.update_progress(0)
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
-        worker.signals.status.connect(self.update_status)
-        if not self.checkSuppress.isChecked():
+            # Change the Start button into a Pause/Resume button
+            self.buttonStart.setText('Pause')
+
+            # Save the slice file list and the draw state to the config.json file
+            self.config['SliceConverter']['Draw'] = self.checkDraw.isChecked()
+            self.config['SliceConverter']['Folder'] = self.contours_folder
+            self.config['SliceConverter']['Files'] = self.slice_list
+            self.config['SliceConverter']['Run'] = True
+            self.config['SliceConverter']['Pause'] = False
+            self.config['SliceConverter']['Build'] = False
+            self.save_settings()
+
+            worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
+            worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
-        worker.signals.finished.connect(self.start_conversion_finished)
-        self.threadpool.start(worker)
+            worker.signals.finished.connect(self.start_finished)
+            self.threadpool.start(worker)
 
-    def start_conversion_finished(self):
+        elif 'Pause' in self.buttonStart.text():
+            self.config['SliceConverter']['Pause'] = True
+            self.save_settings()
+            self.buttonStart.setText('Resume')
+        elif 'Resume' in self.buttonStart.text():
+            self.config['SliceConverter']['Pause'] = False
+            self.save_settings()
+            self.buttonStart.setText('Pause')
+
+    def start_finished(self):
         """Executes when the SliceConverter instance has finished"""
 
-        self.buttonStart.setEnabled(True)
+        # Stop the conversion thread
+        self.config['SliceConverter']['Pause'] = False
+        self.config['SliceConverter']['Run'] = False
+        self.save_settings()
+
+        # Enable/disable respective buttons
+        self.buttonStart.setText('Start')
+        self.buttonStop.setEnabled(False)
         self.buttonBrowseSF.setEnabled(True)
         self.buttonBrowseF.setEnabled(True)
         self.buttonDone.setEnabled(True)
-        self.update_status('Current Part: None | Conversion completed successfully.')
+        self.checkDraw.setEnabled(True)
 
     def save_settings(self):
         """Save any changed values to the config.json file"""
@@ -644,10 +670,20 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def closeEvent(self, event):
         """Executes when the window is closed"""
 
-        self.config['SliceConverter']['Folder'] = ''
-        self.config['SliceConverter']['Files'] = []
-        self.save_settings()
-        self.window_settings.setValue('geometry', self.saveGeometry())
+        # Check if a conversion is in progress or paused, and block the user from closing the window until stopped
+        if not self.buttonDone.isEnabled():
+            run_error = QMessageBox()
+            run_error.setIcon(QMessageBox.Critical)
+            run_error.setText('Conversion in progress or paused.\n'
+                              'Please stop or wait for the conversion to finish before exiting.')
+            run_error.setWindowTitle('Error')
+            run_error.exec_()
+            event.ignore()
+        else:
+            self.config['SliceConverter']['Folder'] = ''
+            self.config['SliceConverter']['Files'] = []
+            self.save_settings()
+            self.window_settings.setValue('geometry', self.saveGeometry())
 
 
 class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustment):

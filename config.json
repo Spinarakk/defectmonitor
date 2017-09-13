@@ -1,18 +1,21 @@
 {
     "BuildInfo": {
-        "Convert": true,
-        "Draw": true,
-        "EmailAddress": "asdf@gmail.com",
+        "Convert": false,
+        "Draw": false,
+        "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
         "Name": "Default",
+        "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
             636.0,
             406.0
         ],
+        "Run": false,
         "SliceFiles": [
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 01.cli",
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 02.cli",
+            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 03.cli",
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 04.cli",
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 05.cli",
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 06.cli",
@@ -37,7 +40,7 @@
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 25.cli",
             "D:/Documents/MCAM/Slice Files/09-08-2017/Part 26.cli"
         ],
-        "Username": "asdf"
+        "Username": "Nicholas Lee"
     },
     "CameraCalibration": {
         "DownscalingRatio": 1,
@@ -54,7 +57,7 @@
         "PixelFormat": 0
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-09-12 [12-05-10] Default",
+        "Folder": "D:/Documents/MCAM/Builds/2017-09-13 [11''40'40] Default",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
