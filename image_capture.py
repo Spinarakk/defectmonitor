@@ -30,7 +30,7 @@ class ImageCapture:
 
     def acquire_camera(self):
         """Accesses the pypylon wrapper and checks the ethernet ports for a connected camera
-        Returns camera information if found and creates the camera variable, else False
+        Creates the camera object and returns camera information if found, else False is returned
         """
 
         # Check for available cameras
@@ -45,7 +45,7 @@ class ImageCapture:
 
     def acquire_trigger(self):
         """Grabs a list of all the available COM ports on the current computer
-        Returns the COM port if attached triggering device is found, else False
+        Returns the COM port if attached triggering device is found, else False is returned
         """
 
         # List all the available serial ports
@@ -117,7 +117,7 @@ class ImageCapture:
             status.emit('Processing captured image...')
 
             # Process the image
-            image = image_processing.ImageCorrection().apply_fixes(image)
+            image = image_processing.ImageTransform().apply_fixes(image)
 
             # Save the processed image to the processed folder
             cv2.imwrite('%s/processed/single/singleP_%s.png' %
@@ -156,7 +156,7 @@ class ImageCapture:
         status.emit('Processing captured image...')
 
         # Process the image
-        image = image_processing.ImageCorrection().apply_fixes(image)
+        image = image_processing.ImageTransform().apply_fixes(image)
 
         # Save the processed image to the processed folder
         cv2.imwrite('%s/processed/%s/%sP_%s.png' %

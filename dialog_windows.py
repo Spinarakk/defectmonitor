@@ -18,7 +18,7 @@ import image_processing
 import extra_functions
 import camera_calibration
 import qt_multithreading
-import defect_analysis
+
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
@@ -51,7 +51,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.open_flag = open_flag
 
         # Set and display the default build image save folder
-        self.slice_file_list = list()
+        self.slice_list = list()
         self.build_folder_name = self.config['BuildInfo']['Folder']
         self.lineBuildFolder.setText(self.build_folder_name)
 
@@ -62,12 +62,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.pushCreate.setText('Load')
             self.lineBuildName.setText(self.config['BuildInfo']['Name'])
             self.comboPlatform.setCurrentIndex(self.config['BuildInfo']['Platform'])
-            self.slice_file_list = self.config['BuildInfo']['SliceFiles']
-            self.set_list(self.slice_file_list)
+            self.slice_list = self.config['BuildInfo']['SliceFiles']
+            self.set_list(self.slice_list)
             self.lineUsername.setText(self.config['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.config['BuildInfo']['EmailAddress'])
-            self.checkConvert.setChecked(self.config['BuildInfo']['Convert'])
-            self.checkDraw.setChecked(self.config['BuildInfo']['Draw'])
             self.checkMinor.setChecked(self.config['Notifications']['Minor'])
             self.checkMajor.setChecked(self.config['Notifications']['Major'])
             self.checkFailure.setChecked(self.config['Notifications']['Failure'])
@@ -80,8 +78,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if file_names:
+            self.slice_list = file_names
             self.set_list(file_names)
-            self.slice_file_list = file_names
 
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
@@ -185,7 +183,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         if not self.lineBuildName.text():
             error_message += 'Build Name not entered.\n'
-        if not self.slice_file_list:
+        if not self.slice_list:
             error_message += 'Slice files not selected.\n'
         if not self.lineUsername.text():
             error_message += 'Username not entered.\n'
@@ -199,7 +197,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             invalid_entries_error.setWindowTitle('Error')
             invalid_entries_error.exec_()
         else:
-            # Save all the entered information to the config file
+            # Save all the entered information to the config.json file
             self.config['BuildInfo']['Name'] = str(self.lineBuildName.text())
             self.config['BuildInfo']['Platform'] = self.comboPlatform.currentIndex()
             self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
@@ -208,7 +206,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             if self.checkConvert.isChecked():
                 self.config['BuildInfo']['Draw'] = self.checkDraw.isChecked()
             self.config['BuildInfo']['Folder'] = self.build_folder_name
-            self.config['BuildInfo']['SliceFiles'] = self.slice_file_list
+            self.config['BuildInfo']['SliceFiles'] = self.slice_list
             self.config['Notifications']['Minor'] = self.checkMinor.isChecked()
             self.config['Notifications']['Major'] = self.checkMajor.isChecked()
             self.config['Notifications']['Failure'] = self.checkFailure.isChecked()
@@ -222,6 +220,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             elif self.comboPlatform.currentIndex() == 2:
                 self.config['BuildInfo']['PlatformDimensions'] = [250.0, 250.0]
 
+            # If a New Build is being created (rather than Open Build), create some folders to store images
             if not self.open_flag:
                 # Generate a timestamp for folder labelling purposes
                 current_time = datetime.now()
@@ -236,7 +235,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 # Save the created image folder's name to the config.json file
                 self.config['ImageCapture']['Folder'] = image_folder
 
-                # Create respective sub-directories for images
+                # Create respective sub-directories for images (and reports)
                 os.makedirs('%s/raw/coat' % image_folder)
                 os.makedirs('%s/raw/scan' % image_folder)
                 os.makedirs('%s/raw/single' % image_folder)
@@ -247,6 +246,25 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 os.makedirs('%s/defects/scan' % image_folder)
                 os.makedirs('%s/defects/single' % image_folder)
                 os.makedirs('%s/contours' % image_folder)
+                os.makedirs('%s/reports/parts' % image_folder)
+
+                # Create a dictionary of colours (different shades of teal) for each part's contours and save it
+                # At the same time, create a bunch of JSON files using a blank dictionary
+                # These JSON files are to store the defect coordinate data for each of the parts
+                part_colours = dict()
+                dict_blank = dict()
+                for index, part_name in enumerate(self.slice_list):
+                    part_name = os.path.splitext(os.path.basename(part_name))[0]
+                    part_colours[part_name] = \
+                        ((100 + 4 * index) % 255, (100 + 4 * index) % 255, 0)
+
+                    with open('%s/reports/parts/%s_report.json' % (image_folder, part_name), 'w+') as report:
+                        json.dump(dict_blank, report)
+
+                self.config['BuildInfo']['Colours'] = part_colours
+
+                with open('%s/reports/background_report.json' % image_folder, 'w+') as report:
+                    json.dump(dict_blank, report)
 
             with open('config.json', 'w+') as config:
                 json.dump(self.config, config, indent=4, sort_keys=True)
@@ -396,11 +414,11 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.update_status('Processing test image...')
             self.update_progress(0)
             image = cv2.imread(self.config['CameraCalibration']['TestImage'])
-            image = image_processing.ImageCorrection(None, test_flag=True).distortion_fix(image)
+            image = image_processing.ImageTransform(None, test_flag=True).distortion_fix(image)
             self.update_progress(25)
-            image = image_processing.ImageCorrection(None, test_flag=True).perspective_fix(image)
+            image = image_processing.ImageTransform(None, test_flag=True).perspective_fix(image)
             self.update_progress(50)
-            image = image_processing.ImageCorrection(None, test_flag=True).crop(image)
+            image = image_processing.ImageTransform(None, test_flag=True).crop(image)
             self.update_progress(75)
             cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image)
             self.update_status('Test Image successfully processed.')
@@ -614,6 +632,12 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             # Change the Start button into a Pause/Resume button
             self.buttonStart.setText('Pause')
 
+            # Create a dictionary of colours (different shades of teal) for each part's contours and save it
+            part_colours = dict()
+            for index, part_name in enumerate(self.slice_list):
+                part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
+                    ((100 + 4 * index) % 255, (100 + 4 * index) % 255, 0)
+
             # Save the slice file list and the draw state to the config.json file
             self.config['SliceConverter']['Draw'] = self.checkDraw.isChecked()
             self.config['SliceConverter']['Folder'] = self.contours_folder
@@ -621,6 +645,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.config['SliceConverter']['Run'] = True
             self.config['SliceConverter']['Pause'] = False
             self.config['SliceConverter']['Build'] = False
+            self.config['SliceConverter']['Colours'] = part_colours
             self.save_settings()
 
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)

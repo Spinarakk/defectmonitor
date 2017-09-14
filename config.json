@@ -1,10 +1,142 @@
 {
     "BuildInfo": {
-        "Convert": false,
-        "Draw": false,
+        "Colours": {
+            "Part 01": [
+                100,
+                100,
+                0
+            ],
+            "Part 02": [
+                104,
+                104,
+                0
+            ],
+            "Part 03": [
+                108,
+                108,
+                0
+            ],
+            "Part 04": [
+                112,
+                112,
+                0
+            ],
+            "Part 05": [
+                116,
+                116,
+                0
+            ],
+            "Part 06": [
+                120,
+                120,
+                0
+            ],
+            "Part 07": [
+                124,
+                124,
+                0
+            ],
+            "Part 08": [
+                128,
+                128,
+                0
+            ],
+            "Part 09": [
+                132,
+                132,
+                0
+            ],
+            "Part 10": [
+                136,
+                136,
+                0
+            ],
+            "Part 11": [
+                140,
+                140,
+                0
+            ],
+            "Part 12": [
+                144,
+                144,
+                0
+            ],
+            "Part 13": [
+                148,
+                148,
+                0
+            ],
+            "Part 14": [
+                152,
+                152,
+                0
+            ],
+            "Part 15": [
+                156,
+                156,
+                0
+            ],
+            "Part 16": [
+                160,
+                160,
+                0
+            ],
+            "Part 17": [
+                164,
+                164,
+                0
+            ],
+            "Part 18": [
+                168,
+                168,
+                0
+            ],
+            "Part 19": [
+                172,
+                172,
+                0
+            ],
+            "Part 20": [
+                176,
+                176,
+                0
+            ],
+            "Part 21": [
+                180,
+                180,
+                0
+            ],
+            "Part 22": [
+                184,
+                184,
+                0
+            ],
+            "Part 23": [
+                188,
+                188,
+                0
+            ],
+            "Part 24": [
+                192,
+                192,
+                0
+            ],
+            "Part 25": [
+                196,
+                196,
+                0
+            ],
+            "Part 26": [
+                200,
+                200,
+                0
+            ]
+        },
+        "Convert": true,
+        "Draw": true,
         "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Default",
+        "Name": "TestBuild",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
@@ -56,8 +188,14 @@
         "PacketSize": 1500,
         "PixelFormat": 0
     },
+    "DefectDetection": {
+        "Image": "",
+        "Layer": 0,
+        "Overlay": "",
+        "Phase": "coat"
+    },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-09-13 [11''40'40] Default",
+        "Folder": "D:/Documents/MCAM/Builds/2017-09-14 [17''46'53] TestBuild",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
@@ -144,17 +282,21 @@
         ]
     },
     "Notifications": {
-        "Error": false,
-        "Failure": false,
-        "Major": false,
-        "Minor": false,
+        "Error": true,
+        "Failure": true,
+        "Major": true,
+        "Minor": true,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
+        "Build": true,
+        "Colours": {},
         "Draw": false,
         "Files": [],
-        "Folder": ""
+        "Folder": "",
+        "Pause": false,
+        "Run": false
     },
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
 }

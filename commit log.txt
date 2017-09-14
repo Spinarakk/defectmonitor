@@ -1,3 +1,19 @@
+September 14
+- Continued rewriting the defect detection code
+- Fixed other parts that had issues such as the end of the slice conversion
+- Looked into getting a new computer for the XLine 100 concept laser
+- Moved the part colour creation to the build dialog and the slice converter dialog and saved the colour dictionary to the config.json file
+
+September 13
+- Reverted the QFileSystemWatcher to the simple polling of the image folder lengths and executing the relevant code should a change be detected
+- In an effort to allow smooth operation, changed the slice conversion to only emit progress intervals of 5% rather than every 1% to curb number of signals being emitted
+- Added buttons to both the MainWindow and the SliceConverter to pause/resume and outright stop the conversion process
+- In turn, added the relevant conditionals and keys in the config.json to allow the aforementioned operation
+- Fixed an issue in the image viewer where the equalization button wasn't doing anything
+- Turns out the toggled signal returns a true or false
+- Added additional keys to the display dictionary for the 3 additional folders containing the defect analyzed images
+- Started properly rewriting the defect detection code
+
 September 12
 - Figured out why the slice conversion wasn't working and rewrote it to now work correctly in Python 3
 - Re-implemented the status and progress indicators, however the progress readout causes lag due to too many signals emitted and thus a suppress progress checkbox has been added temporarily

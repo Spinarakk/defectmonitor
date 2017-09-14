@@ -10,8 +10,7 @@ from PyQt5.QtCore import *
 
 
 class Notifications(QThread):
-    """Module used to send email notifications to a specified email address
-    Attachments such as images can be sent as well"""
+    """Module used to send email notifications including image attachments to a specified email address"""
 
     def __init__(self, subject, message, attachment_name=None):
 

@@ -40,10 +40,12 @@ class SliceConverter:
         # Or as part of a new build, different files will be read and used
 
         if self.config['SliceConverter']['Build']:
+            self.part_colours = self.config['BuildInfo']['Colours']
             self.part_names = self.config['BuildInfo']['SliceFiles']
             self.draw_flag = self.config['BuildInfo']['Draw']
             self.contours_folder = '%s/contours' % self.config['ImageCapture']['Folder']
         else:
+            self.part_colours = self.config['SliceConverter']['Colours']
             self.part_names = self.config['SliceConverter']['Files']
             self.draw_flag = self.config['SliceConverter']['Draw']
             self.contours_folder = self.config['SliceConverter']['Folder']
@@ -83,18 +85,13 @@ class SliceConverter:
                         return
 
         if self.draw_flag:
-            # Create a dictionary of colours (different shades of teal) for each part's contours
-            colours = dict()
-            for index, part_name in enumerate(self.part_names):
-                colours['%s' % os.path.basename(part_name)] = ((100 + 5 * index) % 255, (100 + 5 * index) % 255, 0)
-
             # Draw and save the contours to an image file
-            self.draw_contours(self.part_names, colours, self.contours_folder)
+            self.draw_contours(self.part_names, self.part_colours, self.contours_folder)
 
             if not self.run_flag:
                 return
 
-        self.update_status('Current Part: None | Conversion completed successfully.')
+        self.status.emit('Current Part: None | Conversion completed successfully.')
 
     def read_cls(self, file_name):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
@@ -364,7 +361,7 @@ class SliceConverter:
             # Write the final ENDLAYER to the contours file
             contours_file.write('%s\n' % ['ENDLAYER'])
 
-    def draw_contours(self, file_names, colours, folder_name):
+    def draw_contours(self, file_names, part_colours, folder_name):
         """Draw all the contours of the selected parts on the same image"""
 
         # Make sure the received contours folder exists
@@ -380,7 +377,7 @@ class SliceConverter:
         layer = 1
         layer_max = 10
 
-        while layer < layer_max:
+        while layer <= layer_max:
 
             self.check_flags()
             while self.pause_flag:
@@ -417,7 +414,8 @@ class SliceConverter:
                                 layer_max = int(line[1])
 
                 # Draw the contours onto the image_contours canvas
-                cv2.drawContours(image_contours, contours, -1, colours[os.path.basename(file_name)],
+                cv2.drawContours(image_contours, contours, -1,
+                                 part_colours[os.path.splitext(os.path.basename(file_name))[0]],
                                  offset=self.offset, thickness=cv2.FILLED)
 
             self.status.emit('Current Part: All | Drawing contours %s of %s.' %
@@ -427,7 +425,7 @@ class SliceConverter:
             image_contours = cv2.flip(image_contours, 0)
 
             # Correct the image using calculated transformation parameters to account for the perspective warp
-            image_contours = image_processing.ImageCorrection(None).transform(image_contours, self.transform)
+            image_contours = image_processing.ImageTransform(None).transform(image_contours, self.transform)
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)

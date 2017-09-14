@@ -17,7 +17,6 @@ uic.compileUiDir('gui')
 import dialog_windows
 import image_capture
 import image_processing
-import defect_analysis
 import slice_converter
 import qt_multithreading
 
@@ -148,14 +147,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding image, list or name
-        self.display = {'Image': [0, 0, 0, 0, 0, 0, 0, 0], 'ImageList': [[], [], [], [], [], [], [], []], 'LayerRange': [1, 1, 1, 1],
+        self.display = {'Image': [0, 0, 0, 0, 0, 0, 0, 0], 'ImageList': [[], [], [], [], [], [], [], []],
+                        'LayerRange': [1, 1, 1, 1],
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'], 'CurrentLayer': [1, 1, 1, 1],
                         'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
                         'DisplayImage': [0, 0, 0, 0]}
 
-        # Create a threadpool which contains an amount of threads that can be used to simultaneously run functions
+        # Create a QThreadPool which contains an amount of threads that can be used to simultaneously run functions
         self.threadpool = QThreadPool()
 
     # MENUBAR -> FILE
@@ -199,6 +199,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def setup_build(self):
         """Sets up the widgetDisplay and any background processes for the current build"""
 
+        # Reload any modified configuration settings that the New Build dialog has changed
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -341,7 +342,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.display['StackNames'][index].setCurrentIndex(0)
             self.display['LabelNames'][index].setText('Create or Open a Build to View Images')
 
-        #TODO
+            # TODO
 
     # MENUBAR -> VIEW
     def zoom_in(self):
@@ -362,7 +363,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def camera_calibration(self):
         """Opens a Modeless Dialog Window when the Camera Calibration button is clicked
         Or when Tools -> Camera -> Calibration is clicked
-        Allows the user to select a folder of chessboard images to calculate the camera's intrinsic values for calibration
+        Allows the user to select a folder of chessboard images to calculate intrinsic values for calibration
         """
 
         # Check if the dialog window is already open, if not, create a new window and open it
@@ -439,19 +440,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
         progress.emit(0)
         status.emit('Undistorting image...')
-        image = image_processing.ImageCorrection().distortion_fix(image)
+        image = image_processing.ImageTransform().distortion_fix(image)
         cv2.imwrite('%s_D.png' % image_name, image)
         progress.emit(25)
         status.emit('Fixing perspective warp...')
-        image = image_processing.ImageCorrection().perspective_fix(image)
+        image = image_processing.ImageTransform().perspective_fix(image)
         cv2.imwrite('%s_DP.png' % image_name, image)
         progress.emit(50)
         status.emit('Cropping image to size...')
-        image = image_processing.ImageCorrection().crop(image)
+        image = image_processing.ImageTransform().crop(image)
         cv2.imwrite('%s_DPC.png' % image_name, image)
         progress.emit(75)
         status.emit('Applying CLAHE equalization...')
-        image = image_processing.ImageCorrection().clahe(image)
+        image = image_processing.ImageTransform().clahe(image)
         cv2.imwrite('%s_DPCE.png' % image_name, image)
         progress.emit(100)
         status.emit('Image successfully processed and saved to same folder as input image.')
@@ -716,7 +717,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         graphics = self.display['GraphicsNames'][index]
         stack = self.display['StackNames'][index]
 
-
         # Check if the image folder has an actual image to display
         if not self.display['ImageList'][index]:
             # Change the stacked widget to the one with the information label
@@ -743,11 +743,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.update_image(2)
                 overlay = self.display['Image'][2]
 
-                # Resizes the overlay image if the resolution doesn't match the displayed image
+                # Resize the overlay image if the resolution doesn't match the displayed image
                 if overlay.shape[:2] != image.shape[:2]:
                     overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
-                overlay = image_processing.ImageCorrection(None).transform(overlay, self.transform)
+                overlay = image_processing.ImageTransform(None).transform(overlay, self.transform)
 
                 # self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
                 # Display a status message with the current transformation of the overlay image
@@ -758,7 +758,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 image = cv2.add(image, overlay)
 
             if self.radioCLAHE.isChecked():
-                image = image_processing.ImageCorrection.clahe(image)
+                image = image_processing.ImageTransform.clahe(image)
 
             # Display the image on the current GraphicsView
             graphics.set_image(self.convert2pixmap(image))
@@ -791,16 +791,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     @staticmethod
     def convert2pixmap(image):
-        """Converts the received image into Pixmap format that can be displayed on the label in Qt"""
+        """Converts the received image into a QPixmap that can be displayed on the graphics viewer"""
 
         # If the image is a BGR image, convert to RGB so that colours can be displayed properly
-        if (len(image.shape) == 3): image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Convert to pixmap using in-built Qt functions
+        # Convert to QPixmap using in-built Qt functions
         qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
+
         return QPixmap.fromImage(qimage)
 
-    # MISCELlANEOUS UI ELEMENT FUNCTIONALITY
+    # MISCELLANEOUS UI ELEMENT FUNCTIONALITY
 
     def tab_change(self, index):
         """Executes when the focused tab on widgetDisplay changes to enable/disable buttons and change layer values"""
@@ -817,10 +819,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Set the current layer number depending on the currently displayed tab
             self.labelLayerNumber.setText(str(self.display['CurrentLayer'][index]).zfill(4))
 
-            # Disable the display options groupbox if there isn't a currently displayed image
-            if self.display['ImageList'][index] == []:
-                self.toggle_display_buttons(False)
-            else:
+            # Disable the display options group box if there isn't a currently displayed image
+            if self.display['ImageList'][index]:
                 self.toggle_display_buttons(True)
                 self.update_display(index)
 
@@ -832,6 +832,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 else:
                     self.checkOverlay.setEnabled(True)
                     self.radioDefects.setEnabled(True)
+            else:
+                self.toggle_display_buttons(False)
 
         self.sliderDisplay.blockSignals(False)
 
@@ -937,7 +939,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
                 self.display['ImageList'][index].append(self.display['ImageFolder'][index] + '/' + filename)
 
-        # If the list of filenames remains empty (aka no images in folder), set the corresponding image to None
+        # If the list of file names remains empty (aka no images in folder), set the corresponding image to None
         # Also enable/disable certain UI elements if the received index matches the current widgetDisplay's index
         if not self.display['ImageList'][index]:
             self.display['Image'][index] = None
@@ -1032,8 +1034,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
 
 if __name__ == '__main__':
-        application = QApplication(sys.argv)
-        application.setAttribute(Qt.AA_Use96Dpi)
-        interface = MainWindow()
-        interface.show()
-        sys.exit(application.exec_())
+    application = QApplication(sys.argv)
+    application.setAttribute(Qt.AA_Use96Dpi)
+    interface = MainWindow()
+    interface.show()
+    sys.exit(application.exec_())

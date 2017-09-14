@@ -1,6 +1,7 @@
 {
     "BuildInfo": {
-        "Convert": false,
+        "Colours": {},
+	"Convert": false,
         "Draw": false,
         "EmailAddress": "",
         "Folder": "D:/Documents/MCAM/Builds",
@@ -33,7 +34,7 @@
 	"Image": "",
 	"Overlay": "",
 	"Layer": 0,
-	"Phase": 0
+	"Phase": "coat"
     },
     "ImageCapture": {
         "Folder": "",
@@ -132,6 +133,7 @@
     },
     "SliceConverter": {
 	"Build": false,
+	"Colours": {},
 	"Draw": false,        
 	"Files": [],
 	"Folder": "",
