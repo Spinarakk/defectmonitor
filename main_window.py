@@ -5,6 +5,7 @@ import subprocess
 import json
 import cv2
 import serial
+import bisect
 
 # Import PyQt modules
 from PyQt5.QtGui import *
@@ -72,32 +73,40 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionOverlayAdjustment.triggered.connect(self.overlay_adjustment)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
-        self.actionProcessDefects.triggered.connect(self.process_defects)
+        self.actionUpdateFolders.triggered.connect(self.update_folders)
+        self.actionProcessCurrent.triggered.connect(self.process_current)
+        self.actionProcessAll.triggered.connect(self.process_all_setup)
+        self.actionProcessSelected.triggered.connect(self.process_selected)
 
         # Menubar -> Settings
         self.actionCameraSettings.triggered.connect(self.camera_settings)
         self.actionBuildSettings.triggered.connect(self.build_settings)
+        self.actionAdvancedMode.triggered.connect(self.advanced_mode)
 
         # Menubar -> Help
         self.actionViewHelp.triggered.connect(self.view_help)
         self.actionAbout.triggered.connect(self.view_about)
 
         # Display Options Group Box
-        self.radioOriginal.toggled.connect(self.update_display)
-        self.radioCLAHE.toggled.connect(self.update_display)
-        self.radioDefects.toggled.connect(self.update_display)
+        self.radioOriginal.clicked.connect(self.update_display)
+        self.radioCLAHE.clicked.connect(self.update_display)
+        self.radioDefects.clicked.connect(self.update_display)
         self.checkOverlay.toggled.connect(self.toggle_overlay)
 
-        # Assorted Tools Group Box
+        # Sidebar Toolbox Assorted Tools
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
         self.pushOverlayAdjustment.clicked.connect(self.overlay_adjustment)
-        self.pushSliceConverter.clicked.connect(self.slice_converter)
         self.pushImageConverter.clicked.connect(self.image_converter)
-        self.pushProcessDefects.clicked.connect(self.process_defects)
 
-        # Slice Conversion
+        # Sidebar Toolbox Slice Conversion
         self.pushPauseConversion.clicked.connect(self.pause_conversion)
         self.pushStopConversion.clicked.connect(self.setup_build_finished)
+        self.pushSliceConverter.clicked.connect(self.slice_converter)
+
+        # Sidebar Toolbox Defect Processor
+        self.pushProcessCurrent.clicked.connect(self.process_current)
+        self.pushProcessAll.clicked.connect(self.process_all_setup)
+        self.pushProcessSelected.clicked.connect(self.process_selected)
 
         # Layer Selection
         self.pushGo.clicked.connect(self.set_layer)
@@ -123,7 +132,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Sliders
         self.sliderDisplay.valueChanged.connect(self.slider_change)
         self.pushDisplayUp.clicked.connect(self.slider_up)
+        self.pushDisplayUpSeek.clicked.connect(self.slider_up_seek)
         self.pushDisplayDown.clicked.connect(self.slider_down)
+        self.pushDisplayDownSeek.clicked.connect(self.slider_down_seek)
 
         # Flags for various conditions
         self.display_flag = False
@@ -147,9 +158,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding image, list or name
-        self.display = {'Image': [0, 0, 0, 0, 0, 0, 0, 0], 'ImageList': [[], [], [], [], [], [], [], []],
-                        'LayerRange': [1, 1, 1, 1],
+        self.display = {'ImageList': [list(), list(), list(), list()], 'LayerRange': [1, 1, 1, 1],
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'], 'CurrentLayer': [1, 1, 1, 1],
+                        'LayerNumbers': [list(), list(), list(), list()],
                         'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
@@ -200,8 +211,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Sets up the widgetDisplay and any background processes for the current build"""
 
         # Reload any modified configuration settings that the New Build dialog has changed
-        with open('config.json') as config:
-            self.config = json.load(config)
+        self.load_settings()
 
         # Store config settings as respective variables and update appropriate UI elements
         self.transform = self.config['ImageCorrection']['TransformParameters']
@@ -216,24 +226,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display['ImageFolder'] = ['%s/processed/coat' % self.config['ImageCapture']['Folder'],
                                        '%s/processed/scan' % self.config['ImageCapture']['Folder'],
                                        '%s/contours' % self.config['ImageCapture']['Folder'],
-                                       '%s/processed/single' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects/coat' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects/scan' % self.config['ImageCapture']['Folder'],
-                                       '%s/contours' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects/single' % self.config['ImageCapture']['Folder']]
-
-        # Create a QTimer that will constantly poll the image folders for changes in length
-        self.timer_poll = QTimer()
-
-        # Connect the timeout of the QTimer to the corresponding function
-        self.timer_poll.timeout.connect(self.poll_folders)
-
-        # Start the QTimer which will timeout and execute the above connected slot method every given milliseconds
-        self.timer_poll.start(3000)
-
-        # Reset the lengths of the folders to be polled
-        self.length_old = [0, 0, 0, 0, 0, 0, 0, 0]
-        self.length_new = [0, 0, 0, 0, 0, 0, 0, 0]
+                                       '%s/processed/single' % self.config['ImageCapture']['Folder']]
 
         # Start the image viewer to begin displaying images
         self.start_display()
@@ -251,6 +244,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             self.pushPauseConversion.setEnabled(True)
             self.pushStopConversion.setEnabled(True)
+            self.toolSidebar.setCurrentIndex(1)
 
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
             worker.signals.status.connect(self.update_status)
@@ -281,6 +275,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.pushPauseConversion.setEnabled(False)
         self.pushStopConversion.setEnabled(False)
+        self.pushProcessCurrent.setEnabled(True)
+        self.toolSidebar.setCurrentIndex(0)
 
         self.update_status('Build %s setup complete.' % self.config['BuildInfo']['Name'], 10000)
 
@@ -342,9 +338,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.display['StackNames'][index].setCurrentIndex(0)
             self.display['LabelNames'][index].setText('Create or Open a Build to View Images')
 
-            # TODO
+            # TODO Complete this function
 
     # MENUBAR -> VIEW
+
     def zoom_in(self):
         if self.actionZoomIn.isChecked():
             self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = True
@@ -464,8 +461,66 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Open the folder containing the processed images for the user to view after conversion is finished"""
         subprocess.Popen('explorer %s' % image_folder)
 
-    def process_defects(self):
+    # MENUBAR -> TOOLS -> DEFECT PROCESSOR
+
+    def process_current(self):
+        """Runs the currently displayed image through the DefectDetector and saves it to the appropriate folder
+        This is done by saving pertinent information such as layer, phase and to the config.json file, which is then loaded by the Detector"""
+
+        self.load_settings()
+
+        layer = self.sliderDisplay.value()
+        index = self.widgetDisplay.currentIndex()
+        phase = self.display['FolderNames'][index].lower()[:-1]
+
+        self.config['DefectDetector']['Image'] = self.display['ImageList'][index][layer - 1]
+        self.config['DefectDetector']['ImagePrevious'] = self.display['ImageList'][index][layer - 2]
+        self.config['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
+        self.config['DefectDetector']['Layer'] = layer
+        self.config['DefectDetector']['Phase'] = phase
+
+        self.save_settings()
+
+        self.update_status('Running currently displayed %s through the Defect Detector...' % phase)
+
+        if index == 0:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
+        elif index == 1:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
+
+        worker.signals.finished.connect(self.process_finished)
+        self.threadpool.start(worker)
+
+    def process_all_setup(self):
         pass
+
+    def process_all(self):
+        pass
+
+    def process_selected(self):
+        """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
+        Both the """
+        pass
+
+    def process_defects(self):
+        """Send the images to be processed as a worker to a QThread"""
+
+        if 'coat' in self.config['DefectDetector']['Phase']:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
+        elif 'scan' in self.config['DefectDetector']['Phase']:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
+        else:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat_scan)
+
+        if 'single' in self.config['DefectDetector']['Mode']:
+            worker.signals.finished.connect(self.process_finished)
+        elif 'all' in self.config['DefectDetector']['Mode']:
+            worker.signals.finished.connect(self.process_all)
+
+        self.threadpool.start(worker)
+
+    def process_finished(self):
+        self.update_status('Defect Detection finished successfully.', 10000)
 
     # MENUBAR -> SETTINGS
 
@@ -486,6 +541,20 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def build_settings(self):
         pass
+
+    def advanced_mode(self):
+        """Allows the user to toggle between basic mode or advanced mode which in essence enables or disables buttons
+        These buttons have to do with features or functions which could negatively impact the program if mishandled
+        """
+
+        if self.actionAdvancedMode.isChecked():
+            self.actionCameraCalibration.setEnabled(True)
+            self.pushCameraCalibration.setEnabled(True)
+            self.actionCameraSettings.setEnabled(True)
+        else:
+            self.actionCameraCalibration.setEnabled(False)
+            self.pushCameraCalibration.setEnabled(False)
+            self.actionCameraSettings.setEnabled(False)
 
     # MENUBAR -> HELP
 
@@ -663,47 +732,30 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         The images will need to have proper numbering to ensure that the layer numbers are accurate
         """
 
-        # Empty strings to concatenate additional strings to for the status message
-        status_empty = str()
-        status_display = str()
+        # Update the list of images for all four image folders
+        self.update_folders()
 
-        for index in range(4):
-            # Update the current image using the current value of the corresponding slider
-            self.update_image_list(index)
-            self.update_image(index)
+        for index, image_list in enumerate(self.display['ImageList']):
+            # Check if the list is empty or not
+            if image_list:
+                # Enable certain UI elements if the current index matches the display index
+                if self.widgetDisplay.currentIndex() == index:
+                    self.toggle_display_buttons(True)
 
-            # Checks if the list is empty or not
-            if self.display['ImageList'][index]:
-
-                # Concatenate a string to be used for the status message
-                status_display += self.display['FolderNames'][index]
-                # Enable certain UI elements
-                self.groupDisplayOptions.setEnabled(True)
-            else:
-                status_empty += self.display['FolderNames'][index]
-
-        if status_empty == '':
-            self.update_status('Displaying %s images on their respective tabs.' % status_display[:-1])
-        else:
-            self.update_status('%s folder(s) empty. Displaying %s images on their respective tabs.' %
-                               (status_empty[:-1], status_display[:-1]))
-
+        # Set the display flag to true to allow tab changes to update images
         self.display_flag = True
-        self.actionZoomIn.setEnabled(True)
-        self.actionZoomOut.setEnabled(True)
 
-        self.update_ranges(self.widgetDisplay.currentIndex())
-
-        # Display the image on the graphics scene
-        for index in range(4):
-            self.update_display(index)
-
-        # Enable the slider and its up and down buttons
+        # Enable certain UI elements such as the slider and the layer box
         self.frameSlider.setEnabled(True)
-
-        # Enable and set the currently displayed tab's layer range
+        self.actionUpdateFolders.setEnabled(True)
         self.spinLayer.setEnabled(True)
         self.pushGo.setEnabled(True)
+
+        # Update the maximum ranges of various UI elements
+        self.update_ranges(self.widgetDisplay.currentIndex())
+
+        # Display an image on the current graphics scene
+        self.update_display(self.widgetDisplay.currentIndex())
 
     def update_display(self, index):
         """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles"""
@@ -716,27 +768,41 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         label = self.display['LabelNames'][index]
         graphics = self.display['GraphicsNames'][index]
         stack = self.display['StackNames'][index]
+        image_list = self.display['ImageList'][index]
+
+        value = self.sliderDisplay.value()
+        layer = str(value).zfill(4)
 
         # Check if the image folder has an actual image to display
-        if not self.display['ImageList'][index]:
+        if not image_list:
             # Change the stacked widget to the one with the information label
             stack.setCurrentIndex(0)
             graphics.remove_image()
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
         else:
+            # Load the required image into memory
             if self.radioDefects.isChecked():
-                if self.display['ImageList'][index]:
+                if self.display['ImageList'][index + 4]:
                     image = self.display['Image'][index + 4]
                 else:
                     stack.setCurrentIndex(0)
                     graphics.remove_image()
-                    label.setText('%s defects folder empty. Click Process Defaults to populate folder.' %
+                    label.setText('%s defects folder empty.\nClick Process Defaults to populate folder.' %
                                   self.display['FolderNames'][index][:-1])
+                    return
             else:
-                image = self.display['Image'][index]
+                image_name = [string for string in image_list if layer in string]
+                if image_name:
+                    image = cv2.imread(image_name[0])
+                else:
+                    stack.setCurrentIndex(0)
+                    graphics.remove_image()
+                    label.setText('%s Layer %s Image not in folder.' % (self.display['FolderNames'][index][:-1], layer))
+                    return
 
             # Change the stacked widget to the one with the image viewer
             stack.setCurrentIndex(1)
+
             if self.checkOverlay.isChecked():
 
                 # Update and grab the current overlay image
@@ -782,8 +848,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_overlay(self, transform):
         """Executes the adjustment of the overlay"""
-        with open('config.json') as config:
-            self.config = json.load(config)
+        self.load_settings()
 
         self.transform = transform
 
@@ -801,50 +866,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
 
         return QPixmap.fromImage(qimage)
-
-    # MISCELLANEOUS UI ELEMENT FUNCTIONALITY
-
-    def tab_change(self, index):
-        """Executes when the focused tab on widgetDisplay changes to enable/disable buttons and change layer values"""
-
-        # Stop the change in slider value from changing the picture as well
-        self.sliderDisplay.blockSignals(True)
-
-        if self.display_flag:
-            # Set the layer spinbox's range depending on the currently displayed tab
-            self.update_ranges(index)
-            self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
-            self.display['GraphicsNames'][index].reset_image()
-
-            # Set the current layer number depending on the currently displayed tab
-            self.labelLayerNumber.setText(str(self.display['CurrentLayer'][index]).zfill(4))
-
-            # Disable the display options group box if there isn't a currently displayed image
-            if self.display['ImageList'][index]:
-                self.toggle_display_buttons(True)
-                self.update_display(index)
-
-                # Disables the Toggle Overlay checkbox is the part contours tab is being displayed
-                if index == 2:
-                    self.checkOverlay.setEnabled(False)
-                    self.checkOverlay.setChecked(False)
-                    self.radioDefects.setEnabled(False)
-                else:
-                    self.checkOverlay.setEnabled(True)
-                    self.radioDefects.setEnabled(True)
-            else:
-                self.toggle_display_buttons(False)
-
-        self.sliderDisplay.blockSignals(False)
-
-    def tab_focus(self, index, value):
-        """Changes the tab focus to the received index's tab and sets the slider value to the received value
-        Used for when an image has been captured and focus is to be given to the new image
-        """
-        pass
-        # if self.display_flag:
-        #     self.widgetDisplay.setCurrentIndex(int(index))
-        #     self.display['SliderNames'][int(index)].setValue(int(value))
 
     def context_menu_display(self, position):
         """Opens a context menu at the right-clicked position of any of the display labels
@@ -873,6 +894,60 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             elif action == action_export:
                 self.export_image()
 
+    # MISCELLANEOUS UI ELEMENT FUNCTIONALITY
+
+    def tab_change(self, index):
+        """Executes when the focused tab on widgetDisplay changes to enable/disable buttons and change layer values"""
+
+        # Stop the change in slider value from changing the picture as well
+        self.sliderDisplay.blockSignals(True)
+
+        if self.display_flag:
+            # Set the layer spinbox's range depending on the currently displayed tab
+            self.update_ranges(index)
+
+            # Set the slider's value to the saved layer value of the current tab
+            self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
+
+            # Set the current layer number depending on the currently displayed tab
+            self.labelLayerNumber.setText(str(self.display['CurrentLayer'][index]).zfill(4))
+
+            # Update the image on the graphics display with the new image
+            self.update_display(index)
+
+            # Zoom out and reset the image
+            self.display['GraphicsNames'][index].reset_image()
+
+            # Disable the display options group box if there isn't a currently displayed image
+            if self.display['ImageList'][index]:
+                self.toggle_display_buttons(True)
+
+                # Disables the Toggle Overlay checkbox is the part contours tab is being displayed
+                if index == 2:
+                    self.checkOverlay.setEnabled(False)
+                    self.checkOverlay.setChecked(False)
+                    self.radioDefects.setEnabled(False)
+                    self.pushProcessCurrent.setEnabled(False)
+                    self.menuDefectProcessor.setEnabled(False)
+                else:
+                    self.checkOverlay.setEnabled(True)
+                    self.radioDefects.setEnabled(True)
+                    self.pushProcessCurrent.setEnabled(True)
+                    self.menuDefectProcessor.setEnabled(True)
+            else:
+                self.toggle_display_buttons(False)
+
+        self.sliderDisplay.blockSignals(False)
+
+    def tab_focus(self, index, value):
+        """Changes the tab focus to the received index's tab and sets the slider value to the received value
+        Used for when an image has been captured and focus is to be given to the new image
+        """
+        pass
+        # if self.display_flag:
+        #     self.widgetDisplay.setCurrentIndex(int(index))
+        #     self.display['SliderNames'][int(index)].setValue(int(value))
+
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value
         Also updates the relevant layer numbers of specific UI elements and other internal functions
@@ -884,19 +959,51 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display['CurrentLayer'][self.widgetDisplay.currentIndex()] = value
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
-        # Reloads the current image using the current value of the corresponding slider
-        self.update_image(self.widgetDisplay.currentIndex())
-
-        # Display the image on the label
+        # Update the image on the graphics display with the new image
         self.update_display(self.widgetDisplay.currentIndex())
 
     def slider_up(self):
         """Increments the slider by 1"""
         self.sliderDisplay.setValue(self.sliderDisplay.value() + 1)
 
+    def slider_up_seek(self):
+
+        value = self.sliderDisplay.value()
+        number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
+        pos = bisect.bisect_left(number_list, value)
+        before = number_list[pos - 1]
+        after = number_list[pos]
+        if pos == 0:
+            value2 = number_list[0]
+        elif pos == len(number_list):
+            value2 = number_list[-1]
+        elif after - value < value - before:
+            value2 = after
+        else:
+            value2 = before
+
+        self.sliderDisplay.setValue(value2)
+
     def slider_down(self):
         """Decrements the slider by 1"""
         self.sliderDisplay.setValue(self.sliderDisplay.value() - 1)
+
+    def slider_down_seek(self):
+        value = self.sliderDisplay.value()
+        number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
+        pos = bisect.bisect_left(number_list, value)
+        before = number_list[pos - 1]
+        after = number_list[pos]
+        if pos == 0:
+            value2 = number_list[0]
+        elif pos == len(number_list):
+            value2 = number_list[-1]
+        elif after - value < value - before:
+            value2 = after
+        else:
+            value2 = before
+
+        self.sliderDisplay.setValue(value2)
 
     def toggle_display_buttons(self, flag):
         """Enables or disables the following buttons/actions in one fell swoop"""
@@ -905,28 +1012,22 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.setEnabled(flag)
         self.actionExportImage.setEnabled(flag)
         self.menu_display.setEnabled(flag)
+        self.pushProcessCurrent.setEnabled(flag)
+        self.frameSlider.setEnabled(flag)
         self.actionZoomIn.setChecked(False)
 
-    def poll_folders(self):
-        for index, folder in enumerate(self.display['ImageFolder']):
-            self.length_new[index] = len(os.walk(folder).__next__()[2])
+    def update_folders(self):
+        """Updates the display dictionary with the updated list of images in all four image folders"""
 
-            if not self.length_new[index] == self.length_old[index]:
-                self.folder_change(index % 4)
-                self.length_old[index] = self.length_new[index]
+        for index in range(4):
+            self.display['LayerNumbers'][index] = list()
+            self.update_image_list(index)
 
-    def folder_change(self, index):
-        """Executes whenever a change of items in any of the image folders is detected by the QFileSystemWatcher
-        Updates the Layer spinBox and the Sliders with a new range of acceptable values
-        """
-
-        # Updates various UI elements with updated values
-        self.update_image_list(index)
-        self.update_ranges(self.widgetDisplay.currentIndex())
-
-        if self.display_flag:
-            self.update_image(index)
-            self.update_display(index)
+        # Save the maximum found layer number to the display dictionary
+        numbers_list = list()
+        for numbers in self.display['LayerNumbers'][:-1]:
+            numbers_list.append(max(numbers))
+        self.display['MaxLayers'] = max(numbers_list)
 
     def update_image_list(self, index):
         """Updates the ImageList dictionary with a new list of images"""
@@ -935,45 +1036,34 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display['ImageList'][index][:] = list()
 
         # Checks the returned sorted folder list for actual images (.png or .jpg) while ignoring other files
-        for filename in os.listdir(self.display['ImageFolder'][index]):
-            if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
-                self.display['ImageList'][index].append(self.display['ImageFolder'][index] + '/' + filename)
+        for file_name in os.listdir(self.display['ImageFolder'][index]):
+            if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
+                try:
+                    # Check if the last four characters of the file name are numbers, otherwise the file is ignored
+                    number = int(os.path.splitext(file_name)[0][-4:])
+                except ValueError:
+                    pass
+                else:
+                    self.display['ImageList'][index].append(self.display['ImageFolder'][index] + '/' + file_name)
+                    if index < 3:
+                        self.display['LayerNumbers'][index].append(number)
+
+        self.display['LayerNumbers'][index].sort()
 
         # If the list of file names remains empty (aka no images in folder), set the corresponding image to None
         # Also enable/disable certain UI elements if the received index matches the current widgetDisplay's index
-        if not self.display['ImageList'][index]:
-            self.display['Image'][index] = None
-            self.display['LayerRange'][index] = 1
-            if self.widgetDisplay.currentIndex() == index:
-                self.toggle_display_buttons(False)
-        else:
-            # Save the ranges in a list whose index corresponds with the tabs
-            self.display['LayerRange'][index] = len(self.display['ImageList'][index])
+        if self.display['ImageList'][index]:
             if self.widgetDisplay.currentIndex() == index:
                 self.toggle_display_buttons(True)
-
-    def update_image(self, index):
-        """Updates the Image dictionary with the loaded images"""
-
-        # Check if list isn't empty, otherwise set the corresponding image to None
-        if self.display['ImageList'][index]:
-            # Check if the Toggle Overlay checkbox is checked
-            # If so, use the current tab's slider value to choose which overlay image to load
-            try:
-                # Load the image into memory and store it in the dictionary
-                # Decrement by 1 because code starts at 0
-                self.display['Image'][index] = cv2.imread(
-                    self.display['ImageList'][index][self.sliderDisplay.value() - 1])
-            except IndexError:
-                self.update_status('Part contours not found.')
         else:
-            self.display['Image'][index] = None
+            if self.widgetDisplay.currentIndex() == index:
+                self.toggle_display_buttons(False)
 
     def update_ranges(self, index):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
-        self.spinLayer.setMaximum(self.display['LayerRange'][index])
-        self.spinLayer.setToolTip('1 - %s' % self.display['LayerRange'][index])
-        self.sliderDisplay.setMaximum(self.display['LayerRange'][index])
+        self.spinLayer.setMaximum(self.display['MaxLayers'])
+        self.spinLayer.setToolTip('1 - %s' % self.display['MaxLayers'])
+        self.sliderDisplay.setMaximum(self.display['MaxLayers'])
 
     def update_ct(self, status):
         """Updates the status boxes for the acquisition of the camera and trigger with the received status details
@@ -1022,6 +1112,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
         self.progressBar.setValue(int(percentage))
+
+    def load_settings(self):
+        with open('config.json') as config:
+            self.config = json.load(config)
 
     def save_settings(self):
         with open('config.json', 'w+') as config:

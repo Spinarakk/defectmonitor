@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1147</width>
-    <height>806</height>
+    <width>1028</width>
+    <height>716</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -294,6 +294,142 @@
       </widget>
      </widget>
     </item>
+    <item row="0" column="2">
+     <widget class="QFrame" name="frameSlider">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <property name="spacing">
+        <number>3</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QPushButton" name="pushDisplayUpSeek">
+         <property name="minimumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>▲</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushDisplayUp">
+         <property name="minimumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>▲</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="sliderDisplay">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="tracking">
+          <bool>false</bool>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBelow</enum>
+         </property>
+         <property name="tickInterval">
+          <number>10</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushDisplayDown">
+         <property name="minimumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>▼</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushDisplayDownSeek">
+         <property name="minimumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>27</width>
+           <height>26</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>▼</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
     <item row="1" column="1" colspan="2">
      <widget class="QFrame" name="frameProgress">
       <property name="frameShape">
@@ -492,6 +628,12 @@
     </item>
     <item row="0" column="3" rowspan="2">
      <widget class="QFrame" name="frameSidebar">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -511,7 +653,7 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="4" column="0">
+       <item row="3" column="0">
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -524,246 +666,7 @@
          </property>
         </spacer>
        </item>
-       <item row="3" column="0">
-        <widget class="QFrame" name="frameLayer">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <property name="leftMargin">
-           <number>7</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>7</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <property name="verticalSpacing">
-           <number>4</number>
-          </property>
-          <item row="0" column="0" colspan="2">
-           <widget class="QLabel" name="labelLayerNumberTitle">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Layer Number</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QSpinBox" name="spinLayer">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QPushButton" name="pushGo">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>38</width>
-              <height>24</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>38</width>
-              <height>24</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Go</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QLabel" name="labelLayerNumber">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>0001</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupDisplayOptions">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>8</pointsize>
-          </font>
-         </property>
-         <property name="title">
-          <string>Display Options</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <property name="leftMargin">
-           <number>10</number>
-          </property>
-          <property name="topMargin">
-           <number>7</number>
-          </property>
-          <property name="rightMargin">
-           <number>10</number>
-          </property>
-          <property name="bottomMargin">
-           <number>7</number>
-          </property>
-          <item>
-           <widget class="QRadioButton" name="radioOriginal">
-            <property name="text">
-             <string>Original</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioCLAHE">
-            <property name="text">
-             <string>Equalization</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioDefects">
-            <property name="text">
-             <string>Defect Analysis</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkOverlay">
-            <property name="text">
-             <string>Toggle Overlay</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupAssortedTools">
-         <property name="font">
-          <font>
-           <pointsize>8</pointsize>
-          </font>
-         </property>
-         <property name="title">
-          <string>Assorted Tools</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <property name="spacing">
-           <number>7</number>
-          </property>
-          <property name="leftMargin">
-           <number>7</number>
-          </property>
-          <property name="topMargin">
-           <number>7</number>
-          </property>
-          <property name="rightMargin">
-           <number>7</number>
-          </property>
-          <property name="bottomMargin">
-           <number>7</number>
-          </property>
-          <item>
-           <widget class="QPushButton" name="pushCameraCalibration">
-            <property name="text">
-             <string>Camera Calibration</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushOverlayAdjustment">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Overlay Adjustment</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushSliceConverter">
-            <property name="text">
-             <string>Slice Converter</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushImageConverter">
-            <property name="text">
-             <string>Image Converter</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushProcessDefects">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>Processes all the images in the currently displayed tab's folder for defects. Results can be viewed by toggling the Defect Analysis radio button.</string>
-            </property>
-            <property name="text">
-             <string>Process Defects</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="5" column="0">
+       <item row="4" column="0">
         <widget class="QFrame" name="frameCapture">
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
@@ -1068,135 +971,344 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupSliceConversion">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupDisplayOptions">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="font">
           <font>
            <pointsize>8</pointsize>
           </font>
          </property>
          <property name="title">
-          <string>Slice Conversion</string>
+          <string>Display Options</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
+         <layout class="QVBoxLayout" name="verticalLayout">
           <property name="leftMargin">
-           <number>7</number>
+           <number>10</number>
           </property>
           <property name="topMargin">
            <number>7</number>
           </property>
           <property name="rightMargin">
-           <number>7</number>
+           <number>10</number>
           </property>
           <property name="bottomMargin">
            <number>7</number>
           </property>
           <item>
-           <widget class="QPushButton" name="pushPauseConversion">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
+           <widget class="QRadioButton" name="radioOriginal">
             <property name="text">
-             <string>Pause</string>
+             <string>Original</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushStopConversion">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
+           <widget class="QRadioButton" name="radioCLAHE">
             <property name="text">
-             <string>Stop</string>
+             <string>Equalization</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioDefects">
+            <property name="text">
+             <string>Defect Analysis</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkOverlay">
+            <property name="text">
+             <string>Toggle Overlay</string>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="0" column="2">
-     <widget class="QFrame" name="frameSlider">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_4">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QPushButton" name="pushDisplayUp">
+       <item row="2" column="0">
+        <widget class="QFrame" name="frameLayer">
+         <layout class="QGridLayout" name="gridLayout_3">
+          <property name="leftMargin">
+           <number>7</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>7</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>4</number>
+          </property>
+          <item row="2" column="0">
+           <widget class="QSpinBox" name="spinLayer">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+             </font>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushGo">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>38</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>38</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Go</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QLabel" name="labelLayerNumber">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>0001</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QLabel" name="labelLayerNumberTitle">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Layer Number</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QToolBox" name="toolSidebar">
          <property name="minimumSize">
           <size>
-           <width>27</width>
-           <height>26</height>
+           <width>0</width>
+           <height>171</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>27</width>
-           <height>26</height>
+           <width>16777215</width>
+           <height>171</height>
           </size>
          </property>
          <property name="font">
           <font>
-           <pointsize>10</pointsize>
+           <pointsize>8</pointsize>
           </font>
          </property>
-         <property name="text">
-          <string>▲</string>
+         <property name="currentIndex">
+          <number>0</number>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QSlider" name="sliderDisplay">
-         <property name="minimum">
-          <number>1</number>
+         <property name="tabSpacing">
+          <number>3</number>
          </property>
-         <property name="tracking">
-          <bool>false</bool>
-         </property>
-         <property name="tickPosition">
-          <enum>QSlider::TicksBelow</enum>
-         </property>
-         <property name="tickInterval">
-          <number>10</number>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushDisplayDown">
-         <property name="minimumSize">
-          <size>
-           <width>27</width>
-           <height>26</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>27</width>
-           <height>26</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>▼</string>
-         </property>
+         <widget class="QWidget" name="pageAssortedTools">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>136</width>
+            <height>99</height>
+           </rect>
+          </property>
+          <attribute name="label">
+           <string>Assorted Tools</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_6">
+           <property name="leftMargin">
+            <number>5</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <property name="rightMargin">
+            <number>5</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="pushCameraCalibration">
+             <property name="text">
+              <string>Camera Calibration</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushOverlayAdjustment">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Overlay Adjustment</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushImageConverter">
+             <property name="text">
+              <string>Image Converter</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageSliceConversion">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>136</width>
+            <height>99</height>
+           </rect>
+          </property>
+          <attribute name="label">
+           <string>Slice Conversion</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_8">
+           <property name="leftMargin">
+            <number>5</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <property name="rightMargin">
+            <number>5</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="pushPauseConversion">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Pause</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushStopConversion">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Stop</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushSliceConverter">
+             <property name="text">
+              <string>Slice Converter</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageDefectProcessor">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>136</width>
+            <height>99</height>
+           </rect>
+          </property>
+          <attribute name="label">
+           <string>Defect Processor</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <property name="leftMargin">
+            <number>5</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <property name="rightMargin">
+            <number>5</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="pushProcessCurrent">
+             <property name="text">
+              <string>Process Current</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushProcessAll">
+             <property name="text">
+              <string>Process All</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushProcessSelected">
+             <property name="text">
+              <string>Process Selected...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
@@ -1209,7 +1321,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1147</width>
+     <width>1028</width>
      <height>21</height>
     </rect>
    </property>
@@ -1248,13 +1360,23 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <widget class="QMenu" name="menuDefectProcessor">
+     <property name="title">
+      <string>Defect Processor</string>
+     </property>
+     <addaction name="actionProcessCurrent"/>
+     <addaction name="actionProcessAll"/>
+     <addaction name="separator"/>
+     <addaction name="actionProcessSelected"/>
+    </widget>
     <addaction name="actionCameraCalibration"/>
     <addaction name="actionOverlayAdjustment"/>
     <addaction name="separator"/>
     <addaction name="actionSliceConverter"/>
     <addaction name="actionImageConverter"/>
+    <addaction name="actionUpdateFolders"/>
     <addaction name="separator"/>
-    <addaction name="actionProcessDefects"/>
+    <addaction name="menuDefectProcessor"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1270,6 +1392,8 @@
     </property>
     <addaction name="actionCameraSettings"/>
     <addaction name="actionBuildSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdvancedMode"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -1300,6 +1424,8 @@
    <addaction name="actionOverlayAdjustment"/>
    <addaction name="actionSliceConverter"/>
    <addaction name="actionImageConverter"/>
+   <addaction name="separator"/>
+   <addaction name="actionUpdateFolders"/>
   </widget>
   <action name="actionNew">
    <property name="text">
@@ -1421,9 +1547,38 @@
     <string>Close</string>
    </property>
   </action>
-  <action name="actionProcessDefects">
+  <action name="actionAdvancedMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Process Defects</string>
+    <string>Advanced Mode</string>
+   </property>
+  </action>
+  <action name="actionProcessCurrent">
+   <property name="text">
+    <string>Process Current</string>
+   </property>
+  </action>
+  <action name="actionProcessAll">
+   <property name="text">
+    <string>Process All</string>
+   </property>
+  </action>
+  <action name="actionProcessSelected">
+   <property name="text">
+    <string>Process Selected...</string>
+   </property>
+  </action>
+  <action name="actionUpdateFolders">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Update Folders</string>
    </property>
   </action>
  </widget>
@@ -1445,10 +1600,6 @@
   <tabstop>radioCLAHE</tabstop>
   <tabstop>radioDefects</tabstop>
   <tabstop>checkOverlay</tabstop>
-  <tabstop>pushCameraCalibration</tabstop>
-  <tabstop>pushOverlayAdjustment</tabstop>
-  <tabstop>pushSliceConverter</tabstop>
-  <tabstop>pushImageConverter</tabstop>
   <tabstop>spinLayer</tabstop>
   <tabstop>pushGo</tabstop>
   <tabstop>pushAcquireCT</tabstop>

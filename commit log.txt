@@ -1,3 +1,15 @@
+September 19
+- Inserted a tool box container containing tabs for the Assorted Tools, Slice Converter and Defect Processor buttons
+- Added additional buttons for Defect Processing, namely Process Current (displayed image), Process All (images in a tab/folder) and Process Selected (image as chosen by the user)
+
+September 15
+- Continued rewriting the defect detection code
+- Moved the blade chatter example pictures to a separate folder
+- Removed some redundant methods by incorporating them into others
+- Implemented the Process Defects button to process the currently displayed image
+- Setup another laptop to run the program in the XLine 1000
+- Added an 'Advanced Mode' action to toggle buttons that have to do with features that might break the program
+
 September 14
 - Continued rewriting the defect detection code
 - Fixed other parts that had issues such as the end of the slice conversion

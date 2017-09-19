@@ -5,6 +5,7 @@
       <w>grayscale</w>
       <w>menubar</w>
       <w>modeless</w>
+      <w>otsu</w>
       <w>pypylon</w>
       <w>pyqt</w>
       <w>retval</w>

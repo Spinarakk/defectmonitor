@@ -84,12 +84,12 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
 
-        folder_name = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
-        if folder_name:
+        if folder:
             # Display just the file name on the line box
-            self.lineBuildFolder.setText(folder_name)
-            self.build_folder_name = folder_name
+            self.build_folder_name = folder
+            self.lineBuildFolder.setText(folder)
 
     def send_test(self):
         """Sends a test notification email to the entered email address"""
@@ -286,7 +286,13 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', ''))
+
+        # Restoring the window state needs to go into a try loop as the first time the program is run on a new system
+        # There won't be any stored settings and the function throws a TypeError
+        try:
+            self.restoreGeometry(self.window_settings.value('geometry', ''))
+        except TypeError:
+            pass
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowseF.clicked.connect(self.browse_folder)
@@ -315,11 +321,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.image_list = list()
 
         # Opens a folder select dialog, allowing the user to select a folder
-        self.calibration_folder = None
-        self.calibration_folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         # Checks if a folder is actually selected
-        if self.calibration_folder:
+        if folder:
+            self.calibration_folder = folder
+
             # Store a list of the files found in the folder
             image_list = os.listdir(self.calibration_folder)
             self.listImages.clear()
@@ -500,7 +507,10 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', ''))
+        try:
+            self.restoreGeometry(self.window_settings.value('geometry', ''))
+        except TypeError:
+            pass
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -574,7 +584,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', ''))
+        try:
+            self.restoreGeometry(self.window_settings.value('geometry', ''))
+        except TypeError:
+            pass
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -585,7 +598,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonStop.clicked.connect(self.start_finished)
 
         self.slice_list = list()
-        self.contours_folder = '%s/contours' % self.config['WorkingDirectory']
+        self.contours_folder = os.path.dirname(self.config['WorkingDirectory']) + '/contours'
 
         self.lineFolder.setText(self.contours_folder)
 
@@ -612,9 +625,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def browse_folder(self):
         # Opens a folder select dialog, allowing the user to select a folder
-        self.contours_folder, _ = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
-        if self.contours_folder:
+        if folder:
+            self.contours_folder = folder
             self.lineFolder.setText(self.contours_folder)
 
     def start(self):
@@ -724,7 +738,10 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', ''))
+        try:
+            self.restoreGeometry(self.window_settings.value('geometry', ''))
+        except TypeError:
+            pass
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -916,7 +933,10 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-        self.restoreGeometry(self.window_settings.value('geometry', ''))
+        try:
+            self.restoreGeometry(self.window_settings.value('geometry', ''))
+        except TypeError:
+            pass
 
         # Split camera parameters into their own respective values to be used in OpenCV functions
         camera_matrix = np.array(results['CameraMatrix'])
