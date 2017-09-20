@@ -6,6 +6,7 @@ import json
 import cv2
 import serial
 import bisect
+import math
 
 # Import PyQt modules
 from PyQt5.QtGui import *
@@ -89,8 +90,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Display Options Group Box
         self.radioOriginal.clicked.connect(self.update_display)
-        self.radioCLAHE.clicked.connect(self.update_display)
         self.radioDefects.clicked.connect(self.update_display)
+        self.checkCLAHE.toggled.connect(self.update_display)
         self.checkOverlay.toggled.connect(self.toggle_overlay)
 
         # Sidebar Toolbox Assorted Tools
@@ -158,9 +159,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding image, list or name
-        self.display = {'ImageList': [list(), list(), list(), list()], 'LayerRange': [1, 1, 1, 1],
+        self.display = {'ImageList': [list(), list(), list(), list(), list(), list(), list(), list()],
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'], 'CurrentLayer': [1, 1, 1, 1],
-                        'LayerNumbers': [list(), list(), list(), list()],
+                        'LayerNumbers': [list(), list(), list(), list()], 'MaxLayers': 0,
                         'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
@@ -226,7 +227,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display['ImageFolder'] = ['%s/processed/coat' % self.config['ImageCapture']['Folder'],
                                        '%s/processed/scan' % self.config['ImageCapture']['Folder'],
                                        '%s/contours' % self.config['ImageCapture']['Folder'],
-                                       '%s/processed/single' % self.config['ImageCapture']['Folder']]
+                                       '%s/processed/single' % self.config['ImageCapture']['Folder'],
+                                       '%s/defects/coat' % self.config['ImageCapture']['Folder'],
+                                       '%s/defects/scan' % self.config['ImageCapture']['Folder'],
+                                       '%s/defects' % self.config['ImageCapture']['Folder'],
+                                       '%s/defects/single' % self.config['ImageCapture']['Folder']]
 
         # Start the image viewer to begin displaying images
         self.start_display()
@@ -275,8 +280,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.pushPauseConversion.setEnabled(False)
         self.pushStopConversion.setEnabled(False)
-        self.pushProcessCurrent.setEnabled(True)
-        self.toolSidebar.setCurrentIndex(0)
+        self.toolSidebar.setCurrentIndex(2)
 
         self.update_status('Build %s setup complete.' % self.config['BuildInfo']['Name'], 10000)
 
@@ -474,6 +478,40 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         phase = self.display['FolderNames'][index].lower()[:-1]
 
         self.config['DefectDetector']['Image'] = self.display['ImageList'][index][layer - 1]
+        self.config['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
+        self.config['DefectDetector']['Layer'] = layer
+        self.config['DefectDetector']['Phase'] = phase
+
+        self.save_settings()
+
+        self.update_status('Running displayed %s image through the Defect Detector...' % phase)
+
+        if index == 0:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
+        elif index == 1:
+            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
+
+        worker.signals.status.connect(self.update_status)
+        worker.signals.progress.connect(self.update_progress)
+        worker.signals.finished.connect(self.process_finished)
+        self.threadpool.start(worker)
+
+    def process_all_setup(self):
+        self.counter = 0
+        self.process_all()
+
+    def process_all(self):
+
+        self.update_folders()
+
+        self.load_settings()
+
+        index = self.widgetDisplay.currentIndex()
+        layer = self.display['LayerNumbers'][index][self.counter]
+        phase = self.display['FolderNames'][index].lower()[:-1]
+        self.counter += 1
+
+        self.config['DefectDetector']['Image'] = self.display['ImageList'][index][layer - 1]
         self.config['DefectDetector']['ImagePrevious'] = self.display['ImageList'][index][layer - 2]
         self.config['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
         self.config['DefectDetector']['Layer'] = layer
@@ -481,45 +519,31 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.save_settings()
 
-        self.update_status('Running currently displayed %s through the Defect Detector...' % phase)
+        self.update_status('Running %s layer %s through the Defect Detector...' % (phase, layer))
 
         if index == 0:
             worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
         elif index == 1:
             worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
 
-        worker.signals.finished.connect(self.process_finished)
+        worker.signals.status.connect(self.update_status)
+        worker.signals.progress.connect(self.update_progress)
+
+        if not self.counter == len(self.display['LayerNumbers'][index]):
+            worker.signals.finished.connect(self.process_all)
+        else:
+            worker.signals.finished.connect(self.process_finished)
+
         self.threadpool.start(worker)
-
-    def process_all_setup(self):
-        pass
-
-    def process_all(self):
-        pass
 
     def process_selected(self):
         """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
         Both the """
         pass
 
-    def process_defects(self):
-        """Send the images to be processed as a worker to a QThread"""
-
-        if 'coat' in self.config['DefectDetector']['Phase']:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
-        elif 'scan' in self.config['DefectDetector']['Phase']:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
-        else:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat_scan)
-
-        if 'single' in self.config['DefectDetector']['Mode']:
-            worker.signals.finished.connect(self.process_finished)
-        elif 'all' in self.config['DefectDetector']['Mode']:
-            worker.signals.finished.connect(self.process_all)
-
-        self.threadpool.start(worker)
-
     def process_finished(self):
+        # Update the folders to show the new image
+        self.update_folders()
         self.update_status('Defect Detection finished successfully.', 10000)
 
     # MENUBAR -> SETTINGS
@@ -735,30 +759,23 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Update the list of images for all four image folders
         self.update_folders()
 
-        for index, image_list in enumerate(self.display['ImageList']):
-            # Check if the list is empty or not
-            if image_list:
-                # Enable certain UI elements if the current index matches the display index
-                if self.widgetDisplay.currentIndex() == index:
-                    self.toggle_display_buttons(True)
-
         # Set the display flag to true to allow tab changes to update images
         self.display_flag = True
 
         # Enable certain UI elements such as the slider and the layer box
-        self.frameSlider.setEnabled(True)
         self.actionUpdateFolders.setEnabled(True)
         self.spinLayer.setEnabled(True)
-        self.pushGo.setEnabled(True)
+        self.toolSidebar.setCurrentIndex(2)
 
         # Update the maximum ranges of various UI elements
         self.update_ranges(self.widgetDisplay.currentIndex())
 
-        # Display an image on the current graphics scene
+        # Initialize all four GraphicsViewers
         self.update_display(self.widgetDisplay.currentIndex())
 
     def update_display(self, index):
-        """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles"""
+        """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles
+        Also responsible for enabling or disabling UI elements if there is or isn't an image to be displayed"""
 
         # Grab the current tab index (for clearer code purposes)
         if type(index) == bool:
@@ -774,56 +791,73 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         layer = str(value).zfill(4)
 
         # Check if the image folder has an actual image to display
-        if not image_list:
-            # Change the stacked widget to the one with the information label
-            stack.setCurrentIndex(0)
-            graphics.remove_image()
-            label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
-        else:
-            # Load the required image into memory
-            if self.radioDefects.isChecked():
-                if self.display['ImageList'][index + 4]:
-                    image = self.display['Image'][index + 4]
-                else:
-                    stack.setCurrentIndex(0)
-                    graphics.remove_image()
-                    label.setText('%s defects folder empty.\nClick Process Defaults to populate folder.' %
-                                  self.display['FolderNames'][index][:-1])
-                    return
-            else:
-                image_name = [string for string in image_list if layer in string]
-                if image_name:
-                    image = cv2.imread(image_name[0])
-                else:
-                    stack.setCurrentIndex(0)
-                    graphics.remove_image()
-                    label.setText('%s Layer %s Image not in folder.' % (self.display['FolderNames'][index][:-1], layer))
-                    return
-
+        if image_list:
             # Change the stacked widget to the one with the image viewer
             stack.setCurrentIndex(1)
 
-            if self.checkOverlay.isChecked():
+            # Enable all the display related UI elements
+            self.groupDisplayOptions.setEnabled(True)
+            self.toggle_display_buttons(True)
+            self.pushProcessAll.setEnabled(True)
 
-                # Update and grab the current overlay image
-                self.update_image(2)
-                overlay = self.display['Image'][2]
+            # Check if the Defect Analysis radio button is checked and load the related defect image if so
+            if self.radioDefects.isChecked():
+                if os.path.isfile(self.display['ImageList'][index + 4][value - 1]):
+                    image = cv2.imread(self.display['ImageList'][index + 4][value - 1])
+                else:
+                    label.setText('%s Layer %s Defect Image not in folder.' %
+                                  (self.display['FolderNames'][index][:-1], layer))
+                    stack.setCurrentIndex(0)
+
+                    self.toggle_display_buttons(False, True, False)
+                    # Exit out of the entire method as there isn't an image to display
+                    return
+
+            # Otherwise load the layer image based on the current slider value
+            else:
+                # Check if the image exists (in case it gets deleted between folder checks)
+                if os.path.isfile(image_list[value - 1]):
+
+                    # Load the layer image into memory
+                    image = cv2.imread(image_list[value - 1])
+                else:
+                    # Set the stack to the information label and display the missing layer information
+                    label.setText('%s Layer %s Image not in folder.' % (self.display['FolderNames'][index][:-1], layer))
+                    stack.setCurrentIndex(0)
+
+                    # Enable the seek buttons if the current layer's image isn't found
+                    self.toggle_display_buttons(False, True)
+                    return
+
+            # Disable the Toggle Overlay checkbox if the corresponding overlay image isn't found
+            if os.path.isfile(self.display['ImageList'][2][value - 1]):
+                self.checkOverlay.setEnabled(True)
+            else:
+                self.checkOverlay.setEnabled(False)
+                self.checkOverlay.setChecked(False)
+
+            if self.checkOverlay.isChecked():
+                # Load the overlay image into memory
+                overlay = cv2.imread(self.display['ImageList'][2][value - 1])
 
                 # Resize the overlay image if the resolution doesn't match the displayed image
                 if overlay.shape[:2] != image.shape[:2]:
                     overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
-                overlay = image_processing.ImageTransform(None).transform(overlay, self.transform)
+                # Apply the stored transformation values to the overlay image
+                # overlay = image_processing.ImageTransform(None).transform(overlay, self.transform)
 
                 # self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
                 # Display a status message with the current transformation of the overlay image
-                self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
-                                   (self.transform[1], -self.transform[0], -1 * self.transform[2],
-                                    self.transform[4], self.transform[5]), 10000)
+                # self.update_status('Translation X - %d Y - %d | Rotation - %.2f | Stretch X - %d Y - %d' %
+                #                    (self.transform[1], -self.transform[0], -1 * self.transform[2],
+                #                     self.transform[4], self.transform[5]), 10000)
 
+                # Apply the overlay on top of the image
                 image = cv2.add(image, overlay)
 
-            if self.radioCLAHE.isChecked():
+            # Applies CLAHE to the display image if the Equalization checkbox is checked
+            if self.checkCLAHE.isChecked():
                 image = image_processing.ImageTransform.clahe(image)
 
             # Display the image on the current GraphicsView
@@ -831,6 +865,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Save the current (modified) image so that it can be exported if need be
             self.display['DisplayImage'][index] = image
+
+            # Disable the seek buttons if there is an image being displayed
+            self.toggle_display_buttons(True, True)
+        else:
+            # If the entire folder is empty, change the stacked widget to the one with the information label
+            label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
+            stack.setCurrentIndex(0)
+
+            # Disable all the display related UI elements
+            self.groupDisplayOptions.setEnabled(False)
+            self.toggle_display_buttons(False)
+            self.pushProcessAll.setEnabled(False)
 
     def toggle_overlay(self):
         """Overlay process is done in the update_display method
@@ -840,9 +886,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Display the message for 5 seconds
             self.update_status('Displaying part contours.')
             self.pushOverlayAdjustment.setEnabled(True)
+            self.toolSidebar.setCurrentIndex(0)
         else:
             self.update_status('Hiding part contours.')
             self.pushOverlayAdjustment.setEnabled(False)
+            self.toolSidebar.setCurrentIndex(2)
 
         self.update_display(self.widgetDisplay.currentIndex())
 
@@ -884,8 +932,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Check which action has been clicked and execute the respective methods
         if action:
-            # Grab the name of the image using the displayed layer number (subtract 1 due to code starting from 0)
-            name = self.display['ImageList'][self.widgetDisplay.currentIndex()][int(self.labelLayerNumber.text()) - 1]
+            # Grab the name of the image using the slider value (subtract 1 due to code starting from 0)
+            name = self.display['ImageList'][self.widgetDisplay.currentIndex()][self.sliderDisplay.value() - 1]
             if action == action_show_image:
                 # Need to turn the forward slashes into backslash due to windows explorer only working with backslashes
                 subprocess.Popen(r"""explorer /select, %s""" % name.replace('/', '\\'))
@@ -899,7 +947,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def tab_change(self, index):
         """Executes when the focused tab on widgetDisplay changes to enable/disable buttons and change layer values"""
 
-        # Stop the change in slider value from changing the picture as well
+        # Stop the change in slider value from changing the picture as well, causing conflicting images
         self.sliderDisplay.blockSignals(True)
 
         if self.display_flag:
@@ -910,43 +958,32 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
 
             # Set the current layer number depending on the currently displayed tab
-            self.labelLayerNumber.setText(str(self.display['CurrentLayer'][index]).zfill(4))
+            self.labelLayerNumber.setText('%s / %s' % (str(self.display['CurrentLayer'][index]).zfill(4),
+                                                       str(self.display['MaxLayers']).zfill(4)))
 
-            # Update the image on the graphics display with the new image
+            # Set the radio button to Original as contours have no defect images
+            if index == 2:
+                self.radioOriginal.setChecked(True)
+
+            # Update the image on the graphics display with the new image (in case image has been deleted)
             self.update_display(index)
 
             # Zoom out and reset the image
             self.display['GraphicsNames'][index].reset_image()
 
-            # Disable the display options group box if there isn't a currently displayed image
-            if self.display['ImageList'][index]:
-                self.toggle_display_buttons(True)
-
-                # Disables the Toggle Overlay checkbox is the part contours tab is being displayed
-                if index == 2:
-                    self.checkOverlay.setEnabled(False)
-                    self.checkOverlay.setChecked(False)
-                    self.radioDefects.setEnabled(False)
-                    self.pushProcessCurrent.setEnabled(False)
-                    self.menuDefectProcessor.setEnabled(False)
-                else:
-                    self.checkOverlay.setEnabled(True)
-                    self.radioDefects.setEnabled(True)
-                    self.pushProcessCurrent.setEnabled(True)
-                    self.menuDefectProcessor.setEnabled(True)
-            else:
-                self.toggle_display_buttons(False)
-
         self.sliderDisplay.blockSignals(False)
 
-    def tab_focus(self, index, value):
+    def tab_focus(self, index, value, defect_flag=False):
         """Changes the tab focus to the received index's tab and sets the slider value to the received value
         Used for when an image has been captured and focus is to be given to the new image
+        Also can be used for when an image has just finished processing for defects
         """
-        pass
-        # if self.display_flag:
-        #     self.widgetDisplay.setCurrentIndex(int(index))
-        #     self.display['SliderNames'][int(index)].setValue(int(value))
+        self.widgetDisplay.setCurrentIndex(index)
+        self.sliderDisplay.setValue(value)
+
+        # Set the display image to be the defect analyzed image
+        if defect_flag:
+            self.radioDefects.setChecked(True)
 
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value
@@ -954,8 +991,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Updates the label number and slider tooltip with the currently displayed tab's slider's value
-        self.labelLayerNumber.setText(str(value).zfill(4))
+        self.labelLayerNumber.setText('%s / %s' % (str(value).zfill(4), str(self.display['MaxLayers']).zfill(4)))
         self.sliderDisplay.setToolTip(str(value))
+
+        # Save the current slider value to the current tab's layer dictionary key for tab changes
         self.display['CurrentLayer'][self.widgetDisplay.currentIndex()] = value
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
@@ -967,103 +1006,152 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderDisplay.setValue(self.sliderDisplay.value() + 1)
 
     def slider_up_seek(self):
+        """Jumps the slider to the first available image in the positive direction"""
 
         value = self.sliderDisplay.value()
         number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
-        pos = bisect.bisect_left(number_list, value)
-        before = number_list[pos - 1]
-        after = number_list[pos]
-        if pos == 0:
-            value2 = number_list[0]
-        elif pos == len(number_list):
-            value2 = number_list[-1]
-        elif after - value < value - before:
-            value2 = after
-        else:
-            value2 = before
+        position = bisect.bisect_left(number_list, value)
 
-        self.sliderDisplay.setValue(value2)
+        if position == 0:
+            self.sliderDisplay.setValue(number_list[0])
+        elif position == len(number_list):
+            self.sliderDisplay.setValue(self.sliderDisplay.maximum())
+        else:
+            self.sliderDisplay.setValue(number_list[position])
 
     def slider_down(self):
         """Decrements the slider by 1"""
         self.sliderDisplay.setValue(self.sliderDisplay.value() - 1)
 
     def slider_down_seek(self):
+        """Jumps the slider to the first available image in the negative direction"""
+
         value = self.sliderDisplay.value()
         number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
-        pos = bisect.bisect_left(number_list, value)
-        before = number_list[pos - 1]
-        after = number_list[pos]
-        if pos == 0:
-            value2 = number_list[0]
-        elif pos == len(number_list):
-            value2 = number_list[-1]
-        elif after - value < value - before:
-            value2 = after
+        position = bisect.bisect_left(number_list, value)
+
+        if position == 0:
+            self.sliderDisplay.setValue(1)
+        elif position == len(number_list):
+            self.sliderDisplay.setValue(number_list[-1])
         else:
-            value2 = before
+            self.sliderDisplay.setValue(number_list[position - 1])
 
-        self.sliderDisplay.setValue(value2)
-
-    def toggle_display_buttons(self, flag):
+    def toggle_display_buttons(self, flag, seek_flag=False, defect_flag=True):
         """Enables or disables the following buttons/actions in one fell swoop"""
-        self.groupDisplayOptions.setEnabled(flag)
+
+        self.checkCLAHE.setEnabled(flag)
+        self.checkOverlay.setEnabled(flag)
         self.actionZoomIn.setEnabled(flag)
         self.actionZoomOut.setEnabled(flag)
         self.actionExportImage.setEnabled(flag)
         self.menu_display.setEnabled(flag)
         self.pushProcessCurrent.setEnabled(flag)
-        self.frameSlider.setEnabled(flag)
         self.actionZoomIn.setChecked(False)
+
+        if self.checkOverlay.isChecked():
+            self.pushOverlayAdjustment.setEnabled(flag)
+
+        if self.widgetDisplay.currentIndex() == 3:
+            self.pushDisplayUpSeek.setEnabled(False)
+            self.pushDisplayDownSeek.setEnabled(False)
+
+        if flag:
+            if self.widgetDisplay.currentIndex() == 2:
+                self.checkOverlay.setEnabled(False)
+                self.checkOverlay.setChecked(False)
+                self.radioDefects.setEnabled(False)
+                self.pushProcessCurrent.setEnabled(False)
+                self.pushProcessAll.setEnabled(False)
+                self.actionProcessCurrent.setEnabled(False)
+                self.actionProcessAll.setEnabled(False)
+            else:
+                self.checkOverlay.setEnabled(True)
+                self.radioDefects.setEnabled(True)
+                self.pushProcessCurrent.setEnabled(True)
+                self.pushProcessAll.setEnabled(True)
+                self.actionProcessCurrent.setEnabled(True)
+                self.actionProcessAll.setEnabled(True)
+
+        # Mode 1 refers to the button configuration when a layer image isn't found (rather than there being no images)
+        if seek_flag:
+            self.pushDisplayUpSeek.setEnabled(not flag)
+            self.pushDisplayDownSeek.setEnabled(not flag)
+        else:
+            self.frameSlider.setEnabled(flag)
+            self.pushGo.setEnabled(flag)
 
     def update_folders(self):
         """Updates the display dictionary with the updated list of images in all four image folders"""
 
         for index in range(4):
-            self.display['LayerNumbers'][index] = list()
+            # Get a list of numbers of the supposed layer images in the folder
+            if index < 3:
+                # Reset the layer numbers in the display dictionary
+                self.display['LayerNumbers'][index][:] = list()
+
+                for file_name in os.listdir(self.display['ImageFolder'][index]):
+                    if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
+                        try:
+                            # Check if the last four characters of the file name are numbers, otherwise file is ignored
+                            number = int(os.path.splitext(file_name)[0][-4:])
+                        except ValueError:
+                            pass
+                        else:
+                            # Save the new number as the new max layer if it is higher than the previous saved number
+                            self.display['LayerNumbers'][index].append(number)
+                            if number > self.display['MaxLayers']:
+                                self.display['MaxLayers'] = number
+
+        for index in range(8):
             self.update_image_list(index)
 
-        # Save the maximum found layer number to the display dictionary
-        numbers_list = list()
-        for numbers in self.display['LayerNumbers'][:-1]:
-            numbers_list.append(max(numbers))
-        self.display['MaxLayers'] = max(numbers_list)
+        # Update the ranges as well
+        self.update_ranges(self.widgetDisplay.currentIndex())
+
+        if self.display_flag:
+            # Reload any images in the current tab
+            self.update_display(self.widgetDisplay.currentIndex())
+            self.update_status('Image folders updated.', 5000)
 
     def update_image_list(self, index):
         """Updates the ImageList dictionary with a new list of images"""
 
-        # Empty the list via slice assignment
-        self.display['ImageList'][index][:] = list()
-
-        # Checks the returned sorted folder list for actual images (.png or .jpg) while ignoring other files
-        for file_name in os.listdir(self.display['ImageFolder'][index]):
-            if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
-                try:
-                    # Check if the last four characters of the file name are numbers, otherwise the file is ignored
-                    number = int(os.path.splitext(file_name)[0][-4:])
-                except ValueError:
-                    pass
-                else:
-                    self.display['ImageList'][index].append(self.display['ImageFolder'][index] + '/' + file_name)
-                    if index < 3:
-                        self.display['LayerNumbers'][index].append(number)
-
-        self.display['LayerNumbers'][index].sort()
-
-        # If the list of file names remains empty (aka no images in folder), set the corresponding image to None
-        # Also enable/disable certain UI elements if the received index matches the current widgetDisplay's index
-        if self.display['ImageList'][index]:
-            if self.widgetDisplay.currentIndex() == index:
-                self.toggle_display_buttons(True)
+        if index == 3 or index == 6:
+            # Empty the Single folder list and fill it with the file names in the folder
+            self.display['ImageList'][index][:] = list()
+            for file_name in os.listdir(self.display['ImageFolder'][index]):
+                if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
+                    self.display['ImageList'][index].append('%s/%s' % (self.display['ImageFolder'][index], file_name))
         else:
-            if self.widgetDisplay.currentIndex() == index:
-                self.toggle_display_buttons(False)
+            # Replace the list with a list of empty strings
+            self.display['ImageList'][index] = ['' for _ in range(self.display['MaxLayers'])]
+
+            for file_name in os.listdir(self.display['ImageFolder'][index]):
+                if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
+                    try:
+                        # Check if the last four characters of the file name are numbers, otherwise file is ignored
+                        number = int(os.path.splitext(file_name)[0][-4:])
+                    except ValueError:
+                        pass
+                    else:
+                        # Save the current file name at the index as defined in the file's own name
+                        self.display['ImageList'][index][number - 1] = '%s/%s' % (
+                            self.display['ImageFolder'][index], file_name)
 
     def update_ranges(self, index):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
+
         self.spinLayer.setMaximum(self.display['MaxLayers'])
         self.spinLayer.setToolTip('1 - %s' % self.display['MaxLayers'])
         self.sliderDisplay.setMaximum(self.display['MaxLayers'])
+
+        # Also updates the slider's pageStep and tickInterval depending on the max number of layers
+        self.sliderDisplay.setPageStep(math.ceil(self.display['MaxLayers'] // 50))
+        self.sliderDisplay.setTickInterval(math.ceil(self.display['MaxLayers'] // 50))
+
+        self.labelLayerNumber.setText('%s / %s' % (str(self.sliderDisplay.value()).zfill(4),
+                                                   str(self.display['MaxLayers']).zfill(4)))
 
     def update_ct(self, status):
         """Updates the status boxes for the acquisition of the camera and trigger with the received status details
@@ -1130,6 +1218,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 if __name__ == '__main__':
     application = QApplication(sys.argv)
     application.setAttribute(Qt.AA_Use96Dpi)
+    # application.setAttribute(Qt.AA_EnableHighDpiScaling)
     interface = MainWindow()
     interface.show()
     sys.exit(application.exec_())

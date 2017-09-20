@@ -1,6 +1,14 @@
 September 19
 - Inserted a tool box container containing tabs for the Assorted Tools, Slice Converter and Defect Processor buttons
 - Added additional buttons for Defect Processing, namely Process Current (displayed image), Process All (images in a tab/folder) and Process Selected (image as chosen by the user)
+- Changed the way image folders are updated, rather than constantly polling the folders, methods that create images in these folders update the folder list instead
+- Additionally, an action has been created to update the folders at will
+- Removed a lot of needless variables and methods as a result
+- Images are now loaded during the display image stage
+- Layer number is now dependent on the number as it appears in the image file name, rather than the slider value and an image's position in the folder list
+- Layer range will now be set to the highest found number of layers in either the coat, scan or part contours folder
+- Single folder will remain independent (as it's mostly for debugging purposes)
+- The viewer will now ignore any images that don't have a number in the file name
 
 September 15
 - Continued rewriting the defect detection code

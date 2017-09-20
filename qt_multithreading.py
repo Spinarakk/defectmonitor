@@ -32,11 +32,7 @@ class Worker(QRunnable):
             kwargs['layer'] = self.signals.layer
             kwargs['phase'] = self.signals.phase
 
-        if 'image_converter_function' in str(self.function):
-            kwargs['status'] = self.signals.status
-            kwargs['progress'] = self.signals.progress
-
-        if 'convert' in str(self.function):
+        if 'convert' in str(self.function) or 'analyze' in str(self.function):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
 

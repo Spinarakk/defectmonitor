@@ -1,42 +1,104 @@
 {
     "BuildInfo": {
-        "Convert": false,
-        "Draw": false,
+        "Colours": {
+            "Part 01": [
+                100,
+                100,
+                0
+            ],
+            "Part 02": [
+                104,
+                104,
+                0
+            ],
+            "Part 03": [
+                108,
+                108,
+                0
+            ],
+            "Part 04": [
+                112,
+                112,
+                0
+            ],
+            "Part 05": [
+                116,
+                116,
+                0
+            ],
+            "Part 06": [
+                120,
+                120,
+                0
+            ],
+            "Part 07": [
+                124,
+                124,
+                0
+            ],
+            "Part 08": [
+                128,
+                128,
+                0
+            ],
+            "Part 09": [
+                132,
+                132,
+                0
+            ],
+            "Part 10": [
+                136,
+                136,
+                0
+            ],
+            "Part 11": [
+                140,
+                140,
+                0
+            ],
+            "Part 12": [
+                144,
+                144,
+                0
+            ],
+            "Part 13": [
+                148,
+                148,
+                0
+            ],
+            "Part 14": [
+                152,
+                152,
+                0
+            ]
+        },
+        "Convert": true,
+        "Draw": true,
         "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Default",
+        "Name": "Test 2",
+        "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
             636.0,
             406.0
         ],
+        "Run": false,
         "SliceFiles": [
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 01.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 02.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 03.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 04.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 05.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 06.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 07.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 08.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 09.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 10.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 11.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 12.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 13.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 14.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 15.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 16.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 17.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 18.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 19.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 20.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 21.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 22.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 23.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 24.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 25.cli",
-            "D:/Documents/MCAM/Slice Files/09-08-2017/Part 26.cli"
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 01.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 02.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 03.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 04.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 05.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 06.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 07.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 08.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 09.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 10.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 11.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 12.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 13.cli",
+            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 14.cli"
         ],
         "Username": "Nicholas Lee"
     },
@@ -54,8 +116,15 @@
         "PacketSize": 1500,
         "PixelFormat": 0
     },
+    "DefectDetector": {
+        "Contours": "",
+        "Image": "",
+        "ImagePrevious": "",
+        "Layer": 0,
+        "Phase": "coat"
+    },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-09-13 [11''40'40] Default",
+        "Folder": "D:/Documents/MCAM/Builds/2017-09-15 [11''00'25] Test 2",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
@@ -150,9 +219,13 @@
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
+        "Build": true,
+        "Colours": {},
         "Draw": false,
         "Files": [],
-        "Folder": ""
+        "Folder": "",
+        "Pause": false,
+        "Run": false
     },
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
 }

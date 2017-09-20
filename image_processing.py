@@ -170,6 +170,9 @@ class DefectDetector:
         # image_previous refers to the previous layer's image
         self.image_previous = cv2.imread(self.config['DefectDetector']['ImagePrevious'])
 
+
+        self.defect_dict = dict()
+
         # self.defects = dict()
         #
         # self.defects_on = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
@@ -180,7 +183,11 @@ class DefectDetector:
 
         self.part_colours = self.config['BuildInfo']['Colours']
 
+        for part_name in self.part_colours.keys():
+            with open('%s/reports/parts/%s_report.json' % (self.config['ImageCapture']['Folder'], part_name)) as report:
+                self.defect_dict[part_name] = json.load(report)
 
+        print('asdf)')
 
         # for part_name in self.part_colours:
         #     self.defects[part_name] = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
@@ -188,21 +195,32 @@ class DefectDetector:
         # self.contour_color = np.array((128, 128, 0))
         # self.image_previous = None
 
-    def analyze_coat(self):
+    def analyze_coat(self, status, progress):
         """Analyzes the coat image for any potential defects as listed below"""
+
+        # Assign the status and progress signals as instance variables so other methods can use them
+        self.status = status
+        self.progress = progress
+        self.progress.emit(0)
 
         # Bright spot defects will be drawn in red
         self.detect_bright_spots()
+        self.progress.emit(20)
+
         # Blade streak defects will be drawn in blue
         self.detect_blade_streaks()
+        self.progress.emit(40)
         # Blade chatter defects will be drawn in green
         self.detect_blade_chatter()
+        self.progress.emit(60)
         # Contrast difference defects will be drawn in yellow
         self.detect_contrast_difference()
+        self.progress.emit(80)
 
         # Save the analyzed image with all the defects on it to the correct folder
         cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.config['ImageCapture']['Folder'], self.phase, self.phase,
                                                   str(self.layer).zfill(4)), self.image_analyzed)
+        self.progress.emit(100)
 
         # if self.image_previous is not None:
         #     self.compare_histogram()
@@ -231,8 +249,13 @@ class DefectDetector:
         # report.write('\n\n')
         # report.close()
 
-    def analyze_scan(self):
+    def analyze_scan(self, status, progress):
         """Analyzes the scan image for any potential defects as listed below"""
+
+        # Assign the status and progress signals as instance variables so other methods can use them
+        self.status = status
+        self.progress = progress
+
         self.detect_scan_pattern()
 
         cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.config['ImageCapture']['Folder'], self.phase, self.phase,
