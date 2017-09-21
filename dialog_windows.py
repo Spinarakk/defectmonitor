@@ -250,21 +250,21 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
                 # Create a dictionary of colours (different shades of teal) for each part's contours and save it
                 # At the same time, create a bunch of JSON files using a blank dictionary
-                # These JSON files are to store the defect coordinate data for each of the parts
+                # These JSON files are used to store the defect coordinate and pixel size data for each of the parts
                 part_colours = dict()
                 dict_blank = dict()
+
+                # Append additional 'background' and 'combined' parts and create their folders as well
+                self.slice_list.append('background').append('combined')
+
                 for index, part_name in enumerate(self.slice_list):
                     part_name = os.path.splitext(os.path.basename(part_name))[0]
-                    part_colours[part_name] = \
-                        ((100 + 4 * index) % 255, (100 + 4 * index) % 255, 0)
+                    part_colours[part_name] = ((100 + 4 * index) % 255, (100 + 4 * index) % 255, 0)
 
                     with open('%s/reports/parts/%s_report.json' % (image_folder, part_name), 'w+') as report:
                         json.dump(dict_blank, report)
 
                 self.config['BuildInfo']['Colours'] = part_colours
-
-                with open('%s/reports/background_report.json' % image_folder, 'w+') as report:
-                    json.dump(dict_blank, report)
 
             with open('config.json', 'w+') as config:
                 json.dump(self.config, config, indent=4, sort_keys=True)

@@ -1,82 +1,11 @@
 {
     "BuildInfo": {
-        "Colours": {
-            "Part 01": [
-                100,
-                100,
-                0
-            ],
-            "Part 02": [
-                104,
-                104,
-                0
-            ],
-            "Part 03": [
-                108,
-                108,
-                0
-            ],
-            "Part 04": [
-                112,
-                112,
-                0
-            ],
-            "Part 05": [
-                116,
-                116,
-                0
-            ],
-            "Part 06": [
-                120,
-                120,
-                0
-            ],
-            "Part 07": [
-                124,
-                124,
-                0
-            ],
-            "Part 08": [
-                128,
-                128,
-                0
-            ],
-            "Part 09": [
-                132,
-                132,
-                0
-            ],
-            "Part 10": [
-                136,
-                136,
-                0
-            ],
-            "Part 11": [
-                140,
-                140,
-                0
-            ],
-            "Part 12": [
-                144,
-                144,
-                0
-            ],
-            "Part 13": [
-                148,
-                148,
-                0
-            ],
-            "Part 14": [
-                152,
-                152,
-                0
-            ]
-        },
+        "Colours": {},
         "Convert": false,
-        "Draw": true,
-        "EmailAddress": "nicholascklee@gmail.com",
+        "Draw": false,
+        "EmailAddress": "",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Test 2",
+        "Name": "Default",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
@@ -84,23 +13,8 @@
             406.0
         ],
         "Run": false,
-        "SliceFiles": [
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 01.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 02.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 03.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 04.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 05.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 06.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 07.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 08.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 09.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 10.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 11.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 12.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 13.cli",
-            "D:/Documents/MCAM/Slice Files/18-08-2017/Part 14.cli"
-        ],
-        "Username": "Nicholas Lee"
+        "SliceFiles": [],
+        "Username": ""
     },
     "CameraCalibration": {
         "DownscalingRatio": 1,
@@ -118,13 +32,14 @@
     },
     "DefectDetector": {
         "Contours": "",
-        "Image": "D:/Documents/MCAM/Builds/2017-09-15 [11''00'25] Test 2/processed/coat/imageC_coat_3414.png",
+        "Image": "",
         "ImagePrevious": "",
-        "Layer": 3414,
+        "Layer": 0,
+        "Mode": "single",
         "Phase": "coat"
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-09-15 [11''00'25] Test 2",
+        "Folder": "",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
@@ -211,15 +126,15 @@
         ]
     },
     "Notifications": {
-        "Error": false,
-        "Failure": false,
-        "Major": false,
-        "Minor": false,
+        "Error": true,
+        "Failure": true,
+        "Major": true,
+        "Minor": true,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Build": true,
+        "Build": false,
         "Colours": {},
         "Draw": false,
         "Files": [],

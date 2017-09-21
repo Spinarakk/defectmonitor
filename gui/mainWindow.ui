@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1026</width>
-    <height>716</height>
+    <height>732</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1130,17 +1130,11 @@
        </item>
        <item row="1" column="0">
         <widget class="QToolBox" name="toolSidebar">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>171</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>171</height>
-          </size>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
          <property name="font">
           <font>
@@ -1159,7 +1153,7 @@
             <x>0</x>
             <y>0</y>
             <width>136</width>
-            <height>99</height>
+            <height>91</height>
            </rect>
           </property>
           <attribute name="label">
@@ -1210,7 +1204,7 @@
             <x>0</x>
             <y>0</y>
             <width>136</width>
-            <height>99</height>
+            <height>91</height>
            </rect>
           </property>
           <attribute name="label">
@@ -1264,7 +1258,7 @@
             <x>0</x>
             <y>0</y>
             <width>136</width>
-            <height>99</height>
+            <height>91</height>
            </rect>
           </property>
           <attribute name="label">
@@ -1307,6 +1301,60 @@
             <widget class="QPushButton" name="pushProcessSelected">
              <property name="text">
               <string>Process Selected...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageReportsResults">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>136</width>
+            <height>91</height>
+           </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <attribute name="label">
+           <string>Reports / Results</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <property name="leftMargin">
+            <number>5</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <property name="rightMargin">
+            <number>5</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="pushCalibrationResults">
+             <property name="text">
+              <string>Calibration Results</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushDefectReports">
+             <property name="text">
+              <string>Defect Reports</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushMajorFaults">
+             <property name="text">
+              <string>Major Faults</string>
              </property>
             </widget>
            </item>
@@ -1624,12 +1672,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>930</x>
-     <y>770</y>
+     <x>968</x>
+     <y>680</y>
     </hint>
     <hint type="destinationlabel">
-     <x>974</x>
-     <y>772</y>
+     <x>1012</x>
+     <y>682</y>
     </hint>
    </hints>
   </connection>

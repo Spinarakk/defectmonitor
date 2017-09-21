@@ -161,19 +161,21 @@ class DefectDetector:
         with open('config.json') as config:
             self.config = json.load(config)
 
+        # Checking if the received image exists (a blank string may be sent which means the image doesn't exist)
         # image_raw refers to the original image and will remain unmodified throughout the class
+
         self.image_raw = cv2.imread(self.config['DefectDetector']['Image'])
         # image_contours refers to the image with all the part contours drawn on them
         self.image_contours = cv2.imread(self.config['DefectDetector']['Contours'])
+
         # image_analyzed refers to the original image that will have all the defect pixels drawn on top of it
-        self.image_analyzed = self.image_raw.copy()
+        self.image_coat = self.image_raw.copy()
         # image_previous refers to the previous layer's image
         self.image_previous = cv2.imread(self.config['DefectDetector']['ImagePrevious'])
 
 
         self.defect_dict = dict()
 
-        # self.defects = dict()
         #
         # self.defects_on = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
         # self.defects_off = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
@@ -181,13 +183,14 @@ class DefectDetector:
         self.layer = self.config['DefectDetector']['Layer']
         self.phase = self.config['DefectDetector']['Phase']
 
-        self.part_colours = self.config['BuildInfo']['Colours']
+        # Remove the Background and Combined keys from the part colours dictionary
+        self.part_colours = self.config['BuildInfo']['Colours'].pop('background', None)
 
-        for part_name in self.part_colours.keys():
-            with open('%s/reports/parts/%s_report.json' % (self.config['ImageCapture']['Folder'], part_name)) as report:
-                self.defect_dict[part_name] = json.load(report)
-
-        print('asdf)')
+        # Open all the reports and save their dictionaries to the master defect dictionary
+        # These dictionaries will be overwritten with new data should the program process the same layer/part
+        for report_name in self.config['BuildInfo']['Colours'].keys():
+            with open('%s/reports/parts/%s_report.json' % (self.config['ImageCapture']['Folder'], report_name)) as report:
+                self.defect_dict[report_name] = json.load(report)
 
         # for part_name in self.part_colours:
         #     self.defects[part_name] = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
@@ -195,12 +198,19 @@ class DefectDetector:
         # self.contour_color = np.array((128, 128, 0))
         # self.image_previous = None
 
-    def analyze_coat(self, status, progress):
-        """Analyzes the coat image for any potential defects as listed below"""
-
-        # Assign the status and progress signals as instance variables so other methods can use them
+    def run_detector(self, status, progress):
         self.status = status
         self.progress = progress
+
+        # This way, both processes will be performed on the images marked as 'single'
+        if 'coat' in self.phase or 'single' in self.phase:
+            self.analyze_coat()
+        if 'scan' in self.phase or 'single' in self.phase:
+            self.analyze_scan()
+
+    def analyze_coat(self):
+        """Analyzes the coat image for any potential defects as listed below"""
+
         self.progress.emit(0)
 
         # Bright spot defects will be drawn in red
@@ -219,7 +229,7 @@ class DefectDetector:
 
         # Save the analyzed image with all the defects on it to the correct folder
         cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.config['ImageCapture']['Folder'], self.phase, self.phase,
-                                                  str(self.layer).zfill(4)), self.image_analyzed)
+                                                  str(self.layer).zfill(4)), self.image_coat)
         self.progress.emit(100)
 
         # if self.image_previous is not None:
@@ -249,26 +259,18 @@ class DefectDetector:
         # report.write('\n\n')
         # report.close()
 
-    def analyze_scan(self, status, progress):
+    def analyze_scan(self):
         """Analyzes the scan image for any potential defects as listed below"""
-
-        # Assign the status and progress signals as instance variables so other methods can use them
-        self.status = status
-        self.progress = progress
 
         self.detect_scan_pattern()
 
         cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.config['ImageCapture']['Folder'], self.phase, self.phase,
-                                                  str(self.layer).zfill(4)), self.image_analyzed)
-
-    def analyze_coat_scan(self):
-        """Analyzes the sent image for any potential defects using both the coat and scan processes"""
-        self.analyze_coat()
-        self.analyze_scan()
+                                                  str(self.layer).zfill(4)), self.image_coat)
 
     def detect_bright_spots(self):
         """Detects any spots in the image that are above a certain contrast threshold, aka are too bright"""
 
+        # Save a copy of the original defect image
         image_defects = self.image_raw.copy()
         image_defects_clahe = ImageTransform.clahe(image_defects, gray_flag=True)
 
@@ -289,7 +291,7 @@ class DefectDetector:
         #     self.defects['Background']['Bright Spots'] = \
         #         self.find_coordinates(image_defects, self.image_contours, colour, overlap_flag=False)
 
-        self.overlay_defects(self.image_analyzed, image_defects, COLOUR_RED)
+        self.overlay_defects(self.image_coat, image_defects, COLOUR_RED)
 
     def detect_blade_streaks(self):
         """Detects any horizontal lines on the image, doesn't work as well in the darker areas"""
@@ -325,7 +327,7 @@ class DefectDetector:
         #     if len(coordinates_off) > 0:
         #         self.defects_off['Blade Streaks'].append(coordinates_off)
 
-        self.overlay_defects(self.image_analyzed, image_defects, COLOUR_BLUE)
+        self.overlay_defects(self.image_coat, image_defects, COLOUR_BLUE)
 
     def detect_blade_chatter(self):
         """Detects any vertical lines on the image that are caused as a result of blade chatter
@@ -362,7 +364,7 @@ class DefectDetector:
         #     if len(coordinates_off) > 0:
         #         self.defects_off['Blade Chatter'].append(coordinates_off)
 
-        self.overlay_defects(self.image_analyzed, image_defects, COLOUR_GREEN)
+        self.overlay_defects(self.image_coat, image_defects, COLOUR_GREEN)
 
     def detect_contrast_difference(self):
         """Detects any areas of the image that are too bright or dark compared to the average contrast
@@ -418,7 +420,7 @@ class DefectDetector:
         #     if len(coordinates_off) > 0:
         #         self.defects_off['Contrast Differences'].append(coordinates_off)
 
-        self.overlay_defects(self.image_analyzed, image_defects, COLOUR_YELLOW)
+        self.overlay_defects(self.image_coat, image_defects, COLOUR_YELLOW)
 
     def detect_scan_pattern(self):
         """Detects any scan patterns on the image and draws them as filled contours"""
@@ -449,7 +451,7 @@ class DefectDetector:
         # Draw the contours on the original image
         cv2.drawContours(image_defects, contours_list, -1, COLOUR_PURPLE, thickness=cv2.FILLED)
 
-        self.overlay_defects(self.image_analyzed, image_defects, COLOUR_PURPLE)
+        self.overlay_defects(self.image_coat, image_defects, COLOUR_PURPLE)
 
     def compare_overlay(self):
         pass
@@ -540,7 +542,7 @@ class DefectDetector:
         retval = cv2.threshold(eq, 0, 255, cv2.THRESH_OTSU)[0]
         _, threshold = cv2.threshold(eq, retval * 0.25, 255, cv2.THRESH_BINARY_INV)
         image_defects[threshold == 255] = COLOUR_RED
-        self.overlay_defects(self.image_analyzed, image_defects)
+        self.overlay_defects(self.image_coat, image_defects)
 
         # # checks if the defect overlaps with scan
         # # change color= if uses different color for layer contour
@@ -562,4 +564,4 @@ class DefectDetector:
         image_threshold[:, : image_defects.shape[1] / 2] = COLOUR_BLACK
         image_defects[np.where((image_threshold == COLOUR_WHITE).all(axis=2))] = COLOUR_RED
 
-        self.overlay_defects(self.image_analyzed, image_defects)
+        self.overlay_defects(self.image_coat, image_defects)

@@ -1,3 +1,18 @@
+September 21
+- Rewrote the Defect Processing methods (process_current, process_all) to work more "intelligently" and reduce the number of overall lines
+- Added a new tab to the sidebar tool that contains the results of the defect analysis (functionality not implemented)
+- Fixed quite a few bugs with the tab widget and the combination of buttons that are to be enabled or disabled
+- Viewer should now work perfectly barring unforeseen use cases and combinations of buttons
+- Added a combined report that contains all the defect sizes and coordinates
+
+September 20
+- Added Slider Up and Down Seek buttons that will jump to the next available layer image (if currently on a layer with no associated image)
+- Implemented functionality for the aforementioned buttons
+- Changed the way folder lists are created and accessed
+- Fixed a lot of issues with UI elements and their correct enabling/disabling depending on the image being displayed
+- Image Viewer functionality complete and working properly (though some unique use cases may break it)
+- Runtime to load images may be improved
+
 September 19
 - Inserted a tool box container containing tabs for the Assorted Tools, Slice Converter and Defect Processor buttons
 - Added additional buttons for Defect Processing, namely Process Current (displayed image), Process All (images in a tab/folder) and Process Selected (image as chosen by the user)

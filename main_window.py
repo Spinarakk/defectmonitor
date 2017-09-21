@@ -76,7 +76,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionImageConverter.triggered.connect(self.image_converter)
         self.actionUpdateFolders.triggered.connect(self.update_folders)
         self.actionProcessCurrent.triggered.connect(self.process_current)
-        self.actionProcessAll.triggered.connect(self.process_all_setup)
+        self.actionProcessAll.triggered.connect(self.process_all)
         self.actionProcessSelected.triggered.connect(self.process_selected)
 
         # Menubar -> Settings
@@ -106,7 +106,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Sidebar Toolbox Defect Processor
         self.pushProcessCurrent.clicked.connect(self.process_current)
-        self.pushProcessAll.clicked.connect(self.process_all_setup)
+        self.pushProcessAll.clicked.connect(self.process_all)
         self.pushProcessSelected.clicked.connect(self.process_selected)
 
         # Layer Selection
@@ -151,6 +151,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Initiate an empty config file name to be used for saving purposes
         self.config_name = None
+
+        # Initialize the counter for the defect processing method
+        self.defect_counter = 0
 
         # Create a context menu that will appear when the user right-clicks on any of the display labels
         self.menu_display = QMenu()
@@ -469,82 +472,90 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def process_current(self):
         """Runs the currently displayed image through the DefectDetector and saves it to the appropriate folder
-        This is done by saving pertinent information such as layer, phase and to the config.json file, which is then loaded by the Detector"""
+        This is done by saving pertinent information such as the image file names, layer and phase
+        To the config.json file, which is then loaded by the Detector"""
+
+        self.all_flag = False
+        self.tab_index = self.widgetDisplay.currentIndex()
+        self.process_settings(self.sliderDisplay.value())
+
+    def process_all(self):
+        """Runs all the available images in the currently opened tab through the DefectDetector"""
+
+        self.defect_counter = 0
+        self.all_flag = True
+        self.tab_index = self.widgetDisplay.currentIndex()
+        self.process_settings(self.display['LayerNumbers'][self.tab_index][self.defect_counter])
+
+    def process_selected(self):
+        """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
+        Both the coat and scan defect processes are executed on the image and saved as separate images"""
+        pass
+
+    def process_settings(self, layer):
+        """Saves the settings to be used to process an image for defects to the config.json file
+        This method exists as the only difference between the two options is the layer number"""
 
         self.load_settings()
 
-        layer = self.sliderDisplay.value()
-        index = self.widgetDisplay.currentIndex()
-        phase = self.display['FolderNames'][index].lower()[:-1]
+        # Grab some pertinent information (for clearer code purposes)
+        phase = self.display['FolderNames'][self.tab_index].lower()[:-1]
 
-        self.config['DefectDetector']['Image'] = self.display['ImageList'][index][layer - 1]
+        self.config['DefectDetector']['Image'] = self.display['ImageList'][self.tab_index][layer - 1]
         self.config['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
         self.config['DefectDetector']['Layer'] = layer
         self.config['DefectDetector']['Phase'] = phase
 
+        # Set the preivous image to be compared against the current image if it is not the first layer
+        if layer > 1:
+            self.config['DefectDetector']['ImagePrevious'] = self.display['ImageList'][self.tab_index][layer - 2]
+        else:
+            self.config['DefectDetector']['ImagePrevious'] = ''
+
         self.save_settings()
 
-        self.update_status('Running displayed %s image through the Defect Detector...' % phase)
+        # Disable the Process ... buttons to stop repeated concurrent processes
+        self.toggle_processing_buttons(False)
+        self.pushProcessSelected.setEnabled(False)
+        self.actionProcessSelected.setEnabled(False)
 
-        if index == 0:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
-        elif index == 1:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
+        # Vary the status message to display depending on which button was pressed
+        if self.all_flag:
+            self.defect_counter += 1
+            self.update_status('Running %s layer %s through the Defect Detector...' % (phase, layer))
+        else:
+            self.update_status('Running displayed %s image through the Defect Detector...' % phase)
 
+        self.process_run()
+
+    def process_run(self):
+        """Setup and execute the worker using the QThreadPool"""
+        worker = qt_multithreading.Worker(image_processing.DefectDetector().run_detector)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.finished.connect(self.process_finished)
         self.threadpool.start(worker)
 
-    def process_all_setup(self):
-        self.counter = 0
-        self.process_all()
-
-    def process_all(self):
-
-        self.update_folders()
-
-        self.load_settings()
-
-        index = self.widgetDisplay.currentIndex()
-        layer = self.display['LayerNumbers'][index][self.counter]
-        phase = self.display['FolderNames'][index].lower()[:-1]
-        self.counter += 1
-
-        self.config['DefectDetector']['Image'] = self.display['ImageList'][index][layer - 1]
-        self.config['DefectDetector']['ImagePrevious'] = self.display['ImageList'][index][layer - 2]
-        self.config['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
-        self.config['DefectDetector']['Layer'] = layer
-        self.config['DefectDetector']['Phase'] = phase
-
-        self.save_settings()
-
-        self.update_status('Running %s layer %s through the Defect Detector...' % (phase, layer))
-
-        if index == 0:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_coat)
-        elif index == 1:
-            worker = qt_multithreading.Worker(image_processing.DefectDetector().analyze_scan)
-
-        worker.signals.status.connect(self.update_status)
-        worker.signals.progress.connect(self.update_progress)
-
-        if not self.counter == len(self.display['LayerNumbers'][index]):
-            worker.signals.finished.connect(self.process_all)
-        else:
-            worker.signals.finished.connect(self.process_finished)
-
-        self.threadpool.start(worker)
-
-    def process_selected(self):
-        """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
-        Both the """
-        pass
-
     def process_finished(self):
-        # Update the folders to show the new image
+        """Decides whether the Defect Processor needs to be run again for consecutive images
+        Otherwise the window is set to its processing finished state"""
+
         self.update_folders()
-        self.update_status('Defect Detection finished successfully.', 10000)
+
+        if self.all_flag and not self.defect_counter == len(self.display['LayerNumbers'][self.tab_index]):
+            self.process_settings(self.display['LayerNumbers'][self.tab_index][self.defect_counter])
+        else:
+            self.toggle_processing_buttons(True)
+            self.pushProcessSelected.setEnabled(True)
+            self.actionProcessSelected.setEnabled(True)
+            self.update_status('Defect Detection finished successfully.', 10000)
+
+    def toggle_processing_buttons(self, flag):
+        """Enables or disables the following buttons/actions in one fell swoop"""
+        self.pushProcessCurrent.setEnabled(flag)
+        self.pushProcessAll.setEnabled(flag)
+        self.actionProcessCurrent.setEnabled(flag)
+        self.actionProcessAll.setEnabled(flag)
 
     # MENUBAR -> SETTINGS
 
@@ -798,10 +809,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Enable all the display related UI elements
             self.groupDisplayOptions.setEnabled(True)
             self.toggle_display_buttons(True)
-            self.pushProcessAll.setEnabled(True)
 
             # Check if the Defect Analysis radio button is checked and load the related defect image if so
             if self.radioDefects.isChecked():
+                # Disable the Defect Processor toolbar and actions
+                self.toggle_processing_buttons(False)
+
                 if os.path.isfile(self.display['ImageList'][index + 4][value - 1]):
                     image = cv2.imread(self.display['ImageList'][index + 4][value - 1])
                 else:
@@ -809,15 +822,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                                   (self.display['FolderNames'][index][:-1], layer))
                     stack.setCurrentIndex(0)
 
-                    self.toggle_display_buttons(False, True, False)
+                    self.toggle_display_buttons(False, True)
                     # Exit out of the entire method as there isn't an image to display
                     return
 
             # Otherwise load the layer image based on the current slider value
             else:
+                # Enable the Defect Processor toolbar and actions
+                self.toggle_processing_buttons(True)
+
                 # Check if the image exists (in case it gets deleted between folder checks)
                 if os.path.isfile(image_list[value - 1]):
-
                     # Load the layer image into memory
                     image = cv2.imread(image_list[value - 1])
                 else:
@@ -827,14 +842,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                     # Enable the seek buttons if the current layer's image isn't found
                     self.toggle_display_buttons(False, True)
+                    self.toggle_processing_buttons(False)
                     return
-
-            # Disable the Toggle Overlay checkbox if the corresponding overlay image isn't found
-            if os.path.isfile(self.display['ImageList'][2][value - 1]):
-                self.checkOverlay.setEnabled(True)
-            else:
-                self.checkOverlay.setEnabled(False)
-                self.checkOverlay.setChecked(False)
 
             if self.checkOverlay.isChecked():
                 # Load the overlay image into memory
@@ -868,6 +877,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Disable the seek buttons if there is an image being displayed
             self.toggle_display_buttons(True, True)
+
+            # Disable the Toggle Overlay checkbox if the corresponding overlay image isn't found
+            # This is at the end as toggle_display_buttons also affects the aforementioned checkbox
+            if os.path.isfile(self.display['ImageList'][2][value - 1]) and not index == 2:
+                self.checkOverlay.setEnabled(True)
+            else:
+                self.checkOverlay.setEnabled(False)
+                self.checkOverlay.setChecked(False)
+
+            if index == 2:
+                self.toggle_processing_buttons(False)
         else:
             # If the entire folder is empty, change the stacked widget to the one with the information label
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
@@ -876,7 +896,41 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Disable all the display related UI elements
             self.groupDisplayOptions.setEnabled(False)
             self.toggle_display_buttons(False)
-            self.pushProcessAll.setEnabled(False)
+            self.toggle_processing_buttons(False)
+
+    def toggle_display_buttons(self, flag, seek_flag=False):
+        """Enables or disables the following buttons/actions in one fell swoop"""
+
+        self.checkCLAHE.setEnabled(flag)
+        self.checkOverlay.setEnabled(flag)
+        self.actionZoomIn.setEnabled(flag)
+        self.actionZoomOut.setEnabled(flag)
+        self.actionExportImage.setEnabled(flag)
+        self.actionZoomIn.setChecked(False)
+
+        if self.checkOverlay.isChecked():
+            self.pushOverlayAdjustment.setEnabled(flag)
+
+        if self.widgetDisplay.currentIndex() == 3:
+            self.pushDisplayUpSeek.setEnabled(False)
+            self.pushDisplayDownSeek.setEnabled(False)
+
+        if flag:
+            if self.widgetDisplay.currentIndex() == 2:
+                self.checkOverlay.setEnabled(False)
+                self.checkOverlay.setChecked(False)
+                self.radioDefects.setEnabled(False)
+            else:
+                self.checkOverlay.setEnabled(True)
+                self.radioDefects.setEnabled(True)
+
+        # Seek flag refers to the button configuration when a layer image isn't found (rather than there being no images)
+        if seek_flag:
+            self.pushDisplayUpSeek.setEnabled(not flag)
+            self.pushDisplayDownSeek.setEnabled(not flag)
+        else:
+            self.frameSlider.setEnabled(flag)
+            self.pushGo.setEnabled(flag)
 
     def toggle_overlay(self):
         """Overlay process is done in the update_display method
@@ -961,7 +1015,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.labelLayerNumber.setText('%s / %s' % (str(self.display['CurrentLayer'][index]).zfill(4),
                                                        str(self.display['MaxLayers']).zfill(4)))
 
-            # Set the radio button to Original as contours have no defect images
+            # Set the radio button to Original as contours have no defect images and disable the Defect Processor
             if index == 2:
                 self.radioOriginal.setChecked(True)
 
@@ -1036,50 +1090,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.sliderDisplay.setValue(number_list[-1])
         else:
             self.sliderDisplay.setValue(number_list[position - 1])
-
-    def toggle_display_buttons(self, flag, seek_flag=False, defect_flag=True):
-        """Enables or disables the following buttons/actions in one fell swoop"""
-
-        self.checkCLAHE.setEnabled(flag)
-        self.checkOverlay.setEnabled(flag)
-        self.actionZoomIn.setEnabled(flag)
-        self.actionZoomOut.setEnabled(flag)
-        self.actionExportImage.setEnabled(flag)
-        self.menu_display.setEnabled(flag)
-        self.pushProcessCurrent.setEnabled(flag)
-        self.actionZoomIn.setChecked(False)
-
-        if self.checkOverlay.isChecked():
-            self.pushOverlayAdjustment.setEnabled(flag)
-
-        if self.widgetDisplay.currentIndex() == 3:
-            self.pushDisplayUpSeek.setEnabled(False)
-            self.pushDisplayDownSeek.setEnabled(False)
-
-        if flag:
-            if self.widgetDisplay.currentIndex() == 2:
-                self.checkOverlay.setEnabled(False)
-                self.checkOverlay.setChecked(False)
-                self.radioDefects.setEnabled(False)
-                self.pushProcessCurrent.setEnabled(False)
-                self.pushProcessAll.setEnabled(False)
-                self.actionProcessCurrent.setEnabled(False)
-                self.actionProcessAll.setEnabled(False)
-            else:
-                self.checkOverlay.setEnabled(True)
-                self.radioDefects.setEnabled(True)
-                self.pushProcessCurrent.setEnabled(True)
-                self.pushProcessAll.setEnabled(True)
-                self.actionProcessCurrent.setEnabled(True)
-                self.actionProcessAll.setEnabled(True)
-
-        # Mode 1 refers to the button configuration when a layer image isn't found (rather than there being no images)
-        if seek_flag:
-            self.pushDisplayUpSeek.setEnabled(not flag)
-            self.pushDisplayDownSeek.setEnabled(not flag)
-        else:
-            self.frameSlider.setEnabled(flag)
-            self.pushGo.setEnabled(flag)
 
     def update_folders(self):
         """Updates the display dictionary with the updated list of images in all four image folders"""
