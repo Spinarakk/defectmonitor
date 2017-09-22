@@ -70,20 +70,30 @@
                 152,
                 152,
                 0
+            ],
+            "background": [
+                156,
+                156,
+                0
+            ],
+            "combined": [
+                160,
+                160,
+                0
             ]
         },
         "Convert": true,
         "Draw": true,
         "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Test 2",
+        "Name": "Test Build 1",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
             636.0,
             406.0
         ],
-        "Run": false,
+        "Run": true,
         "SliceFiles": [
             "D:/Documents/MCAM/Slice Files/18-08-2017/Part 01.cli",
             "D:/Documents/MCAM/Slice Files/18-08-2017/Part 02.cli",
@@ -121,10 +131,11 @@
         "Image": "",
         "ImagePrevious": "",
         "Layer": 0,
+        "Mode": "single",
         "Phase": "coat"
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-09-15 [11''00'25] Test 2",
+        "Folder": "D:/Documents/MCAM/Builds/2017-09-22 [10''54'17] Test Build 1",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
@@ -211,10 +222,10 @@
         ]
     },
     "Notifications": {
-        "Error": false,
-        "Failure": false,
-        "Major": false,
-        "Minor": false,
+        "Error": true,
+        "Failure": true,
+        "Major": true,
+        "Minor": true,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },

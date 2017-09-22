@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1026</width>
-    <height>732</height>
+    <height>755</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1022,6 +1022,13 @@
            <widget class="QCheckBox" name="checkOverlay">
             <property name="text">
              <string>Toggle Overlay</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkPartNames">
+            <property name="text">
+             <string>Toggle Part Names</string>
             </property>
            </widget>
           </item>

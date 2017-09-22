@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_mainWindow(object):
     def setupUi(self, mainWindow):
         mainWindow.setObjectName("mainWindow")
-        mainWindow.resize(1026, 732)
+        mainWindow.resize(1026, 755)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         mainWindow.setWindowIcon(icon)
@@ -453,6 +453,9 @@ class Ui_mainWindow(object):
         self.checkOverlay = QtWidgets.QCheckBox(self.groupDisplayOptions)
         self.checkOverlay.setObjectName("checkOverlay")
         self.verticalLayout.addWidget(self.checkOverlay)
+        self.checkPartNames = QtWidgets.QCheckBox(self.groupDisplayOptions)
+        self.checkPartNames.setObjectName("checkPartNames")
+        self.verticalLayout.addWidget(self.checkPartNames)
         self.gridLayout_2.addWidget(self.groupDisplayOptions, 0, 0, 1, 1)
         self.frameLayer = QtWidgets.QFrame(self.frameSidebar)
         self.frameLayer.setObjectName("frameLayer")
@@ -781,6 +784,7 @@ class Ui_mainWindow(object):
         self.radioDefects.setText(_translate("mainWindow", "Defect Analysis"))
         self.checkCLAHE.setText(_translate("mainWindow", "Equalization"))
         self.checkOverlay.setText(_translate("mainWindow", "Toggle Overlay"))
+        self.checkPartNames.setText(_translate("mainWindow", "Toggle Part Names"))
         self.pushGo.setText(_translate("mainWindow", "Go"))
         self.labelLayerNumber.setText(_translate("mainWindow", "0001 / 0001"))
         self.labelLayerNumberTitle.setText(_translate("mainWindow", "Layer Number"))

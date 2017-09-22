@@ -26,7 +26,7 @@
     "CameraSettings": {
         "ExposureTimeAbs": 10000,
         "FrameTransmissionDelay": 0,
-        "InterPacketDelay": 500,
+        "InterPacketDelay": 1000,
         "PacketSize": 1500,
         "PixelFormat": 0
     },

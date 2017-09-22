@@ -1,3 +1,11 @@
+September 22
+- Fixed lots of issues pertaining to the correct working operation of the image viewer and slice conversion
+- Fixed an issue where the slider maximum was being set to 0 causing new builds to start at 0
+- Fixed an issue where the added background and combined reports caused a problem when drawing contours
+- Figured out a report structure for the defects
+- Implemented reporting to the defect dictionary in the defect detector method
+- Observation: Slice Conversion uses up a lot of CPU (~45%)
+
 September 21
 - Rewrote the Defect Processing methods (process_current, process_all) to work more "intelligently" and reduce the number of overall lines
 - Added a new tab to the sidebar tool that contains the results of the defect analysis (functionality not implemented)

@@ -246,7 +246,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 os.makedirs('%s/defects/scan' % image_folder)
                 os.makedirs('%s/defects/single' % image_folder)
                 os.makedirs('%s/contours' % image_folder)
-                os.makedirs('%s/reports/parts' % image_folder)
+                os.makedirs('%s/reports' % image_folder)
 
                 # Create a dictionary of colours (different shades of teal) for each part's contours and save it
                 # At the same time, create a bunch of JSON files using a blank dictionary
@@ -255,13 +255,15 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 dict_blank = dict()
 
                 # Append additional 'background' and 'combined' parts and create their folders as well
-                self.slice_list.append('background').append('combined')
+                report_list = self.slice_list.copy()
+                report_list.append('background')
+                report_list.append('combined')
 
-                for index, part_name in enumerate(self.slice_list):
+                for index, part_name in enumerate(report_list):
                     part_name = os.path.splitext(os.path.basename(part_name))[0]
-                    part_colours[part_name] = ((100 + 4 * index) % 255, (100 + 4 * index) % 255, 0)
+                    part_colours[part_name] = ((100 + 3 * index) % 255, (100 + 3 * index) % 255, 0)
 
-                    with open('%s/reports/parts/%s_report.json' % (image_folder, part_name), 'w+') as report:
+                    with open('%s/reports/%s_report.json' % (image_folder, part_name), 'w+') as report:
                         json.dump(dict_blank, report)
 
                 self.config['BuildInfo']['Colours'] = part_colours
@@ -650,7 +652,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             part_colours = dict()
             for index, part_name in enumerate(self.slice_list):
                 part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
-                    ((100 + 4 * index) % 255, (100 + 4 * index) % 255, 0)
+                    ((100 + 3 * index) % 255, (100 + 3 * index) % 255, 0)
 
             # Save the slice file list and the draw state to the config.json file
             self.config['SliceConverter']['Draw'] = self.checkDraw.isChecked()

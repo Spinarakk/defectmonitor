@@ -389,8 +389,9 @@ class SliceConverter:
                 self.status.emit('Current Part: All | Conversion stopped.')
                 return None
 
-            # Create a black RGB image to draw contours on
+            # Create a black RGB image to draw contours on and one to write the part names on
             image_contours = np.zeros(self.image_resolution, np.uint8)
+            image_names = np.zeros(self.image_resolution, np.uint8)
 
             for file_name in file_names:
                 # Create an empty contours list to store all the contours of the current layer
@@ -418,6 +419,14 @@ class SliceConverter:
                                  part_colours[os.path.splitext(os.path.basename(file_name))[0]],
                                  offset=self.offset, thickness=cv2.FILLED)
 
+                # For the first layer, find the centre of the contours and put the part names on the image
+                if layer == 1:
+                    moments = cv2.moments(contours[0])
+                    centre_x = int(moments['m10'] / moments['m00'])
+                    centre_y = abs(self.image_resolution[0] - int(moments['m01'] / moments['m00']))
+                    cv2.putText(image_names, os.path.splitext(os.path.basename(file_name))[0], (centre_x, centre_y),
+                                cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
+
             self.status.emit('Current Part: All | Drawing contours %s of %s.' %
                              (str(layer).zfill(4), str(layer_max).zfill(4)))
 
@@ -429,6 +438,11 @@ class SliceConverter:
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)
+
+            # Save the part names image after transforming it just like the contours image
+            if layer == 1:
+                image_names = image_processing.ImageTransform(None).transform(image_names, self.transform)
+                cv2.imwrite('%s/part_names.png' % self.config['ImageCapture']['Folder'], image_names)
 
             # Increment to the next layer
             layer += 1

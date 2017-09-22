@@ -7,6 +7,7 @@ import cv2
 import serial
 import bisect
 import math
+import time
 
 # Import PyQt modules
 from PyQt5.QtGui import *
@@ -93,6 +94,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.radioDefects.clicked.connect(self.update_display)
         self.checkCLAHE.toggled.connect(self.update_display)
         self.checkOverlay.toggled.connect(self.toggle_overlay)
+        self.checkPartNames.toggled.connect(self.toggle_part_names)
 
         # Sidebar Toolbox Assorted Tools
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
@@ -139,6 +141,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Flags for various conditions
         self.display_flag = False
+        self.processing_flag = False
 
         # Instantiate any instances that cannot be run simultaneously
         self.FM_instance = None
@@ -162,9 +165,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
         # The current tab's index will be used to grab the corresponding image, list or name
-        self.display = {'ImageList': [list(), list(), list(), list(), list(), list(), list(), list()],
+        self.display = {'ImageList': [list(), list(), list(), list(), list(), list(), list(), list()], 'MaxLayers': 1,
                         'FolderNames': ['Coat/', 'Scan/', 'Contour/', 'Single/'], 'CurrentLayer': [1, 1, 1, 1],
-                        'LayerNumbers': [list(), list(), list(), list()], 'MaxLayers': 0,
+                        'LayerNumbers': [list(), list(), list(), list(), list(), list(), list(), list()],
                         'StackNames': [self.stackedCE, self.stackedSE, self.stackedPC, self.stackedIC],
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
@@ -242,6 +245,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Check for and acquire an attached camera and trigger
         self.acquire_ct()
 
+        time.sleep(1)
+
         # Converts and draws the contours if set to do so in the build settings
         if self.config['BuildInfo']['Convert']:
             # Set the appropriate flags in the config.json file to run the slice conversion
@@ -285,6 +290,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushStopConversion.setEnabled(False)
         self.toolSidebar.setCurrentIndex(2)
 
+        self.update_folders()
+        self.update_progress(0)
         self.update_status('Build %s setup complete.' % self.config['BuildInfo']['Name'], 10000)
 
     def clear_menu(self):
@@ -496,6 +503,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Saves the settings to be used to process an image for defects to the config.json file
         This method exists as the only difference between the two options is the layer number"""
 
+
         self.load_settings()
 
         # Grab some pertinent information (for clearer code purposes)
@@ -518,11 +526,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.toggle_processing_buttons(False)
         self.pushProcessSelected.setEnabled(False)
         self.actionProcessSelected.setEnabled(False)
+        self.processing_flag = True
 
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
             self.defect_counter += 1
-            self.update_status('Running %s layer %s through the Defect Detector...' % (phase, layer))
+            self.update_status('Running %s layer %s through the Defect Detector...' % (phase, str(layer).zfill(4)))
         else:
             self.update_status('Running displayed %s image through the Defect Detector...' % phase)
 
@@ -545,17 +554,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.all_flag and not self.defect_counter == len(self.display['LayerNumbers'][self.tab_index]):
             self.process_settings(self.display['LayerNumbers'][self.tab_index][self.defect_counter])
         else:
+            self.processing_flag = False
             self.toggle_processing_buttons(True)
             self.pushProcessSelected.setEnabled(True)
             self.actionProcessSelected.setEnabled(True)
             self.update_status('Defect Detection finished successfully.', 10000)
 
     def toggle_processing_buttons(self, flag):
-        """Enables or disables the following buttons/actions in one fell swoop"""
-        self.pushProcessCurrent.setEnabled(flag)
-        self.pushProcessAll.setEnabled(flag)
-        self.actionProcessCurrent.setEnabled(flag)
-        self.actionProcessAll.setEnabled(flag)
+        """Enables or disables the following buttons/actions in one fell swoop (if a process isn't currently running)"""
+        if not self.processing_flag:
+            self.pushProcessCurrent.setEnabled(flag)
+            self.pushProcessAll.setEnabled(flag)
+            self.actionProcessCurrent.setEnabled(flag)
+            self.actionProcessAll.setEnabled(flag)
 
     # MENUBAR -> SETTINGS
 
@@ -668,9 +679,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Open the COM port associated with the attached trigger device
         self.serial_trigger = serial.Serial(self.labelTriggerStatus.text(), 9600, timeout=1)
 
-        # Reset the elapsed time and idle time counters
+        # Reset the elapsed time and idle time counters and initialize the display time to 0
         self.stopwatch_elapsed = 0
         self.stopwatch_idle = 0
+        self.update_time()
 
         # Create a QTimer that will increment the two running timers
         self.timer_stopwatch = QTimer()
@@ -749,6 +761,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushCapture.setEnabled(True)
         self.checkResume.setEnabled(True)
 
+        # Reset the Pause/Resume button back to its default state (including the text colour)
+        self.pushPauseResume.setText('PAUSE')
+        self.pushPauseResume.setStyleSheet('')
+
         # Stop the stopwatch timer and close the serial port
         self.timer_stopwatch.stop()
         self.serial_trigger.close()
@@ -781,7 +797,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Update the maximum ranges of various UI elements
         self.update_ranges(self.widgetDisplay.currentIndex())
 
-        # Initialize all four GraphicsViewers
+        # Initialize the current Image Viewer
         self.update_display(self.widgetDisplay.currentIndex())
 
     def update_display(self, index):
@@ -802,7 +818,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         layer = str(value).zfill(4)
 
         # Check if the image folder has an actual image to display
-        if image_list:
+        if list(filter(bool, image_list)):
             # Change the stacked widget to the one with the image viewer
             stack.setCurrentIndex(1)
 
@@ -865,6 +881,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 # Apply the overlay on top of the image
                 image = cv2.add(image, overlay)
 
+            # Overlays the part names if the Toggle Part Names checkbox is checked
+            if self.checkPartNames.isChecked():
+                # Load the part names image into memory
+                image_names = cv2.imread('%s/part_names.png' % self.config['ImageCapture']['Folder'])
+
+                # Resize the overlay image if the resolution doesn't match the displayed image
+                if image_names.shape[:2] != image.shape[:2]:
+                    image_names = cv2.resize(image_names, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
+                    
+                image = cv2.add(image, image_names)
+
             # Applies CLAHE to the display image if the Equalization checkbox is checked
             if self.checkCLAHE.isChecked():
                 image = image_processing.ImageTransform.clahe(image)
@@ -885,6 +912,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             else:
                 self.checkOverlay.setEnabled(False)
                 self.checkOverlay.setChecked(False)
+                
+            # Similar to above, disable the Toggle Part Names checkbox if the part names image isn't found
+            if os.path.isfile('%s/part_names.png' % self.config['ImageCapture']['Folder']):
+                self.checkPartNames.setEnabled(True)
+            else:
+                self.checkPartNames.setEnabled(False)
+                self.checkPartNames.setChecked(False)
 
             if index == 2:
                 self.toggle_processing_buttons(False)
@@ -902,6 +936,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Enables or disables the following buttons/actions in one fell swoop"""
 
         self.checkCLAHE.setEnabled(flag)
+        self.checkPartNames.setEnabled(flag)
         self.checkOverlay.setEnabled(flag)
         self.actionZoomIn.setEnabled(flag)
         self.actionZoomOut.setEnabled(flag)
@@ -938,13 +973,23 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         if self.checkOverlay.isChecked():
             # Display the message for 5 seconds
-            self.update_status('Displaying part contours.')
+            self.update_status('Displaying part contours.', 3000)
             self.pushOverlayAdjustment.setEnabled(True)
             self.toolSidebar.setCurrentIndex(0)
         else:
-            self.update_status('Hiding part contours.')
+            self.update_status('Hiding part contours.', 3000)
             self.pushOverlayAdjustment.setEnabled(False)
             self.toolSidebar.setCurrentIndex(2)
+
+        self.update_display(self.widgetDisplay.currentIndex())
+
+    def toggle_part_names(self):
+        """Shows or hides the part names on the image (so long as the part name image exists)"""
+
+        if self.checkPartNames.isChecked():
+            self.update_status('Displaying part names.', 3000)
+        else:
+            self.update_status('Hiding part names.', 3000)
 
         self.update_display(self.widgetDisplay.currentIndex())
 
@@ -1062,8 +1107,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def slider_up_seek(self):
         """Jumps the slider to the first available image in the positive direction"""
 
+        # If the Defect Analysis radio button is checked, use the defect image list instead
+        if self.radioOriginal.isChecked():
+            number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
+        else:
+            number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex() + 4]
+
+        # All bisect left does is give you an index within the number list below the closest number to the value
         value = self.sliderDisplay.value()
-        number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
         position = bisect.bisect_left(number_list, value)
 
         if position == 0:
@@ -1080,8 +1131,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def slider_down_seek(self):
         """Jumps the slider to the first available image in the negative direction"""
 
+        if self.radioOriginal.isChecked():
+            number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
+        else:
+            number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex() + 4]
         value = self.sliderDisplay.value()
-        number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
         position = bisect.bisect_left(number_list, value)
 
         if position == 0:
@@ -1094,9 +1148,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def update_folders(self):
         """Updates the display dictionary with the updated list of images in all four image folders"""
 
-        for index in range(4):
-            # Get a list of numbers of the supposed layer images in the folder
-            if index < 3:
+        for index in range(8):
+            # Get a list of numbers of the supposed layer images in the folder (except the single folders)
+            if not index == 3 or not index == 6:
                 # Reset the layer numbers in the display dictionary
                 self.display['LayerNumbers'][index][:] = list()
 
@@ -1127,7 +1181,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def update_image_list(self, index):
         """Updates the ImageList dictionary with a new list of images"""
 
-        if index == 3 or index == 6:
+        if index == 3 or index > 6:
             # Empty the Single folder list and fill it with the file names in the folder
             self.display['ImageList'][index][:] = list()
             for file_name in os.listdir(self.display['ImageFolder'][index]):
