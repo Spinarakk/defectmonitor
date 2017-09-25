@@ -1,3 +1,16 @@
+September 26
+- Implemented the compare overlay function that compares the detect scan pattern output with the contour part overlay using template matching
+
+September 25
+- Changed the camera settings to also save to the config_default.json file as these settings should persist accross builds
+- Fixed an issue with the reporting where it was only looking for red pixels
+- The Process All button now only runs through the images that have not been processed yet
+- The Process Current still processes and overwrites the image
+- Redesigned the Process All button to also function as a Process Stop that will stop the defect processing process
+- Implemented the compare histogram function that compares two back to back images for differences
+- The result is saved to just the combined report for now
+- Blade Chatter is treated as the same as the other defect types where the number and location of pixel clusters are reported rather than number of occurences for now
+
 September 22
 - Fixed lots of issues pertaining to the correct working operation of the image viewer and slice conversion
 - Fixed an issue where the slider maximum was being set to 0 causing new builds to start at 0
@@ -5,6 +18,9 @@ September 22
 - Figured out a report structure for the defects
 - Implemented reporting to the defect dictionary in the defect detector method
 - Observation: Slice Conversion uses up a lot of CPU (~45%)
+- Fixed a few issues with the run buttons
+- Fixed an issue where a slow processor causes the acquisition of the camera and trigger to interfere with the slice conversion
+- Added a feature to the slice converter which outputs an additional contour image of the first layer which has each part labelled with its part name
 
 September 21
 - Rewrote the Defect Processing methods (process_current, process_all) to work more "intelligently" and reduce the number of overall lines

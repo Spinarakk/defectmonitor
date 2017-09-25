@@ -419,8 +419,9 @@ class SliceConverter:
                                  part_colours[os.path.splitext(os.path.basename(file_name))[0]],
                                  offset=self.offset, thickness=cv2.FILLED)
 
-                # For the first layer, find the centre of the contours and put the part names on the image
+                # For the first layer, find the centre of the contours and put the part names on a blank image
                 if layer == 1:
+                    # The first contour is generally the largest one, regardless the exact position isn't important
                     moments = cv2.moments(contours[0])
                     centre_x = int(moments['m10'] / moments['m00'])
                     centre_y = abs(self.image_resolution[0] - int(moments['m01'] / moments['m00']))
@@ -439,10 +440,10 @@ class SliceConverter:
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)
 
-            # Save the part names image after transforming it just like the contours image
+            # Save the part names image to the contours up one folder after transforming it just like the contours image
             if layer == 1:
                 image_names = image_processing.ImageTransform(None).transform(image_names, self.transform)
-                cv2.imwrite('%s/part_names.png' % self.config['ImageCapture']['Folder'], image_names)
+                cv2.imwrite('%s/part_names.png' % os.path.dirname(folder_name), image_names)
 
             # Increment to the next layer
             layer += 1

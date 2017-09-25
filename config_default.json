@@ -43,7 +43,7 @@
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
-        "TriggerTimeout": 5
+        "TriggerTimeout": 2
     },
     "ImageCorrection": {
         "CameraMatrix": [

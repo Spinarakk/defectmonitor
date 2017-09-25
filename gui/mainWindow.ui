@@ -1149,7 +1149,7 @@
           </font>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <property name="tabSpacing">
           <number>3</number>
@@ -1361,7 +1361,7 @@
            <item>
             <widget class="QPushButton" name="pushMajorFaults">
              <property name="text">
-              <string>Major Faults</string>
+              <string>Histogram Comparison</string>
              </property>
             </widget>
            </item>

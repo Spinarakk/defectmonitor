@@ -514,13 +514,12 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         except TypeError:
             pass
 
-        with open('config.json') as config:
-            self.config = json.load(config)
+        self.load_settings()
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonApply.clicked.connect(self.apply)
 
-        # Setup event listeners for all the setting boxes to detect a change
+        # Setup event listeners for all the setting boxes to detect a change in an entered value
         self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
         self.spinExposureTime.valueChanged.connect(self.apply_enable)
         self.spinPacketSize.valueChanged.connect(self.apply_enable)
@@ -544,7 +543,10 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.buttonApply.setEnabled(True)
 
     def apply(self):
-        # Save the new index values from the changed settings to the config dictionary
+        """Saves the entered settings to both the config.json and the config_default.json files"""
+        self.load_settings()
+        
+        # Save the new index values from the changed settings to both the config and config_default dictionary
         self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
         self.config['CameraSettings']['ExposureTimeAbs'] = self.spinExposureTime.value()
         self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
@@ -552,12 +554,31 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
         self.config['ImageCapture']['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
-        # Save configuration settings to config.json file
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
+        self.config_default['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
+        self.config_default['CameraSettings']['ExposureTimeAbs'] = self.spinExposureTime.value()
+        self.config_default['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
+        self.config_default['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
+        self.config_default['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
+        self.config_default['ImageCapture']['TriggerTimeout'] = self.spinTriggerTimeout.value()
+
+        self.save_settings()
 
         # Disable the Apply button until another setting is changed
         self.buttonApply.setEnabled(False)
+
+    def load_settings(self):
+        with open('config.json') as config:
+            self.config = json.load(config)
+        
+        with open('config_default.json') as config:
+            self.config_default = json.load(config)
+
+    def save_settings(self):
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
+            
+        with open('config_default.json') as config:
+            json.dump(self.config_default, config, indent=4, sort_keys=True)
 
     def accept(self):
         """Executes when the OK button is pressed
@@ -733,6 +754,9 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
     Allows the user to adjust and transform the overlay image in a variety of ways
     """
 
+    # Signal that will be emitted anytime one of the transformation buttons is pressed
+    update_overlay = pyqtSignal(list)
+
     def __init__(self, parent=None):
 
         # Setup Dialog UI with MainWindow as parent and restore the previous window state
@@ -904,7 +928,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
     def save_settings(self, undo_flag=False):
 
-        self.emit(pyqtSignal("update_overlay(PyQt_PyObject)"), self.transform)
+
 
         if not undo_flag:
             self.transform_states.append(self.transform[:])
@@ -916,6 +940,8 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
+
+        self.update_overlay.emit(self.transform)
 
     def closeEvent(self, event):
         """Executes when the window is closed"""

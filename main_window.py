@@ -197,7 +197,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Acquire the name of the config file to be opened and read
-        file_name, _ = QFileDialog.getOpenFileName(self, 'Browse...', '', 'JSON File (*.json)')
+        file_name = QFileDialog.getOpenFileName(self, 'Browse...', self.config['BuildInfo']['Folder'],
+                                                'JSON File (*.json)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if file_name:
@@ -315,7 +316,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
 
-        config_name, _ = QFileDialog.getSaveFileName(self, 'Save Build As', '', 'JSON File (*.json)')
+        config_name, _ = QFileDialog.getSaveFileName(self, 'Save Build As', self.config['BuildInfo']['Name'],
+                                                     'JSON File (*.json)')
 
         # Checking if user has chosen to save the build or clicked cancel
         if config_name:
@@ -399,8 +401,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         if self.OA_dialog is None:
             self.OA_dialog = dialog_windows.OverlayAdjustment(self)
-            self.connect(self.OA_dialog, pyqtSignal("destroyed()"), self.overlay_adjustment_closed)
-            self.connect(self.OA_dialog, pyqtSignal("update_overlay(PyQt_PyObject)"), self.update_overlay)
+            self.OA_dialog.destroyed.connect(self.overlay_adjustment_closed)
+
+            self.OA_dialog.show()
         else:
             self.OA_dialog.activateWindow()
 
@@ -484,15 +487,34 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.all_flag = False
         self.tab_index = self.widgetDisplay.currentIndex()
+        self.toggle_processing_buttons(False)
         self.process_settings(self.sliderDisplay.value())
 
     def process_all(self):
-        """Runs all the available images in the currently opened tab through the DefectDetector"""
+        """Runs all the available images in the currently opened tab through the DefectDetector
+        The button also functions as a Process Stop button which halts the processing process"""
 
-        self.defect_counter = 0
-        self.all_flag = True
-        self.tab_index = self.widgetDisplay.currentIndex()
-        self.process_settings(self.display['LayerNumbers'][self.tab_index][self.defect_counter])
+        if 'Process All' in self.pushProcessAll.text():
+            self.defect_counter = 0
+            self.all_flag = True
+            self.tab_index = self.widgetDisplay.currentIndex()
+            self.pushProcessAll.setStyleSheet('QPushButton {color: #ff0000;}')
+            self.pushProcessAll.setText('Process Stop')
+            self.actionProcessAll.setText('Process Stop')
+            self.toggle_processing_buttons(False)
+
+            # Remove the already processed defect images from the image list
+            self.layer_numbers = list(set(self.display['LayerNumbers'][self.tab_index]) - \
+                                 set(self.display['LayerNumbers'][self.tab_index + 4]))
+            self.process_settings(self.layer_numbers[self.defect_counter])
+
+        elif 'Process Stop' in self.pushProcessAll.text():
+            # On the next process loop, setting this to False will send the process to the finished method
+            self.all_flag = False
+            self.pushProcessAll.setStyleSheet('')
+            self.pushProcessAll.setText('Process All')
+            self.actionProcessAll.setText('Process All')
+            self.toggle_processing_buttons(False)
 
     def process_selected(self):
         """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
@@ -502,7 +524,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def process_settings(self, layer):
         """Saves the settings to be used to process an image for defects to the config.json file
         This method exists as the only difference between the two options is the layer number"""
-
 
         self.load_settings()
 
@@ -523,14 +544,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.save_settings()
 
         # Disable the Process ... buttons to stop repeated concurrent processes
-        self.toggle_processing_buttons(False)
         self.pushProcessSelected.setEnabled(False)
         self.actionProcessSelected.setEnabled(False)
         self.processing_flag = True
 
+
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
             self.defect_counter += 1
+            self.toggle_processing_buttons(True)
             self.update_status('Running %s layer %s through the Defect Detector...' % (phase, str(layer).zfill(4)))
         else:
             self.update_status('Running displayed %s image through the Defect Detector...' % phase)
@@ -551,8 +573,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_folders()
 
-        if self.all_flag and not self.defect_counter == len(self.display['LayerNumbers'][self.tab_index]):
-            self.process_settings(self.display['LayerNumbers'][self.tab_index][self.defect_counter])
+        if self.all_flag and not self.defect_counter == len(self.layer_numbers):
+            self.process_settings(self.layer_numbers[self.defect_counter])
         else:
             self.processing_flag = False
             self.toggle_processing_buttons(True)
@@ -566,6 +588,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessCurrent.setEnabled(flag)
             self.pushProcessAll.setEnabled(flag)
             self.actionProcessCurrent.setEnabled(flag)
+            self.actionProcessAll.setEnabled(flag)
+        else:
+            self.pushProcessAll.setEnabled(flag)
             self.actionProcessAll.setEnabled(flag)
 
     # MENUBAR -> SETTINGS
