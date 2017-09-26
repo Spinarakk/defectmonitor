@@ -69,6 +69,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Menubar -> View
         self.actionZoomIn.triggered.connect(self.zoom_in)
         self.actionZoomOut.triggered.connect(self.zoom_out)
+        self.actionCalibrationResults.triggered.connect(self.calibration_results)
+        self.actionDefectReports.triggered.connect(self.defect_reports)
+        self.actionHistogramComparison.triggered.connect(self.histogram_comparison)
 
         # Menubar -> Tools
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
@@ -110,6 +113,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushProcessCurrent.clicked.connect(self.process_current)
         self.pushProcessAll.clicked.connect(self.process_all)
         self.pushProcessSelected.clicked.connect(self.process_selected)
+
+        # Sidebar Toolbox Reports / Results
+        self.pushCalibrationResults.clicked.connect(self.calibration_results)
+        self.pushDefectReports.clicked.connect(self.defect_reports)
+        self.pushHistogramComparison.clicked.connect(self.histogram_comparison)
 
         # Layer Selection
         self.pushGo.clicked.connect(self.set_layer)
@@ -370,6 +378,27 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def zoom_out(self):
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
+
+    def calibration_results(self):
+        """Opens a Modeless Dialog Window when the Calibration Results button is clicked
+        Displays the results of the camera calibration to the user"""
+
+        with open('config.json') as config:
+            results = json.load(config)
+
+        try:
+            self.calibration_results_dialog.close()
+        except:
+            pass
+
+        self.calibration_results_dialog = dialog_windows.CalibrationResults(self, results['ImageCorrection'])
+        self.calibration_results_dialog.show()
+
+    def defect_reports(self):
+        pass
+
+    def histogram_comparison(self):
+        pass
 
     # MENUBAR -> TOOLS
 
@@ -1306,8 +1335,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
 if __name__ == '__main__':
     application = QApplication(sys.argv)
-    application.setAttribute(Qt.AA_Use96Dpi)
-    # application.setAttribute(Qt.AA_EnableHighDpiScaling)
+    #application.setAttribute(Qt.AA_Use96Dpi)
+    #application.setAttribute(Qt.AA_DisableHighDpiScaling)
+    #application.setAttribute(Qt.AA_EnableHighDpiScaling)
     interface = MainWindow()
     interface.show()
     sys.exit(application.exec_())

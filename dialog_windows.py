@@ -297,12 +297,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             pass
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonBrowseF.clicked.connect(self.browse_folder)
-        self.buttonBrowseHI.clicked.connect(self.browse_homography)
-        self.buttonBrowseTI.clicked.connect(self.browse_test_image)
-        self.buttonStart.clicked.connect(self.start)
-        self.buttonResults.clicked.connect(self.view_results)
-        self.buttonSave.clicked.connect(self.save_results)
+        self.pushBrowseF.clicked.connect(self.browse_folder)
+        self.pushBrowseHI.clicked.connect(self.browse_homography)
+        self.pushBrowseTI.clicked.connect(self.browse_test_image)
+        self.pushStart.clicked.connect(self.start)
+        self.pushResults.clicked.connect(self.view_results)
+        self.pushSave.clicked.connect(self.save_results)
 
         # Load configuration settings from config.json file
         with open('config.json') as config:
@@ -343,12 +343,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
 
             if not self.image_list:
                 self.update_status('No calibration images found.')
-                self.buttonStart.setEnabled(False)
+                self.pushStart.setEnabled(False)
             else:
                 # Remove previous entries and fill with new entries
                 self.listImages.addItems(self.image_list)
 
-                self.buttonStart.setEnabled(True)
+                self.pushStart.setEnabled(True)
                 self.update_status('Waiting to start process.')
                 self.update_progress(0)
 
@@ -376,11 +376,11 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         """
 
         # Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonBrowseF.setEnabled(False)
-        self.buttonBrowseHI.setEnabled(False)
-        self.buttonBrowseTI.setEnabled(False)
-        self.buttonStart.setEnabled(False)
-        self.buttonDone.setEnabled(False)
+        self.pushBrowseF.setEnabled(False)
+        self.pushBrowseHI.setEnabled(False)
+        self.pushBrowseTI.setEnabled(False)
+        self.pushStart.setEnabled(False)
+        self.pushDone.setEnabled(False)
 
         # Save calibration settings
         self.save_settings()
@@ -436,12 +436,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
 
         # Enable or disable relevant UI elements to prevent concurrent processes
-        self.buttonBrowseF.setEnabled(True)
-        self.buttonBrowseHI.setEnabled(True)
-        self.buttonBrowseTI.setEnabled(True)
-        self.buttonStart.setEnabled(True)
-        self.buttonSave.setEnabled(True)
-        self.buttonDone.setEnabled(True)
+        self.pushBrowseF.setEnabled(True)
+        self.pushBrowseHI.setEnabled(True)
+        self.pushBrowseTI.setEnabled(True)
+        self.pushStart.setEnabled(True)
+        self.pushSave.setEnabled(True)
+        self.pushDone.setEnabled(True)
 
     def view_results(self, calibration_flag=False):
         """Opens a Dialog Window when the CameraCalibration instance has finished
@@ -469,7 +469,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.config.update(results)
         self.save_settings()
         self.update_status('Calibration results saved to the config file.')
-        self.buttonSave.setEnabled(False)
+        self.pushSave.setEnabled(False)
 
     def save_settings(self):
         """Save the spinxBox values to the config.json file"""
@@ -517,7 +517,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.load_settings()
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonApply.clicked.connect(self.apply)
+        self.pushApply.clicked.connect(self.apply)
 
         # Setup event listeners for all the setting boxes to detect a change in an entered value
         self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
@@ -536,11 +536,11 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameTransmissionDelay']))
         self.spinTriggerTimeout.setValue(int(self.config['ImageCapture']['TriggerTimeout']))
 
-        self.buttonApply.setEnabled(False)
+        self.pushApply.setEnabled(False)
 
     def apply_enable(self):
         """Enable the Apply button on any change of setting values"""
-        self.buttonApply.setEnabled(True)
+        self.pushApply.setEnabled(True)
 
     def apply(self):
         """Saves the entered settings to both the config.json and the config_default.json files"""
@@ -564,7 +564,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.save_settings()
 
         # Disable the Apply button until another setting is changed
-        self.buttonApply.setEnabled(False)
+        self.pushApply.setEnabled(False)
 
     def load_settings(self):
         with open('config.json') as config:
@@ -577,14 +577,14 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
             
-        with open('config_default.json') as config:
+        with open('config_default.json', 'w+') as config:
             json.dump(self.config_default, config, indent=4, sort_keys=True)
 
     def accept(self):
         """Executes when the OK button is pressed
         If the settings have changed, the apply function is executed before closing the window"""
 
-        if self.buttonApply.isEnabled():
+        if self.pushApply.isEnabled():
             self.apply()
 
         self.closeEvent(self.close())
@@ -778,40 +778,40 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # General
-        self.buttonReset.clicked.connect(self.reset)
-        self.buttonUndo.clicked.connect(self.undo)
+        self.pushReset.clicked.connect(self.reset)
+        self.pushUndo.clicked.connect(self.undo)
 
         # Translation
-        self.buttonTranslateUp.clicked.connect(self.translate_up)
-        self.buttonTranslateDown.clicked.connect(self.translate_down)
-        self.buttonTranslateLeft.clicked.connect(self.translate_left)
-        self.buttonTranslateRight.clicked.connect(self.translate_right)
+        self.pushTranslateUp.clicked.connect(self.translate_up)
+        self.pushTranslateDown.clicked.connect(self.translate_down)
+        self.pushTranslateLeft.clicked.connect(self.translate_left)
+        self.pushTranslateRight.clicked.connect(self.translate_right)
 
         # Rotation / Flip
-        self.buttonRotateACW.clicked.connect(self.rotate_acw)
-        self.buttonRotateCW.clicked.connect(self.rotate_cw)
-        self.buttonFlipHorizontal.clicked.connect(self.flip_horizontal)
-        self.buttonFlipVertical.clicked.connect(self.flip_vertical)
+        self.pushRotateACW.clicked.connect(self.rotate_acw)
+        self.pushRotateCW.clicked.connect(self.rotate_cw)
+        self.pushFlipHorizontal.clicked.connect(self.flip_horizontal)
+        self.pushFlipVertical.clicked.connect(self.flip_vertical)
 
         # Stretch / Pull
-        self.buttonResetStretch.clicked.connect(self.stretch_reset)
-        self.buttonStretchN.clicked.connect(self.stretch_n)
-        self.buttonStretchNE.clicked.connect(self.stretch_ne)
-        self.buttonStretchE.clicked.connect(self.stretch_e)
-        self.buttonStretchSE.clicked.connect(self.stretch_se)
-        self.buttonStretchS.clicked.connect(self.stretch_s)
-        self.buttonStretchSW.clicked.connect(self.stretch_sw)
-        self.buttonStretchW.clicked.connect(self.stretch_w)
-        self.buttonStretchNW.clicked.connect(self.stretch_nw)
+        self.pushResetStretch.clicked.connect(self.stretch_reset)
+        self.pushStretchN.clicked.connect(self.stretch_n)
+        self.pushStretchNE.clicked.connect(self.stretch_ne)
+        self.pushStretchE.clicked.connect(self.stretch_e)
+        self.pushStretchSE.clicked.connect(self.stretch_se)
+        self.pushStretchS.clicked.connect(self.stretch_s)
+        self.pushStretchSW.clicked.connect(self.stretch_sw)
+        self.pushStretchW.clicked.connect(self.stretch_w)
+        self.pushStretchNW.clicked.connect(self.stretch_nw)
 
-        self.buttonStretchUpLeft.clicked.connect(self.stretch_ul)
-        self.buttonStretchLeftUp.clicked.connect(self.stretch_lu)
-        self.buttonStretchUpRight.clicked.connect(self.stretch_ur)
-        self.buttonStretchRightUp.clicked.connect(self.stretch_ru)
-        self.buttonStretchDownLeft.clicked.connect(self.stretch_dl)
-        self.buttonStretchLeftDown.clicked.connect(self.stretch_ld)
-        self.buttonStretchDownRight.clicked.connect(self.stretch_dr)
-        self.buttonStretchRightDown.clicked.connect(self.stretch_rd)
+        self.pushStretchUpLeft.clicked.connect(self.stretch_ul)
+        self.pushStretchLeftUp.clicked.connect(self.stretch_lu)
+        self.pushStretchUpRight.clicked.connect(self.stretch_ur)
+        self.pushStretchRightUp.clicked.connect(self.stretch_ru)
+        self.pushStretchDownLeft.clicked.connect(self.stretch_dl)
+        self.pushStretchLeftDown.clicked.connect(self.stretch_ld)
+        self.pushStretchDownRight.clicked.connect(self.stretch_dr)
+        self.pushStretchRightDown.clicked.connect(self.stretch_rd)
 
     def reset(self):
         self.transform = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -927,9 +927,6 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         self.save_settings()
 
     def save_settings(self, undo_flag=False):
-
-
-
         if not undo_flag:
             self.transform_states.append(self.transform[:])
 

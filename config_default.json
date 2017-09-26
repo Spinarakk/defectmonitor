@@ -1,19 +1,19 @@
 {
     "BuildInfo": {
         "Colours": {},
-	"Convert": false,
+        "Convert": false,
         "Draw": false,
         "EmailAddress": "",
         "Folder": "D:/Documents/MCAM/Builds",
         "Name": "Default",
+        "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
             636.0,
             406.0
         ],
-	"Pause": false,
-	"Run": false,
-	"SliceFiles": [],
+        "Run": false,
+        "SliceFiles": [],
         "Username": ""
     },
     "CameraCalibration": {
@@ -31,19 +31,19 @@
         "PixelFormat": 0
     },
     "DefectDetector": {
-	"Contours": "",
-	"Image": "",
-	"ImagePrevious": "",
-	"Layer": 0,
-	"Mode": "single",
-	"Phase": "coat"
+        "Contours": "",
+        "Image": "",
+        "ImagePrevious": "",
+        "Layer": 0,
+        "Mode": "single",
+        "Phase": "coat"
     },
     "ImageCapture": {
         "Folder": "",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1,
-        "TriggerTimeout": 2
+        "TriggerTimeout": 3
     },
     "ImageCorrection": {
         "CameraMatrix": [
@@ -134,13 +134,13 @@
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-	"Build": false,
-	"Colours": {},
-	"Draw": false,        
-	"Files": [],
-	"Folder": "",
-	"Pause": false,
-	"Run": false
+        "Build": false,
+        "Colours": {},
+        "Draw": false,
+        "Files": [],
+        "Folder": "",
+        "Pause": false,
+        "Run": false
     },
     "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
 }

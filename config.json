@@ -223,12 +223,12 @@
         "PixelFormat": 0
     },
     "DefectDetector": {
-        "Contours": "",
-        "Image": "",
+        "Contours": "D:/Documents/MCAM/Builds/2017-09-25 [10''01'05] Test Build 2/contours/contours_0015.png",
+        "Image": "D:/Documents/MCAM/Builds/2017-09-25 [10''01'05] Test Build 2/processed/scan/scanP_0015.png",
         "ImagePrevious": "",
-        "Layer": 0,
+        "Layer": 15,
         "Mode": "single",
-        "Phase": "coat"
+        "Phase": "scan"
     },
     "ImageCapture": {
         "Folder": "D:/Documents/MCAM/Builds/2017-09-25 [10''01'05] Test Build 2",
@@ -298,7 +298,7 @@
         ],
         "ScaleFactor": 5.333333333333333,
         "TransformParameters": [
-            -122,
+            20,
             -10,
             0,
             0,

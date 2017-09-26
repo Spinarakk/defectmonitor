@@ -1,5 +1,7 @@
 September 26
 - Implemented the compare overlay function that compares the detect scan pattern output with the contour part overlay using template matching
+- Fixed the layout scaling issues of the Slice Converter, Overlay Adjustment, Camera Calibration, Camera Settings and Calibration Results dialog windows
+- Also fixed all the window icons and made sure all windows work properly
 
 September 25
 - Changed the camera settings to also save to the config_default.json file as these settings should persist accross builds

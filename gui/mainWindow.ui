@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1026</width>
-    <height>755</height>
+    <width>1080</width>
+    <height>756</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -783,11 +783,6 @@
             <property name="enabled">
              <bool>false</bool>
             </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Acquire Camera / Trigger</string>
             </property>
@@ -797,11 +792,6 @@
            <widget class="QPushButton" name="pushCapture">
             <property name="enabled">
              <bool>false</bool>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
             </property>
             <property name="text">
              <string>Capture Single Image</string>
@@ -925,11 +915,6 @@
              </property>
              <item>
               <widget class="QCheckBox" name="checkResume">
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
                <property name="text">
                 <string>Resume From</string>
                </property>
@@ -972,11 +957,6 @@
         <widget class="QGroupBox" name="groupDisplayOptions">
          <property name="enabled">
           <bool>false</bool>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>8</pointsize>
-          </font>
          </property>
          <property name="title">
           <string>Display Options</string>
@@ -1088,13 +1068,6 @@
               <height>24</height>
              </size>
             </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
             <property name="text">
              <string>Go</string>
             </property>
@@ -1143,13 +1116,8 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="font">
-          <font>
-           <pointsize>8</pointsize>
-          </font>
-         </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>0</number>
          </property>
          <property name="tabSpacing">
           <number>3</number>
@@ -1210,7 +1178,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>98</width>
             <height>91</height>
            </rect>
           </property>
@@ -1264,7 +1232,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>111</width>
             <height>91</height>
            </rect>
           </property>
@@ -1318,7 +1286,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>125</width>
             <height>91</height>
            </rect>
           </property>
@@ -1353,13 +1321,19 @@
            </item>
            <item>
             <widget class="QPushButton" name="pushDefectReports">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Defect Reports</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushMajorFaults">
+            <widget class="QPushButton" name="pushHistogramComparison">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Histogram Comparison</string>
              </property>
@@ -1379,7 +1353,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1026</width>
+     <width>1080</width>
      <height>21</height>
     </rect>
    </property>
@@ -1413,6 +1387,11 @@
     </property>
     <addaction name="actionZoomIn"/>
     <addaction name="actionZoomOut"/>
+    <addaction name="separator"/>
+    <addaction name="actionCalibrationResults"/>
+    <addaction name="separator"/>
+    <addaction name="actionDefectReports"/>
+    <addaction name="actionHistogramComparison"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1637,6 +1616,27 @@
    </property>
    <property name="text">
     <string>Update Folders</string>
+   </property>
+  </action>
+  <action name="actionCalibrationResults">
+   <property name="text">
+    <string>Calibration Results</string>
+   </property>
+  </action>
+  <action name="actionDefectReports">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Defect Reports</string>
+   </property>
+  </action>
+  <action name="actionHistogramComparison">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Histogram Comparison</string>
    </property>
   </action>
  </widget>

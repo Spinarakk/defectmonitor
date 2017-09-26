@@ -12,6 +12,8 @@ Installation
 	- pip3 install PyQt5
 	- pip3 install pyserial
 	- pip3 install validate_email
+- Alternatively, just execute package_installation.bat
+
 - (Optional) If a pypylon folder isn't in the root directory
 	- pip3 install Cython
 	- Visual C++ 14.0 will need to be installed (Google)
