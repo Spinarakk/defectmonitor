@@ -63,9 +63,9 @@ class Ui_dialogNewBuild(object):
         self.pushBrowseSF.setSizePolicy(sizePolicy)
         self.pushBrowseSF.setObjectName("pushBrowseSF")
         self.gridLayout.addWidget(self.pushBrowseSF, 2, 5, 1, 1)
-        self.pushClose = QtWidgets.QPushButton(dialogNewBuild)
-        self.pushClose.setObjectName("pushClose")
-        self.gridLayout.addWidget(self.pushClose, 12, 5, 1, 1)
+        self.pushCancel = QtWidgets.QPushButton(dialogNewBuild)
+        self.pushCancel.setObjectName("pushCancel")
+        self.gridLayout.addWidget(self.pushCancel, 12, 5, 1, 1)
         self.pushCreate = QtWidgets.QPushButton(dialogNewBuild)
         self.pushCreate.setObjectName("pushCreate")
         self.gridLayout.addWidget(self.pushCreate, 12, 4, 1, 1)
@@ -220,8 +220,7 @@ class Ui_dialogNewBuild(object):
         self.labelEmailAddress.setBuddy(self.lineEmailAddress)
 
         self.retranslateUi(dialogNewBuild)
-        self.pushCreate.clicked.connect(dialogNewBuild.accept)
-        self.pushClose.clicked.connect(dialogNewBuild.reject)
+        self.pushCancel.clicked.connect(dialogNewBuild.reject)
         self.checkConvert.toggled['bool'].connect(self.checkDraw.setEnabled)
         self.checkAll.toggled['bool'].connect(self.checkMinor.setChecked)
         self.checkAll.toggled['bool'].connect(self.checkMajor.setChecked)
@@ -236,7 +235,7 @@ class Ui_dialogNewBuild(object):
         dialogNewBuild.setTabOrder(self.pushSendTestEmail, self.checkAddAttachment)
         dialogNewBuild.setTabOrder(self.checkAddAttachment, self.pushBrowseSF)
         dialogNewBuild.setTabOrder(self.pushBrowseSF, self.pushBrowseBF)
-        dialogNewBuild.setTabOrder(self.pushBrowseBF, self.pushClose)
+        dialogNewBuild.setTabOrder(self.pushBrowseBF, self.pushCancel)
 
     def retranslateUi(self, dialogNewBuild):
         _translate = QtCore.QCoreApplication.translate
@@ -249,7 +248,7 @@ class Ui_dialogNewBuild(object):
         self.checkError.setText(_translate("dialogNewBuild", "Program Error"))
         self.pushBrowseSF.setToolTip(_translate("dialogNewBuild", "Select the slice files to be used to draw the part contours."))
         self.pushBrowseSF.setText(_translate("dialogNewBuild", "Browse"))
-        self.pushClose.setText(_translate("dialogNewBuild", "Cancel"))
+        self.pushCancel.setText(_translate("dialogNewBuild", "Cancel"))
         self.pushCreate.setText(_translate("dialogNewBuild", "Create"))
         self.pushSendTestEmail.setText(_translate("dialogNewBuild", "Send Test Email"))
         self.checkAddAttachment.setToolTip(_translate("dialogNewBuild", "Check this box to add an attachment (a test picture) to the test email notification."))

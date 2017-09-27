@@ -122,8 +122,16 @@ class Ui_dialogCameraSettings(object):
 
         self.retranslateUi(dialogCameraSettings)
         self.pushOK.clicked.connect(dialogCameraSettings.accept)
-        self.pushCancel.clicked.connect(dialogCameraSettings.reject)
+        self.pushCancel.clicked.connect(dialogCameraSettings.close)
         QtCore.QMetaObject.connectSlotsByName(dialogCameraSettings)
+        dialogCameraSettings.setTabOrder(self.comboPixelFormat, self.spinExposureTime)
+        dialogCameraSettings.setTabOrder(self.spinExposureTime, self.spinPacketSize)
+        dialogCameraSettings.setTabOrder(self.spinPacketSize, self.spinInterPacketDelay)
+        dialogCameraSettings.setTabOrder(self.spinInterPacketDelay, self.spinFrameDelay)
+        dialogCameraSettings.setTabOrder(self.spinFrameDelay, self.spinTriggerTimeout)
+        dialogCameraSettings.setTabOrder(self.spinTriggerTimeout, self.pushApply)
+        dialogCameraSettings.setTabOrder(self.pushApply, self.pushOK)
+        dialogCameraSettings.setTabOrder(self.pushOK, self.pushCancel)
 
     def retranslateUi(self, dialogCameraSettings):
         _translate = QtCore.QCoreApplication.translate

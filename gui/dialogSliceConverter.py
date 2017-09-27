@@ -13,7 +13,7 @@ class Ui_dialogSliceConverter(object):
         dialogSliceConverter.setObjectName("dialogSliceConverter")
         dialogSliceConverter.resize(275, 214)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogSliceConverter.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(dialogSliceConverter)
         self.gridLayout.setObjectName("gridLayout")
@@ -84,3 +84,4 @@ class Ui_dialogSliceConverter(object):
         self.labelStatusSlice.setText(_translate("dialogSliceConverter", "Current Part: None"))
         self.checkDraw.setText(_translate("dialogSliceConverter", "Draw Contours"))
 
+import icons_rc

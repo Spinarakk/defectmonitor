@@ -272,6 +272,17 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>comboPixelFormat</tabstop>
+  <tabstop>spinExposureTime</tabstop>
+  <tabstop>spinPacketSize</tabstop>
+  <tabstop>spinInterPacketDelay</tabstop>
+  <tabstop>spinFrameDelay</tabstop>
+  <tabstop>spinTriggerTimeout</tabstop>
+  <tabstop>pushApply</tabstop>
+  <tabstop>pushOK</tabstop>
+  <tabstop>pushCancel</tabstop>
+ </tabstops>
  <resources>
   <include location="icons.qrc"/>
  </resources>
@@ -296,7 +307,7 @@
    <sender>pushCancel</sender>
    <signal>clicked()</signal>
    <receiver>dialogCameraSettings</receiver>
-   <slot>reject()</slot>
+   <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>255</x>

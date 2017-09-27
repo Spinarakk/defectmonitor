@@ -3,6 +3,7 @@ import sys
 import traceback
 from PyQt5.QtCore import *
 
+
 class WorkerSignals(QObject):
     """Signals available from a running worker thread are defined here"""
     finished = pyqtSignal()

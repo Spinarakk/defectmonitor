@@ -5,10 +5,8 @@ import json
 import time
 import cv2
 import numpy as np
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 
+# Import related modules
 import image_processing
 
 
@@ -39,16 +37,16 @@ class SliceConverter:
         # Part names are taken from the config.json file, depending if this method was run from the Slice Converter
         # Or as part of a new build, different files will be read and used
 
-        if self.config['SliceConverter']['Build']:
-            self.part_colours = self.config['BuildInfo']['Colours']
-            self.part_names = self.config['BuildInfo']['SliceFiles']
-            self.draw_flag = self.config['BuildInfo']['Draw']
-            self.contours_folder = '%s/contours' % self.config['ImageCapture']['Folder']
+        if self.build['SliceConverter']['Build']:
+            self.part_colours = self.build['BuildInfo']['Colours']
+            self.part_names = self.build['BuildInfo']['SliceFiles']
+            self.draw_flag = self.build['BuildInfo']['Draw']
+            self.contours_folder = '%s/contours' % self.build['ImageCapture']['Folder']
         else:
-            self.part_colours = self.config['SliceConverter']['Colours']
-            self.part_names = self.config['SliceConverter']['Files']
-            self.draw_flag = self.config['SliceConverter']['Draw']
-            self.contours_folder = self.config['SliceConverter']['Folder']
+            self.part_colours = self.build['SliceConverter']['Colours']
+            self.part_names = self.build['SliceConverter']['Files']
+            self.draw_flag = self.build['SliceConverter']['Draw']
+            self.contours_folder = self.build['SliceConverter']['Folder']
 
     def convert(self, status, progress):
 
@@ -93,10 +91,10 @@ class SliceConverter:
 
         self.status.emit('Current Part: None | Conversion completed successfully.')
 
-    def read_cls(self, file_name):
+    def read_cls(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
-        self.status.emit('Current Part: %s | Reading CLS file...' % os.path.basename(file_name).replace('.cls', ''))
+        self.status.emit('Current Part: %s | Reading CLS file...' % os.path.basename(filename).replace('.cls', ''))
 
         # Set up a few flags, counters and lists
         layer_flag = False
@@ -112,7 +110,7 @@ class SliceConverter:
         progress = 10.0
         progress_previous = None
 
-        with open(file_name, 'rb') as cls_file:
+        with open(filename, 'rb') as cls_file:
             # Split the entire file into a massive list if the following strings are found
             data_binary = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
                                    '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', cls_file.read())
@@ -165,14 +163,14 @@ class SliceConverter:
 
         return data_ascii
 
-    def read_cli(self, file_name):
+    def read_cli(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
         # UI Progress and Status Messages
         progress_count = 0.0
         progress_previous = None
         self.status.emit('Current Part: %s | Reading CLI (BINARY) file...' %
-                         os.path.basename(file_name).replace('.cli', ''))
+                         os.path.basename(filename).replace('.cli', ''))
         self.progress.emit(0)
 
         # Set up a few lists, flags, counters
@@ -184,10 +182,10 @@ class SliceConverter:
         header_length = 0
 
         # Grab the file size of the cli file in bytes
-        file_size = os.path.getsize(file_name)
+        file_size = os.path.getsize(filename)
 
         # File needs to be opened and read as binary as it is encoded in binary
-        with open(file_name, 'rb') as cli_file:
+        with open(filename, 'rb') as cli_file:
 
             # Get pertinent information from the header by reading the lines and storing them in the final data list
             for line in cli_file.readlines():
@@ -249,23 +247,23 @@ class SliceConverter:
                     self.check_flags()
                     while self.pause_flag:
                         self.status.emit('Current Part: %s | Conversion paused.' %
-                                         os.path.basename(file_name).replace('.cli', ''))
+                                         os.path.basename(filename).replace('.cli', ''))
                         time.sleep(1)
                         self.check_flags()
                     if not self.run_flag:
                         self.status.emit('Current Part: %s | Conversion stopped.' %
-                                         os.path.basename(file_name).replace('.cli', ''))
+                                         os.path.basename(filename).replace('.cli', ''))
                         self.draw_flag = False
                         return None
 
                     self.status.emit('Current Part: %s | Reading CLI (BINARY) file...' %
-                                     os.path.basename(file_name).replace('.cli', ''))
+                                     os.path.basename(filename).replace('.cli', ''))
 
         return data_ascii
 
-    def read_cli_ascii(self, file_name):
+    def read_cli_ascii(self, filename):
         # Open the .cli file
-        with open(file_name, 'r') as cli_file:
+        with open(filename, 'r') as cli_file:
             # print(len(cli_file.read()))
             increment = 0.001
             # increment = 100.0 / sum(1 for _ in cli_file.read())
@@ -295,7 +293,7 @@ class SliceConverter:
                     progress_previous = int(round(progress))
                 progress += increment
 
-    def format_contours(self, file_name, data_ascii):
+    def format_contours(self, filename, data_ascii):
         """Formats the data from the slice file into an organized scaled list of contours
         First element is the number of layers
         Every layer starts with a STARTLAYERXX, YY list, followed by the list of contours, followed by a ENDLAYER
@@ -308,14 +306,14 @@ class SliceConverter:
         progress_previous = None
         increment = 100.0 / (len(data_ascii))
         self.status.emit('Current Part: %s | Formatting contour data...' %
-                         os.path.basename(file_name).replace('_contours.txt', ''))
+                         os.path.basename(filename).replace('_contours.txt', ''))
         self.progress.emit(0)
 
         # Initialize some variables to be used later
         units = data_ascii[0]
         layer_count = 0
 
-        with open(file_name, 'w+') as contours_file:
+        with open(filename, 'w+') as contours_file:
             # Write the first line, the number of layers, to the text file
             contours_file.write('%s\n' % ['LAYERS', data_ascii[1]])
 
@@ -346,27 +344,27 @@ class SliceConverter:
                     self.check_flags()
                     while self.pause_flag:
                         self.status.emit('Current Part: %s | Conversion paused.' %
-                                         os.path.basename(file_name).replace('_contours.txt', ''))
+                                         os.path.basename(filename).replace('_contours.txt', ''))
                         time.sleep(1)
                         self.check_flags()
                     if not self.run_flag:
                         self.status.emit('Current Part: %s | Conversion stopped.' %
-                                         os.path.basename(file_name).replace('_contours.txt', ''))
+                                         os.path.basename(filename).replace('_contours.txt', ''))
                         self.draw_flag = False
                         return None
 
                     self.status.emit('Current Part: %s | Formatting contour data...' %
-                                     os.path.basename(file_name).replace('_contours.txt', ''))
+                                     os.path.basename(filename).replace('_contours.txt', ''))
 
             # Write the final ENDLAYER to the contours file
             contours_file.write('%s\n' % ['ENDLAYER'])
 
-    def draw_contours(self, file_names, part_colours, folder_name):
+    def draw_contours(self, filenames, part_colours, folder):
         """Draw all the contours of the selected parts on the same image"""
 
         # Make sure the received contours folder exists
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
 
         # UI Progress and Status Messages
         progress = 0.0
@@ -393,12 +391,12 @@ class SliceConverter:
             image_contours = np.zeros(self.image_resolution, np.uint8)
             image_names = np.zeros(self.image_resolution, np.uint8)
 
-            for file_name in file_names:
+            for filename in filenames:
                 # Create an empty contours list to store all the contours of the current layer
                 contours = list()
                 contours_flag = False
 
-                with open(file_name.replace('.cli', '_contours.txt').replace('.cls', '_contours.txt')) as contours_file:
+                with open(filename.replace('.cli', '_contours.txt').replace('.cls', '_contours.txt')) as contours_file:
                     for line in contours_file:
                         # Grab the contours and format them as a numpy array that drawContours accepts
                         if 'ENDLAYER' in line and contours_flag:
@@ -416,7 +414,7 @@ class SliceConverter:
 
                 # Draw the contours onto the image_contours canvas
                 cv2.drawContours(image_contours, contours, -1,
-                                 part_colours[os.path.splitext(os.path.basename(file_name))[0]],
+                                 part_colours[os.path.splitext(os.path.basename(filename))[0]],
                                  offset=self.offset, thickness=cv2.FILLED)
 
                 # For the first layer, find the centre of the contours and put the part names on a blank image
@@ -425,7 +423,7 @@ class SliceConverter:
                     moments = cv2.moments(contours[0])
                     centre_x = int(moments['m10'] / moments['m00'])
                     centre_y = abs(self.image_resolution[0] - int(moments['m01'] / moments['m00']))
-                    cv2.putText(image_names, os.path.splitext(os.path.basename(file_name))[0], (centre_x, centre_y),
+                    cv2.putText(image_names, os.path.splitext(os.path.basename(filename))[0], (centre_x, centre_y),
                                 cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
 
             self.status.emit('Current Part: All | Drawing contours %s of %s.' %
@@ -438,12 +436,12 @@ class SliceConverter:
             image_contours = image_processing.ImageTransform(None).transform(image_contours, self.transform)
 
             # Save the image to the selected image folder
-            cv2.imwrite('%s/contours_%s.png' % (folder_name, str(layer).zfill(4)), image_contours)
+            cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
 
             # Save the part names image to the contours up one folder after transforming it just like the contours image
             if layer == 1:
                 image_names = image_processing.ImageTransform(None).transform(image_names, self.transform)
-                cv2.imwrite('%s/part_names.png' % os.path.dirname(folder_name), image_names)
+                cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
             # Increment to the next layer
             layer += 1
@@ -459,9 +457,9 @@ class SliceConverter:
         with open('config.json') as config:
             self.config = json.load(config)
 
-        if self.config['SliceConverter']['Build']:
-            self.run_flag = self.config['BuildInfo']['Run']
-            self.pause_flag = self.config['BuildInfo']['Pause']
+        if self.build['SliceConverter']['Build']:
+            self.run_flag = self.build['BuildInfo']['Run']
+            self.pause_flag = self.build['BuildInfo']['Pause']
         else:
-            self.run_flag = self.config['SliceConverter']['Run']
-            self.pause_flag = self.config['SliceConverter']['Pause']
+            self.run_flag = self.build['SliceConverter']['Run']
+            self.pause_flag = self.build['SliceConverter']['Pause']

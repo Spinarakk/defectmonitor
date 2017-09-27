@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>347</width>
-    <height>369</height>
+    <width>338</width>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,115 +18,7 @@
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="3" column="3">
-    <widget class="QPushButton" name="pushBrowseHI">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Browse...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="labelTestImage">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Select the image to be used to test the calculated calibration results.</string>
-     </property>
-     <property name="text">
-      <string>Test Image</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="3">
-    <widget class="QPushButton" name="pushBrowseTI">
-     <property name="text">
-      <string>Browse...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0" colspan="4">
-    <widget class="QLabel" name="labelStatus">
-     <property name="text">
-      <string>Waiting to start process.</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1" colspan="2">
-    <widget class="QLineEdit" name="lineHomographyImage">
-     <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1" colspan="2">
-    <widget class="QLineEdit" name="lineTestImage">
-     <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="4">
-    <widget class="QListWidget" name="listImages"/>
-   </item>
-   <item row="0" column="0" colspan="3">
-    <widget class="QLineEdit" name="lineCalibrationFolder">
-     <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="3">
-    <widget class="QPushButton" name="pushBrowseF">
-     <property name="text">
-      <string>Browse...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="labelHomographyImage">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Select the image to be used to calculate the homography image.</string>
-     </property>
-     <property name="text">
-      <string>Homography</string>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="0" colspan="4">
+   <item row="11" column="0" colspan="4">
     <widget class="QFrame" name="frameButtons">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -190,94 +82,7 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0" colspan="4">
-    <widget class="QLabel" name="labelImages">
-     <property name="text">
-      <string>List of images:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="2" colspan="2">
-    <widget class="QCheckBox" name="checkApply">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Check to apply found camera matrix, distortion coefficient and homography matrix processing to the sample image.</string>
-     </property>
-     <property name="text">
-      <string>Apply to Test Image</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="2" colspan="2">
-    <widget class="QCheckBox" name="checkSaveU">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Check to save undistorted calibration images to the undistorted folder.</string>
-     </property>
-     <property name="text">
-      <string>Save Undistorted Images</string>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="2" colspan="2">
-    <widget class="QCheckBox" name="checkSaveC">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Check to save drawn chessboard corner calibration images to the corners folder.</string>
-     </property>
-     <property name="text">
-      <string>Save Chessboard Images</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="4">
-    <widget class="QProgressBar" name="progressBar">
-     <property name="value">
-      <number>0</number>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="textVisible">
-      <bool>true</bool>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0" colspan="4">
-    <widget class="QLabel" name="labelCalibrationSettings">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Calibration Settings</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="0" rowspan="3" colspan="2">
+   <item row="8" column="0" rowspan="3" colspan="2">
     <widget class="QFrame" name="frameCalibrationSettings">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -305,12 +110,12 @@
        <widget class="QLabel" name="labelWidth">
         <property name="font">
          <font>
-          <weight>75</weight>
-          <bold>true</bold>
+          <weight>50</weight>
+          <bold>false</bold>
          </font>
         </property>
         <property name="toolTip">
-         <string>Sets the number of square corners the width of the chessboard has.</string>
+         <string>Number of square corners along the width of the chessboard.</string>
         </property>
         <property name="text">
          <string>Chessboard Width</string>
@@ -337,12 +142,12 @@
        <widget class="QLabel" name="labelHeight">
         <property name="font">
          <font>
-          <weight>75</weight>
-          <bold>true</bold>
+          <weight>50</weight>
+          <bold>false</bold>
          </font>
         </property>
         <property name="toolTip">
-         <string>Sets the number of square corners the height of the chessboard has.</string>
+         <string>Number of square corners along the height of the chessboard.</string>
         </property>
         <property name="text">
          <string>Chessboard Height</string>
@@ -369,12 +174,12 @@
        <widget class="QLabel" name="labelRatio">
         <property name="font">
          <font>
-          <weight>75</weight>
-          <bold>true</bold>
+          <weight>50</weight>
+          <bold>false</bold>
          </font>
         </property>
         <property name="toolTip">
-         <string>Sets the downscaling ratio to use to speed up calibration.</string>
+         <string>Downscaling ratio used to speed up calibration at the cost of accuracy.</string>
         </property>
         <property name="text">
          <string>Downscaling Ratio</string>
@@ -400,14 +205,227 @@
      </layout>
     </widget>
    </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="labelTestImage">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Image used to test the calculated calibration results.</string>
+     </property>
+     <property name="text">
+      <string>Test Image</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="4">
+    <widget class="QLabel" name="labelStatus">
+     <property name="text">
+      <string>Waiting to start process.</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineHomographyImage">
+     <property name="focusPolicy">
+      <enum>Qt::ClickFocus</enum>
+     </property>
+     <property name="toolTip">
+      <string>Image used to calculate the homography matrix.</string>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QPushButton" name="pushBrowseTI">
+     <property name="text">
+      <string>Browse...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="3">
+    <widget class="QPushButton" name="pushBrowseHI">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Browse...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineTestImage">
+     <property name="focusPolicy">
+      <enum>Qt::ClickFocus</enum>
+     </property>
+     <property name="toolTip">
+      <string>Image used to test the calculated calibration results.</string>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="2" colspan="2">
+    <widget class="QCheckBox" name="checkSaveC">
+     <property name="font">
+      <font>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Check to save drawn chessboard corner calibration images to the corners folder.</string>
+     </property>
+     <property name="text">
+      <string>Save Chessboard Images</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="3">
+    <widget class="QLineEdit" name="lineCalibrationFolder">
+     <property name="focusPolicy">
+      <enum>Qt::ClickFocus</enum>
+     </property>
+     <property name="toolTip">
+      <string>Folder containing calibration images.</string>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="4">
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="textVisible">
+      <bool>true</bool>
+     </property>
+     <property name="invertedAppearance">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="2" colspan="2">
+    <widget class="QCheckBox" name="checkSaveU">
+     <property name="font">
+      <font>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Check to save undistorted calibration images to the undistorted folder.</string>
+     </property>
+     <property name="text">
+      <string>Save Undistorted Images</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelHomographyImage">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Image used to calculate the homography matrix.</string>
+     </property>
+     <property name="text">
+      <string>Homography</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QPushButton" name="pushBrowseF">
+     <property name="text">
+      <string>Browse...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="2" colspan="2">
+    <widget class="QCheckBox" name="checkApply">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="font">
+      <font>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Check to test calculated calibration results on the selected test image.</string>
+     </property>
+     <property name="text">
+      <string>Apply to Test Image</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="4">
+    <widget class="QListWidget" name="listImages">
+     <property name="toolTip">
+      <string>List of calibration images found in the above folder.</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="4">
+    <widget class="QLabel" name="labelCalibrationSettings">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Calibration Settings</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
   <tabstop>pushBrowseF</tabstop>
   <tabstop>listImages</tabstop>
+  <tabstop>pushBrowseHI</tabstop>
+  <tabstop>pushBrowseTI</tabstop>
+  <tabstop>spinWidth</tabstop>
+  <tabstop>spinHeight</tabstop>
+  <tabstop>spinRatio</tabstop>
   <tabstop>checkSaveC</tabstop>
   <tabstop>checkSaveU</tabstop>
   <tabstop>checkApply</tabstop>
+  <tabstop>pushStart</tabstop>
+  <tabstop>pushResults</tabstop>
+  <tabstop>pushSave</tabstop>
+  <tabstop>pushDone</tabstop>
  </tabstops>
  <resources>
   <include location="icons.qrc"/>
@@ -420,8 +438,8 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>326</x>
-     <y>413</y>
+     <x>327</x>
+     <y>339</y>
     </hint>
     <hint type="destinationlabel">
      <x>191</x>

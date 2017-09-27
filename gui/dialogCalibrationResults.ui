@@ -39,6 +39,9 @@
        <bold>true</bold>
       </font>
      </property>
+     <property name="toolTip">
+      <string>Matrix that describes the mapping of a pinhole camera from 3D points in the real world to 2D points in an image.</string>
+     </property>
      <property name="text">
       <string>Camera Matrix</string>
      </property>
@@ -56,6 +59,9 @@
        <bold>true</bold>
       </font>
      </property>
+     <property name="toolTip">
+      <string>Values that specify how to undistort the image to correct any radial and tangential distortion caused by pinhole cameras.</string>
+     </property>
      <property name="text">
       <string>Distortion Coefficients</string>
      </property>
@@ -72,6 +78,9 @@
        <weight>75</weight>
        <bold>true</bold>
       </font>
+     </property>
+     <property name="toolTip">
+      <string>Matrix that describes the relation of two images with the same planar surface in space that is used to warp the perspective of an image onto another.</string>
      </property>
      <property name="text">
       <string>Homography Matrix</string>
@@ -91,7 +100,7 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>An acceptable error should be less than 1 pixel.</string>
+      <string>Geometric error corresponding to the image distance between a projected point and a measured one. An acceptable error should be less than 1 pixel.</string>
      </property>
      <property name="text">
       <string>Re-Projection Error: 0.000000000</string>

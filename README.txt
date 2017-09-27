@@ -112,8 +112,9 @@ Nomenclature Notes
 - All PyQt GUI Object names use camelCaps with the first word being what the object is
 - Similar code grouped in boxes with comment describing what that block does
 - Variable naming schemes
+	- filename / XXX_folder (strings that contain a file/folder name)
 	- XXX_name (Strings that contain a file/folder name)
-	- XXX_file (The actual open file used within with blocks)
+	- XXX_file (The actual open file used within with blocks, exception: config)
 	- XXX_flag (Flags)
 	- XXX_dialog (For dialog windows)
 	- XXX_instance (For Qthread instances)

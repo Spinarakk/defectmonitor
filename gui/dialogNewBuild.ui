@@ -138,7 +138,7 @@
     </widget>
    </item>
    <item row="12" column="5">
-    <widget class="QPushButton" name="pushClose">
+    <widget class="QPushButton" name="pushCancel">
      <property name="text">
       <string>Cancel</string>
      </property>
@@ -520,30 +520,14 @@
   <tabstop>checkAddAttachment</tabstop>
   <tabstop>pushBrowseSF</tabstop>
   <tabstop>pushBrowseBF</tabstop>
-  <tabstop>pushClose</tabstop>
+  <tabstop>pushCancel</tabstop>
  </tabstops>
  <resources>
   <include location="icons.qrc"/>
  </resources>
  <connections>
   <connection>
-   <sender>pushCreate</sender>
-   <signal>clicked()</signal>
-   <receiver>dialogNewBuild</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>255</x>
-     <y>410</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>205</x>
-     <y>217</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushClose</sender>
+   <sender>pushCancel</sender>
    <signal>clicked()</signal>
    <receiver>dialogNewBuild</receiver>
    <slot>reject()</slot>

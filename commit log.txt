@@ -1,3 +1,6 @@
+September 27
+- 
+
 September 26
 - Implemented the compare overlay function that compares the detect scan pattern output with the contour part overlay using template matching
 - Fixed the layout scaling issues of the Slice Converter, Overlay Adjustment, Camera Calibration, Camera Settings and Calibration Results dialog windows

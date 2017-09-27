@@ -25,7 +25,7 @@ class ImageTransform:
 
         # Checks whether to use the temporary results of the camera calibration, or the ones saved in the config file
         if test_flag:
-            with open('%s/calibration_results.json' % self.config['WorkingDirectory']) as camera_parameters:
+            with open('%s/calibration_results.json' % self.build['WorkingDirectory']) as camera_parameters:
                 self.parameters = json.load(camera_parameters)
                 self.parameters = self.parameters['ImageCorrection']
         else:
@@ -165,23 +165,23 @@ class DefectDetector:
         # Checking if the received image exists (a blank string may be sent which means the image doesn't exist)
         # Only a problem for the contours and previous images as this method cannot be accessed if the raw doesn't exist
         # image_raw refers to the original image and will remain unmodified throughout the class
-        self.image_raw = cv2.imread(self.config['DefectDetector']['Image'])
+        self.image_raw = cv2.imread(self.build['DefectDetector']['Image'])
         # image_contours refers to the image with all the part contours drawn on them
-        if os.path.isfile(self.config['DefectDetector']['Contours']):
-            self.image_contours = cv2.imread(self.config['DefectDetector']['Contours'])
+        if os.path.isfile(self.build['DefectDetector']['Contours']):
+            self.image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
             self.contours_flag = True
         else:
             self.contours_flag = False
 
         # image_previous refers to the previous layer's image
-        if os.path.isfile(self.config['DefectDetector']['ImagePrevious']):
-            self.image_previous = cv2.imread(self.config['DefectDetector']['ImagePrevious'])
+        if os.path.isfile(self.build['DefectDetector']['ImagePrevious']):
+            self.image_previous = cv2.imread(self.build['DefectDetector']['ImagePrevious'])
             self.compare_flag = True
         else:
             self.compare_flag = False
 
-        self.layer = str(self.config['DefectDetector']['Layer']).zfill(4)
-        self.phase = self.config['DefectDetector']['Phase']
+        self.layer = str(self.build['DefectDetector']['Layer']).zfill(4)
+        self.phase = self.build['DefectDetector']['Phase']
 
         # This is the master defect dictionary which stores all the defect results for all the parts
         self.defect_dict = dict()
@@ -190,12 +190,12 @@ class DefectDetector:
         # self.defects_off = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
 
         # Store a dictionary of all the reports to be written to (including the background and combined reports)
-        self.part_colours = self.config['BuildInfo']['Colours']
+        self.part_colours = self.build['BuildInfo']['Colours']
 
         # Open all the reports and save their dictionaries to the master defect dictionary
         # These dictionaries will be overwritten with new data should the program process the same layer/part
         for report_name in self.part_colours.keys():
-            with open('%s/reports/%s_report.json' % (self.config['ImageCapture']['Folder'], report_name)) as report:
+            with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'], report_name)) as report:
                 self.defect_dict[report_name] = json.load(report)
 
             # The dictionary needs to be built up if it doesn't already exist
@@ -219,9 +219,9 @@ class DefectDetector:
             image_scan = self.image_raw.copy()
             self.analyze_scan(image_scan)
 
-        # Save all the reports to their respective JSON files
+        # Save all the reports to their respective json files
         for report_name in self.part_colours.keys():
-            with open('%s/reports/%s_report.json' % (self.config['ImageCapture']['Folder'], report_name),
+            with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'], report_name),
                       'w+') as report:
                 json.dump(self.defect_dict[report_name], report, indent=4, sort_keys=True)
 
@@ -248,7 +248,7 @@ class DefectDetector:
             self.compare_histogram(self.image_raw, self.image_previous)
 
         # Save the analyzed coat image with all the defects on it to the correct folder
-        cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.config['ImageCapture']['Folder'], self.phase, self.phase,
+        cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
                                                   self.layer), image_coat)
         self.progress.emit(100)
 
@@ -266,7 +266,7 @@ class DefectDetector:
             self.compare_histogram(self.image_raw, self.image_previous)
 
         # Save the analyzed scan image with all the defects on it to the correct folder
-        cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.config['ImageCapture']['Folder'], self.phase, self.phase,
+        cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
                                                   self.layer), image_scan)
         self.progress.emit(100)
 
@@ -328,8 +328,8 @@ class DefectDetector:
 
         # Load the chatter template images into memory in grayscale
         chatter_templates = list()
-        for file_name in os.listdir('%s/templates' % self.config['WorkingDirectory']):
-            chatter_templates.append(cv2.imread('%s/templates/%s' % (self.config['WorkingDirectory'], file_name), 0))
+        for filename in os.listdir('%s/templates' % self.build['WorkingDirectory']):
+            chatter_templates.append(cv2.imread('%s/templates/%s' % (self.build['WorkingDirectory'], filename), 0))
 
             for template in chatter_templates:
                 # Look for the template in the original image

@@ -21,8 +21,8 @@ class Notifications(QThread):
 
         # Construct the email using the received subject and message
         self.message = MIMEMultipart()
-        self.message['From'] = self.config['Notifications']['Sender']
-        self.message['To'] = self.config['BuildInfo']['EmailAddress']
+        self.message['From'] = self.build['Notifications']['Sender']
+        self.message['To'] = self.build['BuildInfo']['EmailAddress']
         self.message['Subject'] = subject
         self.message.attach(MIMEText(message, 'plain'))
 
@@ -39,7 +39,7 @@ class Notifications(QThread):
         # Connect to the gmail server, login to the default sender email and send the message
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(self.config['Notifications']['Sender'], self.config['Notifications']['Password'])
-        server.sendmail(self.config['Notifications']['Sender'], self.config['BuildInfo']['EmailAddress'],
+        server.login(self.build['Notifications']['Sender'], self.build['Notifications']['Password'])
+        server.sendmail(self.build['Notifications']['Sender'], self.build['BuildInfo']['EmailAddress'],
                         self.message.as_string())
         server.quit()

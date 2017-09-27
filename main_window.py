@@ -15,7 +15,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 
+# Compile UI files, can be disabled if UIs have been finalized to reduce startup time
 uic.compileUiDir('gui')
+
 # # Import related modules
 import dialog_windows
 import image_capture
@@ -41,19 +43,24 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         super(self.__class__, self).__init__(parent)
         self.setupUi(self)
 
-        # Load default configuration settings from the hidden config_default.json file
-        with open('config_default.json') as config:
+        # Load default build settings from the hidden non-user accessible build_default.json file
+        with open('build_default.json') as build:
+            self.build = json.load(build)
+
+        # Load config settings from the hidden non-user accessible config.json file
+        with open('config.json') as config:
             self.config = json.load(config)
 
         # Get the current working directory and save it to the config.json file so later methods can grab it
         # Additionally, create a default builds folder (if it doesn't exist) using the cwd to store images
-        self.config['WorkingDirectory'] = os.getcwd().replace('\\', '/')
-        self.config['BuildInfo']['Folder'] = os.path.dirname(self.config['WorkingDirectory']) + '/Builds'
-        if not os.path.isdir(self.config['BuildInfo']['Folder']):
-            os.makedirs(self.config['BuildInfo']['Folder'])
+        self.build['WorkingDirectory'] = os.getcwd().replace('\\', '/')
+        self.build['BuildInfo']['Folder'] = os.path.dirname(self.build['WorkingDirectory']) + '/Builds'
+        if not os.path.isdir(self.build['BuildInfo']['Folder']):
+            os.makedirs(self.build['BuildInfo']['Folder'])
 
-        # Save the default config to the current working config.json file
-        self.save_settings()
+        # Save the default build to the current working build.json file (using w+ in case file doesn't exist)
+        with open('build.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Menubar -> File
@@ -161,7 +168,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.CS_dialog = None
 
         # Initiate an empty config file name to be used for saving purposes
-        self.config_name = None
+        self.build_name = None
 
         # Initialize the counter for the defect processing method
         self.defect_counter = 0
@@ -200,23 +207,25 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def open_build(self):
         """Opens a File Dialog when File -> Open... is clicked
-        Allows the user to select a previous build's configuration settings
+        Allows the user to select a previous build's settings
         Subsequently opens the New Build Dialog Window with all the boxes filled in, allowing the user to make changes
         """
 
         # Acquire the name of the config file to be opened and read
-        file_name = QFileDialog.getOpenFileName(self, 'Browse...', self.config['BuildInfo']['Folder'],
-                                                'JSON File (*.json)')[0]
+        filename = QFileDialog.getOpenFileName(self, 'Browse...', self.build['BuildInfo']['Folder'],
+                                               'JSON File (*.json)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
-        if file_name:
-            # Open the config file and overwrite the contents of the default config file with the new config file
-            with open(file_name) as config:
-                self.config = json.load(config)
+        if filename:
+            # Load from the selected build file and overwrite the contents of the working build dictionary
+            with open(filename) as build:
+                self.build = json.load(build)
 
-            self.save_settings()
+            # Save to the build.json file
+            with open('build.json', 'r+') as build:
+                json.dump(self.build, build, indent=4, sort_keys=True)
 
-            self.config_name = file_name
+            self.build_name = filename
 
             OB_dialog = dialog_windows.NewBuild(self, open_flag=True)
 
@@ -226,12 +235,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def setup_build(self):
         """Sets up the widgetDisplay and any background processes for the current build"""
 
-        # Reload any modified configuration settings that the New Build dialog has changed
-        self.load_settings()
+        # Reload any modified build settings that the New Build dialog has changed
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         # Store config settings as respective variables and update appropriate UI elements
-        self.transform = self.config['ImageCorrection']['TransformParameters']
-        self.setWindowTitle('Defect Monitor - Build ' + self.config['BuildInfo']['Name'])
+        self.setWindowTitle('Defect Monitor - Build ' + self.build['BuildInfo']['Name'])
 
         # Enable certain UI elements
         self.actionSave.setEnabled(True)
@@ -239,14 +248,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushAcquireCT.setEnabled(True)
 
         # Store the names of the seven folders (one is a spacer) to be monitored in the display dictionary
-        self.display['ImageFolder'] = ['%s/processed/coat' % self.config['ImageCapture']['Folder'],
-                                       '%s/processed/scan' % self.config['ImageCapture']['Folder'],
-                                       '%s/contours' % self.config['ImageCapture']['Folder'],
-                                       '%s/processed/single' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects/coat' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects/scan' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects' % self.config['ImageCapture']['Folder'],
-                                       '%s/defects/single' % self.config['ImageCapture']['Folder']]
+        self.display['ImageFolder'] = ['%s/processed/coat' % self.build['ImageCapture']['Folder'],
+                                       '%s/processed/scan' % self.build['ImageCapture']['Folder'],
+                                       '%s/contours' % self.build['ImageCapture']['Folder'],
+                                       '%s/processed/single' % self.build['ImageCapture']['Folder'],
+                                       '%s/defects/coat' % self.build['ImageCapture']['Folder'],
+                                       '%s/defects/scan' % self.build['ImageCapture']['Folder'],
+                                       '%s/defects' % self.build['ImageCapture']['Folder'],
+                                       '%s/defects/single' % self.build['ImageCapture']['Folder']]
 
         # Start the image viewer to begin displaying images
         self.start_display()
@@ -257,12 +266,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         time.sleep(1)
 
         # Converts and draws the contours if set to do so in the build settings
-        if self.config['BuildInfo']['Convert']:
+        if self.build['BuildInfo']['Convert']:
             # Set the appropriate flags in the config.json file to run the slice conversion
-            self.config['BuildInfo']['Pause'] = False
-            self.config['BuildInfo']['Run'] = True
-            self.config['SliceConverter']['Build'] = True
-            self.save_settings()
+            self.build['BuildInfo']['Pause'] = False
+            self.build['BuildInfo']['Run'] = True
+            self.build['SliceConverter']['Build'] = True
+
+            # Save to the build.json file
+            with open('build.json', 'r+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
 
             self.pushPauseConversion.setEnabled(True)
             self.pushStopConversion.setEnabled(True)
@@ -280,20 +292,28 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Executes when the Pause/Resume button in the Slice Conversion group box is clicked"""
 
         if 'Pause' in self.pushPauseConversion.text():
-            self.config['BuildInfo']['Pause'] = True
-            self.save_settings()
+            self.build['BuildInfo']['Pause'] = True
             self.pushPauseConversion.setText('Resume')
+            # Save to the build.json file
+            with open('build.json', 'r+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
+
         elif 'Resume' in self.pushPauseConversion.text():
-            self.config['BuildInfo']['Pause'] = False
-            self.save_settings()
+            self.build['BuildInfo']['Pause'] = False
             self.pushPauseConversion.setText('Pause')
+            # Save to the build.json file
+            with open('build.json', 'r+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
 
     def setup_build_finished(self):
         """Executes when the slice conversion thread is finished, or the Stop button is pressed"""
 
-        self.config['BuildInfo']['Pause'] = False
-        self.config['BuildInfo']['Run'] = False
-        self.save_settings()
+        self.build['BuildInfo']['Pause'] = False
+        self.build['BuildInfo']['Run'] = False
+
+        # Save to the build.json file
+        with open('build.json', 'r+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         self.pushPauseConversion.setEnabled(False)
         self.pushStopConversion.setEnabled(False)
@@ -301,7 +321,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_folders()
         self.update_progress(0)
-        self.update_status('Build %s setup complete.' % self.config['BuildInfo']['Name'], 10000)
+        self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 10000)
 
     def clear_menu(self):
         pass
@@ -311,11 +331,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Executes save_as_build instead if this is the first time the build is being saved
         """
 
-        if self.config_name:
-            # Save the config file as the given name in the given location
-            with open(self.config_name, 'w+') as config:
-                json.dump(self.config, config, indent=4, sort_keys=True)
-            self.update_status('Build saved to %s.' % os.path.basename(self.config_name), 5000)
+        if self.build_name:
+            # Save the current build as the given filename in the given location
+            with open(self.build_name, 'w+') as build:
+                json.dump(self.build, build, indent=4, sort_keys=True)
+
+            self.update_status('Build saved to %s.' % os.path.basename(self.build_name), 5000)
         else:
             self.save_as_build()
 
@@ -324,12 +345,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
 
-        config_name, _ = QFileDialog.getSaveFileName(self, 'Save Build As', self.config['BuildInfo']['Name'],
-                                                     'JSON File (*.json)')
+        filename = QFileDialog.getSaveFileName(self, 'Save Build As', self.build['BuildInfo']['Name'],
+                                               'JSON File (*.json)')[0]
 
         # Checking if user has chosen to save the build or clicked cancel
-        if config_name:
-            self.config_name = config_name
+        if filename:
+            self.build_name = filename
             self.save_build()
 
     def export_image(self):
@@ -338,7 +359,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        image_name, _ = QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)')
+        image_name = QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)')[0]
 
         # Checking if user has chosen to save the image or clicked cancel
         if image_name:
@@ -383,8 +404,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Opens a Modeless Dialog Window when the Calibration Results button is clicked
         Displays the results of the camera calibration to the user"""
 
-        with open('config.json') as config:
-            results = json.load(config)
+        # Load from the config.json file (that contains the calibration results)
+        with open('config.json') as file:
+            results = json.load(file)
 
         try:
             self.calibration_results_dialog.close()
@@ -461,7 +483,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Get the name of the image file to be processed
-        image_name, _ = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')
+        image_name = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')[0]
 
         # Checking if user has selected a file or clicked cancel
         if image_name:
@@ -533,8 +555,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.toggle_processing_buttons(False)
 
             # Remove the already processed defect images from the image list
-            self.layer_numbers = list(set(self.display['LayerNumbers'][self.tab_index]) - \
-                                 set(self.display['LayerNumbers'][self.tab_index + 4]))
+            self.layer_numbers = list(set(self.display['LayerNumbers'][self.tab_index]) -
+                                      set(self.display['LayerNumbers'][self.tab_index + 4]))
             self.process_settings(self.layer_numbers[self.defect_counter])
 
         elif 'Process Stop' in self.pushProcessAll.text():
@@ -551,32 +573,35 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         pass
 
     def process_settings(self, layer):
-        """Saves the settings to be used to process an image for defects to the config.json file
+        """Saves the settings to be used to process an image for defects to the build.json file
         This method exists as the only difference between the two options is the layer number"""
 
-        self.load_settings()
+        # Load from the build.json file
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         # Grab some pertinent information (for clearer code purposes)
         phase = self.display['FolderNames'][self.tab_index].lower()[:-1]
 
-        self.config['DefectDetector']['Image'] = self.display['ImageList'][self.tab_index][layer - 1]
-        self.config['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
-        self.config['DefectDetector']['Layer'] = layer
-        self.config['DefectDetector']['Phase'] = phase
+        self.build['DefectDetector']['Image'] = self.display['ImageList'][self.tab_index][layer - 1]
+        self.build['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
+        self.build['DefectDetector']['Layer'] = layer
+        self.build['DefectDetector']['Phase'] = phase
 
-        # Set the preivous image to be compared against the current image if it is not the first layer
+        # Set the previous image to be compared against the current image if it is not the first layer
         if layer > 1:
-            self.config['DefectDetector']['ImagePrevious'] = self.display['ImageList'][self.tab_index][layer - 2]
+            self.build['DefectDetector']['ImagePrevious'] = self.display['ImageList'][self.tab_index][layer - 2]
         else:
-            self.config['DefectDetector']['ImagePrevious'] = ''
+            self.build['DefectDetector']['ImagePrevious'] = ''
 
-        self.save_settings()
+        # Save to the build.json file
+        with open('build.json', 'r+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Disable the Process ... buttons to stop repeated concurrent processes
         self.pushProcessSelected.setEnabled(False)
         self.actionProcessSelected.setEnabled(False)
         self.processing_flag = True
-
 
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
@@ -647,14 +672,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         These buttons have to do with features or functions which could negatively impact the program if mishandled
         """
 
-        if self.actionAdvancedMode.isChecked():
-            self.actionCameraCalibration.setEnabled(True)
-            self.pushCameraCalibration.setEnabled(True)
-            self.actionCameraSettings.setEnabled(True)
-        else:
-            self.actionCameraCalibration.setEnabled(False)
-            self.pushCameraCalibration.setEnabled(False)
-            self.actionCameraSettings.setEnabled(False)
+        # Grab the bool value of the Advanced Mode 'checkbox' (for clearer code purposes)
+        flag = self.actionAdvancedMode.isChecked()
+
+        self.actionCameraCalibration.setEnabled(flag)
+        self.pushCameraCalibration.setEnabled(flag)
+        self.actionSliceConverter.setEnabled(flag)
+        self.pushSliceConverter.setEnabled(flag)
+        self.pushCapture.setEnabled(flag)
+        self.widgetDisplay.setTabEnabled(3, flag)
 
     # MENUBAR -> HELP
 
@@ -725,10 +751,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
         if self.checkResume.isChecked():
             self.spinStartingLayer.setEnabled(False)
-            self.config['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
-            self.config['ImageCapture']['Phase'] = 1
+            self.build['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
+            self.build['ImageCapture']['Phase'] = 1
 
-            self.save_settings()
+            # Save to the build.json file
+            with open('build.json', 'r+') as config:
+                json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Open the COM port associated with the attached trigger device
         self.serial_trigger = serial.Serial(self.labelTriggerStatus.text(), 9600, timeout=1)
@@ -812,8 +840,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushPauseResume.setEnabled(False)
         self.pushStop.setEnabled(False)
         self.pushAcquireCT.setEnabled(True)
-        self.pushCapture.setEnabled(True)
         self.checkResume.setEnabled(True)
+        if self.actionAdvancedMode.isChecked():
+            self.pushCapture.setEnabled(True)
 
         # Reset the Pause/Resume button back to its default state (including the text colour)
         self.pushPauseResume.setText('PAUSE')
@@ -938,20 +967,23 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Overlays the part names if the Toggle Part Names checkbox is checked
             if self.checkPartNames.isChecked():
                 # Load the part names image into memory
-                image_names = cv2.imread('%s/part_names.png' % self.config['ImageCapture']['Folder'])
+                image_names = cv2.imread('%s/part_names.png' % self.build['ImageCapture']['Folder'])
 
                 # Resize the overlay image if the resolution doesn't match the displayed image
                 if image_names.shape[:2] != image.shape[:2]:
                     image_names = cv2.resize(image_names, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
-                    
+
                 image = cv2.add(image, image_names)
 
             # Applies CLAHE to the display image if the Equalization checkbox is checked
             if self.checkCLAHE.isChecked():
                 image = image_processing.ImageTransform.clahe(image)
 
+            # Convert from OpenCV's BGR format to RGB so that colours are displayed correctly
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
             # Display the image on the current GraphicsView
-            graphics.set_image(self.convert2pixmap(image))
+            graphics.set_image(image)
 
             # Save the current (modified) image so that it can be exported if need be
             self.display['DisplayImage'][index] = image
@@ -966,9 +998,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             else:
                 self.checkOverlay.setEnabled(False)
                 self.checkOverlay.setChecked(False)
-                
+
             # Similar to above, disable the Toggle Part Names checkbox if the part names image isn't found
-            if os.path.isfile('%s/part_names.png' % self.config['ImageCapture']['Folder']):
+            if os.path.isfile('%s/part_names.png' % self.build['ImageCapture']['Folder']):
                 self.checkPartNames.setEnabled(True)
             else:
                 self.checkPartNames.setEnabled(False)
@@ -1013,7 +1045,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkOverlay.setEnabled(True)
                 self.radioDefects.setEnabled(True)
 
-        # Seek flag refers to the button configuration when a layer image isn't found (rather than there being no images)
+        # Seek flag refers to the button setup when a layer image isn't found (rather than there being no images)
         if seek_flag:
             self.pushDisplayUpSeek.setEnabled(not flag)
             self.pushDisplayDownSeek.setEnabled(not flag)
@@ -1049,24 +1081,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_overlay(self, transform):
         """Executes the adjustment of the overlay"""
-        self.load_settings()
-
-        self.transform = transform
-
-        self.update_display(self.widgetDisplay.currentIndex())
-
-    @staticmethod
-    def convert2pixmap(image):
-        """Converts the received image into a QPixmap that can be displayed on the graphics viewer"""
-
-        # If the image is a BGR image, convert to RGB so that colours can be displayed properly
-        if len(image.shape) == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Convert to QPixmap using in-built Qt functions
-        qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
-
-        return QPixmap.fromImage(qimage)
+        pass
 
     def context_menu_display(self, position):
         """Opens a context menu at the right-clicked position of any of the display labels
@@ -1208,11 +1223,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 # Reset the layer numbers in the display dictionary
                 self.display['LayerNumbers'][index][:] = list()
 
-                for file_name in os.listdir(self.display['ImageFolder'][index]):
-                    if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
+                for filename in os.listdir(self.display['ImageFolder'][index]):
+                    if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
                         try:
                             # Check if the last four characters of the file name are numbers, otherwise file is ignored
-                            number = int(os.path.splitext(file_name)[0][-4:])
+                            number = int(os.path.splitext(filename)[0][-4:])
                         except ValueError:
                             pass
                         else:
@@ -1238,24 +1253,24 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if index == 3 or index > 6:
             # Empty the Single folder list and fill it with the file names in the folder
             self.display['ImageList'][index][:] = list()
-            for file_name in os.listdir(self.display['ImageFolder'][index]):
-                if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
-                    self.display['ImageList'][index].append('%s/%s' % (self.display['ImageFolder'][index], file_name))
+            for filename in os.listdir(self.display['ImageFolder'][index]):
+                if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
+                    self.display['ImageList'][index].append('%s/%s' % (self.display['ImageFolder'][index], filename))
         else:
             # Replace the list with a list of empty strings
             self.display['ImageList'][index] = ['' for _ in range(self.display['MaxLayers'])]
 
-            for file_name in os.listdir(self.display['ImageFolder'][index]):
-                if '.png' in file_name or '.jpg' in file_name or '.jpeg' in file_name:
+            for filename in os.listdir(self.display['ImageFolder'][index]):
+                if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
                     try:
                         # Check if the last four characters of the file name are numbers, otherwise file is ignored
-                        number = int(os.path.splitext(file_name)[0][-4:])
+                        number = int(os.path.splitext(filename)[0][-4:])
                     except ValueError:
                         pass
                     else:
                         # Save the current file name at the index as defined in the file's own name
                         self.display['ImageList'][index][number - 1] = '%s/%s' % (
-                            self.display['ImageFolder'][index], file_name)
+                            self.display['ImageFolder'][index], filename)
 
     def update_ranges(self, index):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
@@ -1278,7 +1293,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Camera status
         if bool(status[0]):
             self.labelCameraStatus.setText('FOUND')
-            self.pushCapture.setEnabled(True)
+            if self.actionAdvancedMode.isChecked():
+                self.pushCapture.setEnabled(True)
             if bool(status[1]):
                 self.pushRun.setEnabled(True)
         else:
@@ -1305,6 +1321,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     @staticmethod
     def format_time(time):
         """Format the individual seconds, minutes and hours into proper string time format"""
+
         seconds = str(time % 60).zfill(2)
         minutes = str(int((time % 3600) / 60)).zfill(2)
         hours = str(int(time / 3600)).zfill(2)
@@ -1313,19 +1330,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_status(self, string, duration=0):
         """Updates the default status bar at the bottom of the Main Window with the received string argument"""
+
         self.statusBar.showMessage(string, duration)
 
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
+
         self.progressBar.setValue(int(percentage))
-
-    def load_settings(self):
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-    def save_settings(self):
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
 
     # CLEANUP
 
@@ -1335,9 +1346,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
 if __name__ == '__main__':
     application = QApplication(sys.argv)
-    #application.setAttribute(Qt.AA_Use96Dpi)
-    #application.setAttribute(Qt.AA_DisableHighDpiScaling)
-    #application.setAttribute(Qt.AA_EnableHighDpiScaling)
     interface = MainWindow()
     interface.show()
     sys.exit(application.exec_())

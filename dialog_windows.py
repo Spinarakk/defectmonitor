@@ -37,49 +37,51 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        # Setup event listeners for all the relevent UI components, and connect them to specific functions
+        # Load from the build.json file
+        with open('build.json') as build:
+            self.build = json.load(build)
+
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Buttons
         self.pushBrowseSF.clicked.connect(self.browse_slice)
         self.pushBrowseBF.clicked.connect(self.browse_build_folder)
         self.pushSendTestEmail.clicked.connect(self.send_test)
+        self.pushCreate.clicked.connect(self.create)
         self.lineEmailAddress.textChanged.connect(self.enable_button)
-
-        with open('config.json') as config:
-            self.config = json.load(config)
 
         # Flag to prevent additional image folders from being created
         self.open_flag = open_flag
 
         # Set and display the default build image save folder
         self.slice_list = list()
-        self.build_folder_name = self.config['BuildInfo']['Folder']
-        self.lineBuildFolder.setText(self.build_folder_name)
+        self.build_folder = self.build['BuildInfo']['Folder']
+        self.lineBuildFolder.setText(self.build_folder)
 
         # If this dialog window was opened as a result of the Open... action, then the following is executed
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
         if self.open_flag:
             self.setWindowTitle('Open Build')
             self.pushCreate.setText('Load')
-            self.lineBuildName.setText(self.config['BuildInfo']['Name'])
-            self.comboPlatform.setCurrentIndex(self.config['BuildInfo']['Platform'])
-            self.slice_list = self.config['BuildInfo']['SliceFiles']
+            self.lineBuildName.setText(self.build['BuildInfo']['Name'])
+            self.comboPlatform.setCurrentIndex(self.build['BuildInfo']['Platform'])
+            self.slice_list = self.build['BuildInfo']['SliceFiles']
             self.set_list(self.slice_list)
-            self.lineUsername.setText(self.config['BuildInfo']['Username'])
-            self.lineEmailAddress.setText(self.config['BuildInfo']['EmailAddress'])
-            self.checkMinor.setChecked(self.config['Notifications']['Minor'])
-            self.checkMajor.setChecked(self.config['Notifications']['Major'])
-            self.checkFailure.setChecked(self.config['Notifications']['Failure'])
-            self.checkError.setChecked(self.config['Notifications']['Error'])
+            self.lineUsername.setText(self.build['BuildInfo']['Username'])
+            self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
+            self.checkMinor.setChecked(self.build['Notifications']['Minor'])
+            self.checkMajor.setChecked(self.build['Notifications']['Major'])
+            self.checkFailure.setChecked(self.build['Notifications']['Failure'])
+            self.checkError.setChecked(self.build['Notifications']['Error'])
 
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
 
-        file_names, _ = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
-        if file_names:
-            self.slice_list = file_names
-            self.set_list(file_names)
+        if filenames:
+            self.slice_list = filenames
+            self.set_list(filenames)
 
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
@@ -88,7 +90,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         if folder:
             # Display just the file name on the line box
-            self.build_folder_name = folder
+            self.build_folder = folder
             self.lineBuildFolder.setText(folder)
 
     def send_test(self):
@@ -111,12 +113,14 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 # Disable the Send Test Email button to prevent SPAM and other buttons until the thread is finished
                 self.pushSendTestEmail.setEnabled(False)
                 self.pushCreate.setEnabled(False)
-                self.pushClose.setEnabled(False)
+                self.pushCancel.setEnabled(False)
 
-                self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
-                self.config['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
-                with open('config.json', 'w+') as config:
-                    json.dump(self.config, config, indent=4, sort_keys=True)
+                self.build['BuildInfo']['Username'] = str(self.lineUsername.text())
+                self.build['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
+
+                # Save to the build.json file
+                with open('build.json', 'r+') as build:
+                    json.dump(self.build, build, indent=4, sort_keys=True)
 
                 # Construct the subject lien and message to be sent here
                 subject = 'Test Email Notification'
@@ -142,7 +146,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         """Open a message box with a send test confirmation message"""
 
         self.pushCreate.setEnabled(True)
-        self.pushClose.setEnabled(True)
+        self.pushCancel.setEnabled(True)
 
         send_test_confirmation = QMessageBox()
         send_test_confirmation.setIcon(QMessageBox.Information)
@@ -173,7 +177,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.pushSendTestEmail.setEnabled(False)
             self.checkAddAttachment.setEnabled(False)
 
-    def accept(self):
+    def create(self):
         """Executes when the Create button is clicked
         First checks if all the required boxes have been filled, otherwise a MessageBox will be opened
         Saves important selection options to the config.json file and closes the window
@@ -191,34 +195,34 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             error_message += 'Email Address not valid.\n'
 
         if error_message:
-            invalid_entries_error = QMessageBox()
-            invalid_entries_error.setIcon(QMessageBox.Critical)
-            invalid_entries_error.setText(error_message.rstrip('\n'))
-            invalid_entries_error.setWindowTitle('Error')
-            invalid_entries_error.exec_()
+            missing_folder_error = QMessageBox()
+            missing_folder_error.setIcon(QMessageBox.Critical)
+            missing_folder_error.setText(error_message.rstrip('\n'))
+            missing_folder_error.setWindowTitle('Error')
+            missing_folder_error.exec_()
         else:
             # Save all the entered information to the config.json file
-            self.config['BuildInfo']['Name'] = str(self.lineBuildName.text())
-            self.config['BuildInfo']['Platform'] = self.comboPlatform.currentIndex()
-            self.config['BuildInfo']['Username'] = str(self.lineUsername.text())
-            self.config['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
-            self.config['BuildInfo']['Convert'] = self.checkConvert.isChecked()
+            self.build['BuildInfo']['Name'] = str(self.lineBuildName.text())
+            self.build['BuildInfo']['Platform'] = self.comboPlatform.currentIndex()
+            self.build['BuildInfo']['Username'] = str(self.lineUsername.text())
+            self.build['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
+            self.build['BuildInfo']['Convert'] = self.checkConvert.isChecked()
             if self.checkConvert.isChecked():
-                self.config['BuildInfo']['Draw'] = self.checkDraw.isChecked()
-            self.config['BuildInfo']['Folder'] = self.build_folder_name
-            self.config['BuildInfo']['SliceFiles'] = self.slice_list
-            self.config['Notifications']['Minor'] = self.checkMinor.isChecked()
-            self.config['Notifications']['Major'] = self.checkMajor.isChecked()
-            self.config['Notifications']['Failure'] = self.checkFailure.isChecked()
-            self.config['Notifications']['Error'] = self.checkError.isChecked()
+                self.build['BuildInfo']['Draw'] = self.checkDraw.isChecked()
+            self.build['BuildInfo']['Folder'] = self.build_folder
+            self.build['BuildInfo']['SliceFiles'] = self.slice_list
+            self.build['Notifications']['Minor'] = self.checkMinor.isChecked()
+            self.build['Notifications']['Major'] = self.checkMajor.isChecked()
+            self.build['Notifications']['Failure'] = self.checkFailure.isChecked()
+            self.build['Notifications']['Error'] = self.checkError.isChecked()
 
             # Save the selected platform dimensions to the config.json file
             if self.comboPlatform.currentIndex() == 0:
-                self.config['BuildInfo']['PlatformDimensions'] = [636.0, 406.0]
+                self.build['BuildInfo']['PlatformDimensions'] = [636.0, 406.0]
             elif self.comboPlatform.currentIndex() == 1:
-                self.config['BuildInfo']['PlatformDimensions'] = [800.0, 400.0]
+                self.build['BuildInfo']['PlatformDimensions'] = [800.0, 400.0]
             elif self.comboPlatform.currentIndex() == 2:
-                self.config['BuildInfo']['PlatformDimensions'] = [250.0, 250.0]
+                self.build['BuildInfo']['PlatformDimensions'] = [250.0, 250.0]
 
             # If a New Build is being created (rather than Open Build), create some folders to store images
             if not self.open_flag:
@@ -227,13 +231,13 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
                 # Set the full name of the main storage folder for all acquired images
                 image_folder = """%s/%s-%s-%s [%s''%s'%s] %s""" % \
-                               (self.config['BuildInfo']['Folder'], current_time.year, str(current_time.month).zfill(2),
+                               (self.build['BuildInfo']['Folder'], current_time.year, str(current_time.month).zfill(2),
                                 str(current_time.day).zfill(2), str(current_time.hour).zfill(2),
                                 str(current_time.minute).zfill(2), str(current_time.second).zfill(2),
-                                self.config['BuildInfo']['Name'])
+                                self.build['BuildInfo']['Name'])
 
                 # Save the created image folder's name to the config.json file
-                self.config['ImageCapture']['Folder'] = image_folder
+                self.build['ImageCapture']['Folder'] = image_folder
 
                 # Create respective sub-directories for images (and reports)
                 os.makedirs('%s/raw/coat' % image_folder)
@@ -249,8 +253,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 os.makedirs('%s/reports' % image_folder)
 
                 # Create a dictionary of colours (different shades of teal) for each part's contours and save it
-                # At the same time, create a bunch of JSON files using a blank dictionary
-                # These JSON files are used to store the defect coordinate and pixel size data for each of the parts
+                # At the same time, create a bunch of json files containing a blank dictionary
+                # These json files are used to store the defect coordinate and pixel size data for each of the parts
                 part_colours = dict()
                 dict_blank = dict()
 
@@ -266,10 +270,23 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                     with open('%s/reports/%s_report.json' % (image_folder, part_name), 'w+') as report:
                         json.dump(dict_blank, report)
 
-                self.config['BuildInfo']['Colours'] = part_colours
+                self.build['BuildInfo']['Colours'] = part_colours
+            else:
+                # Check if the folder containing the images exist if a build was opened
+                if not os.path.isdir(self.build['ImageCapture']['Folder']):
+                    missing_folder_error = QMessageBox()
+                    missing_folder_error.setIcon(QMessageBox.Critical)
+                    missing_folder_error.setText('Image folder not found.\nBuild cancelled.')
+                    missing_folder_error.setWindowTitle('Error')
+                    missing_folder_error.exec_()
 
-            with open('config.json', 'w+') as config:
-                json.dump(self.config, config, indent=4, sort_keys=True)
+                    # Close the New Build window, return to the Main Window and do nothing
+                    self.done(0)
+                    return
+
+            # Save to the build.json file
+            with open('build.json', 'r+') as build:
+                json.dump(self.build, build, indent=4, sort_keys=True)
 
             # Close the dialog window and return True
             self.done(1)
@@ -296,6 +313,10 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         except TypeError:
             pass
 
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.pushBrowseF.clicked.connect(self.browse_folder)
         self.pushBrowseHI.clicked.connect(self.browse_homography)
@@ -303,71 +324,68 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.pushStart.clicked.connect(self.start)
         self.pushResults.clicked.connect(self.view_results)
         self.pushSave.clicked.connect(self.save_results)
-
-        # Load configuration settings from config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
+        self.lineTestImage.textChanged.connect(self.enable_checkbox)
 
         # Set the SpinBox settings to the previously saved values
-        self.spinWidth.setValue(int(self.config['CameraCalibration']['Width']))
-        self.spinHeight.setValue(int(self.config['CameraCalibration']['Height']))
-        self.spinRatio.setValue(int(self.config['CameraCalibration']['DownscalingRatio']))
+        self.spinWidth.setValue(self.config['CameraCalibration']['Width'])
+        self.spinHeight.setValue(self.config['CameraCalibration']['Height'])
+        self.spinRatio.setValue(self.config['CameraCalibration']['DownscalingRatio'])
 
-        # Set the LineEdit text to the previously saved file names
-        self.lineHomographyImage.setText(os.path.basename(self.config['CameraCalibration']['HomographyImage']))
-        self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
+        # Set and display previously saved image path names if they exist, else leave empty strings
+        if os.path.isfile(self.config['CameraCalibration']['HomographyImage']):
+            self.lineHomographyImage.setText(os.path.basename(self.config['CameraCalibration']['HomographyImage']))
+        if os.path.isfile(self.config['CameraCalibration']['TestImage']):
+            self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
 
     def browse_folder(self):
+        """Opens a File Dialog, allowing the user to select a folder containing calibration images"""
 
-        # Empty the image list
-        self.image_list = list()
-
-        # Opens a folder select dialog, allowing the user to select a folder
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
-        # Checks if a folder is actually selected
+        # Checks if a folder is actually selected or if the user clicked cancel
         if folder:
-            self.calibration_folder = folder
+            # Save the selected folder to the config dictionary
+            self.config['CameraCalibration']['Folder'] = folder
 
-            # Store a list of the files found in the folder
-            image_list = os.listdir(self.calibration_folder)
+            # Display the folder name on the respective QLineEdit
+            self.lineCalibrationFolder.setText(folder)
+
+            # Empty the image QListWidget and the image list
             self.listImages.clear()
+            self.image_list = list()
 
-            # Update the lineEdit with the new folder name
-            self.lineCalibrationFolder.setText(self.calibration_folder)
+            # Grab the list of images in the selected folder and store them if the name contains 'calibration_image'
+            for image_name in os.listdir(self.calibration_folder):
+                if 'image_calibration' in image_name:
+                    self.image_list.append(image_name)
 
-            # Search for images containing the word calibration_image in the folder
-            for image_name in image_list:
-                if 'image_calibration' in str(image_name):
-                    self.image_list.append(str(image_name))
+            # Check if certain conditions are met to enable the Start button
+            self.enable_button()
 
-            if not self.image_list:
-                self.update_status('No calibration images found.')
-                self.pushStart.setEnabled(False)
-            else:
+            # Check if the image list contains any valid images
+            if self.image_list:
                 # Remove previous entries and fill with new entries
                 self.listImages.addItems(self.image_list)
-
-                self.pushStart.setEnabled(True)
-                self.update_status('Waiting to start process.')
+            else:
+                self.update_status('No calibration images found.')
                 self.update_progress(0)
 
     def browse_homography(self):
-        """Opens a File Dialog, allowing the user to select an homography image"""
+        """Opens a File Dialog, allowing the user to select an homography image to calculate the homography matrix"""
 
-        file_name, _ = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')
+        filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')[0]
 
-        if file_name:
-            self.config['CameraCalibration']['HomographyImage'] = file_name
+        if filename:
+            self.config['CameraCalibration']['HomographyImage'] = filename
             self.lineHomographyImage.setText(os.path.basename(self.config['CameraCalibration']['HomographyImage']))
 
     def browse_test_image(self):
-        """Opens a File Dialog, allowing the user to select a test image"""
+        """Opens a File Dialog, allowing the user to select a test image used to test calibration results"""
 
-        file_name, _ = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')
+        filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')[0]
 
-        if file_name:
-            self.config['CameraCalibration']['TestImage'] = file_name
+        if filename:
+            self.config['CameraCalibration']['TestImage'] = filename
             self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
 
     def start(self):
@@ -383,7 +401,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.pushDone.setEnabled(False)
 
         # Save calibration settings
-        self.save_settings()
+        self.apply_settings()
 
         # Reset the colours of the items in the list widget
         # Try exception causes this function to be skipped the first time
@@ -399,19 +417,10 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.connect(self.CC_instance, pyqtSignal("change_colour(QString, QString)"), self.change_colour)
         self.connect(self.CC_instance, pyqtSignal("update_status(QString)"), self.update_status)
         self.connect(self.CC_instance, pyqtSignal("update_progress(QString)"), self.update_progress)
-        self.connect(self.CC_instance, pyqtSignal("finished()"), self.calibration_finished)
+        self.connect(self.CC_instance, pyqtSignal("finished()"), self.start_finished)
         self.CC_instance.start()
 
-    def change_colour(self, index, valid):
-        """Changes the background colour of the received item in the listImages box
-        Changes to green if image is valid, red if image is invalid for calibration
-        """
-        if int(valid):
-            self.listImages.item(int(index)).setBackground(QColor('green'))
-        else:
-            self.listImages.item(int(index)).setBackground(QColor('red'))
-
-    def calibration_finished(self):
+    def start_finished(self):
         """Executes when the CameraCalibration instance has finished"""
 
         # Opens a Dialog Window to view Calibration Results
@@ -450,7 +459,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         """
 
         if calibration_flag:
-            with open('%s/calibration_results.json' % self.config['WorkingDirectory']) as file:
+            with open('%s/calibration_results.json' % self.build['WorkingDirectory']) as file:
                 results = json.load(file)
         else:
             results = self.config.copy()
@@ -464,21 +473,56 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.calibration_results_dialog.show()
 
     def save_results(self):
-        with open('%s/calibration_results.json' % self.config['WorkingDirectory']) as file:
+        """Copies the calibration results from the temporary json file to the config.json file"""
+
+        with open('calibration_results.json') as file:
             results = json.load(file)
+
+        # Copy the results dictionary into the config dictionary
         self.config.update(results)
-        self.save_settings()
+        self.apply_settings()
         self.update_status('Calibration results saved to the config file.')
         self.pushSave.setEnabled(False)
 
-    def save_settings(self):
-        """Save the spinxBox values to the config.json file"""
+    def change_colour(self, index, valid):
+        """Changes the background colour of the received item in the listImages box
+        Changes to green if image is valid, red if image is invalid for calibration
+        """
+        if int(valid):
+            self.listImages.item(int(index)).setBackground(QColor('green'))
+        else:
+            self.listImages.item(int(index)).setBackground(QColor('red'))
+
+    def enable_checkbox(self):
+        """(Re-)Enables the Apply to Test Image checkbox if a test image has been selected"""
+
+        if self.lineTestImage.text():
+            self.checkApply.setEnabled(True)
+        else:
+            self.checkApply.setEnabled(False)
+            self.checkApply.setChecked(False)
+
+    def enable_button(self):
+        """(Re-)Enables the Start button if valid calibration images and an homography image have been selected"""
+
+        if self.image_list and self.lineHomographyImage.text():
+            self.update_status('Waiting to start process.')
+            self.pushStart.setEnabled(True)
+        else:
+            self.pushStart.setEnabled(False)
+
+    def apply_settings(self):
+        """Grab the spinxBox and checkBox values and save them to the working config and default config file"""
 
         self.config['CameraCalibration']['Width'] = self.spinWidth.value()
         self.config['CameraCalibration']['Height'] = self.spinHeight.value()
         self.config['CameraCalibration']['DownscalingRatio'] = self.spinRatio.value()
+        self.config['CameraCalibration']['Chessboard'] = self.checkSaveC.isChecked()
+        self.config['CameraCalibration']['Undistort'] = self.checkSaveU.isChecked()
+        self.config['CameraCalibration']['Apply'] = self.checkApply.isChecked()
 
-        with open('config.json', 'w+') as config:
+        # Save to the config.json file
+        with open('config.json', 'r+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
     def update_status(self, string):
@@ -488,9 +532,10 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        """Executes when the Done button is clicked or when the window is closed"""
 
-        self.save_settings()
+        # Save settings so that settings persist across instances
+        self.apply_settings()
 
         # Save the current position of the Dialog Window before the window is closed
         self.window_settings.setValue('geometry', self.saveGeometry())
@@ -514,7 +559,9 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         except TypeError:
             pass
 
-        self.load_settings()
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.pushApply.clicked.connect(self.apply)
@@ -534,17 +581,17 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.spinPacketSize.setValue(int(self.config['CameraSettings']['PacketSize']))
         self.spinInterPacketDelay.setValue(int(self.config['CameraSettings']['InterPacketDelay']))
         self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameTransmissionDelay']))
-        self.spinTriggerTimeout.setValue(int(self.config['ImageCapture']['TriggerTimeout']))
+        self.spinTriggerTimeout.setValue(int(self.config['CameraSettings']['TriggerTimeout']))
 
         self.pushApply.setEnabled(False)
 
     def apply_enable(self):
-        """Enable the Apply button on any change of setting values"""
+        """Enable the Apply button on any change of settings"""
+
         self.pushApply.setEnabled(True)
 
     def apply(self):
-        """Saves the entered settings to both the config.json and the config_default.json files"""
-        self.load_settings()
+        """Executes when the Apply button is clicked and saves the entered values to the config.json file"""
         
         # Save the new index values from the changed settings to both the config and config_default dictionary
         self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
@@ -552,33 +599,14 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
         self.config['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
         self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
-        self.config['ImageCapture']['TriggerTimeout'] = self.spinTriggerTimeout.value()
+        self.config['CameraSettings']['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
-        self.config_default['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
-        self.config_default['CameraSettings']['ExposureTimeAbs'] = self.spinExposureTime.value()
-        self.config_default['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
-        self.config_default['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
-        self.config_default['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
-        self.config_default['ImageCapture']['TriggerTimeout'] = self.spinTriggerTimeout.value()
-
-        self.save_settings()
+        # Save to the config.json file
+        with open('config.json', 'r+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Disable the Apply button until another setting is changed
         self.pushApply.setEnabled(False)
-
-    def load_settings(self):
-        with open('config.json') as config:
-            self.config = json.load(config)
-        
-        with open('config_default.json') as config:
-            self.config_default = json.load(config)
-
-    def save_settings(self):
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
-            
-        with open('config_default.json', 'w+') as config:
-            json.dump(self.config_default, config, indent=4, sort_keys=True)
 
     def accept(self):
         """Executes when the OK button is pressed
@@ -590,7 +618,9 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.closeEvent(self.close())
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        """Executes when the window is closed or the Cancel button is clicked
+        Doesn't save any changed settings at all"""
+
         self.window_settings.setValue('geometry', self.saveGeometry())
 
 
@@ -612,8 +642,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         except TypeError:
             pass
 
-        with open('config.json') as config:
-            self.config = json.load(config)
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
         self.buttonBrowseF.clicked.connect(self.browse_folder)
@@ -621,21 +651,19 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonStop.clicked.connect(self.start_finished)
 
         self.slice_list = list()
-        self.contours_folder = os.path.dirname(self.config['WorkingDirectory']) + '/contours'
+        self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
 
         self.lineFolder.setText(self.contours_folder)
 
         self.threadpool = QThreadPool()
 
     def browse_slice(self):
-        """Opens a File Dialog, allowing the user to select one or multiple slice files
-        The slice files are displayed on the ListWidget and saved to the config file
-        """
+        """Opens a File Dialog, allowing the user to select one or multiple slice files"""
 
-        file_names, _ = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')
+        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')[0]
 
-        if file_names:
-            self.slice_list = file_names
+        if filenames:
+            self.slice_list = filenames
             self.listSliceFiles.clear()
             self.buttonStart.setEnabled(True)
             self.update_status('Current Part: None | Waiting to start conversion.')
@@ -647,7 +675,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                     self.listSliceFiles.item(index).setBackground(QColor('yellow'))
 
     def browse_folder(self):
-        # Opens a folder select dialog, allowing the user to select a folder
+        """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
+
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if folder:
@@ -676,13 +705,13 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                     ((100 + 3 * index) % 255, (100 + 3 * index) % 255, 0)
 
             # Save the slice file list and the draw state to the config.json file
-            self.config['SliceConverter']['Draw'] = self.checkDraw.isChecked()
-            self.config['SliceConverter']['Folder'] = self.contours_folder
-            self.config['SliceConverter']['Files'] = self.slice_list
-            self.config['SliceConverter']['Run'] = True
-            self.config['SliceConverter']['Pause'] = False
-            self.config['SliceConverter']['Build'] = False
-            self.config['SliceConverter']['Colours'] = part_colours
+            self.build['SliceConverter']['Draw'] = self.checkDraw.isChecked()
+            self.build['SliceConverter']['Folder'] = self.contours_folder
+            self.build['SliceConverter']['Files'] = self.slice_list
+            self.build['SliceConverter']['Run'] = True
+            self.build['SliceConverter']['Pause'] = False
+            self.build['SliceConverter']['Build'] = False
+            self.build['SliceConverter']['Colours'] = part_colours
             self.save_settings()
 
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
@@ -692,11 +721,11 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.threadpool.start(worker)
 
         elif 'Pause' in self.buttonStart.text():
-            self.config['SliceConverter']['Pause'] = True
+            self.build['SliceConverter']['Pause'] = True
             self.save_settings()
             self.buttonStart.setText('Resume')
         elif 'Resume' in self.buttonStart.text():
-            self.config['SliceConverter']['Pause'] = False
+            self.build['SliceConverter']['Pause'] = False
             self.save_settings()
             self.buttonStart.setText('Pause')
 
@@ -704,8 +733,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         """Executes when the SliceConverter instance has finished"""
 
         # Stop the conversion thread
-        self.config['SliceConverter']['Pause'] = False
-        self.config['SliceConverter']['Run'] = False
+        self.build['SliceConverter']['Pause'] = False
+        self.build['SliceConverter']['Run'] = False
         self.save_settings()
 
         # Enable/disable respective buttons
@@ -742,8 +771,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             run_error.exec_()
             event.ignore()
         else:
-            self.config['SliceConverter']['Folder'] = ''
-            self.config['SliceConverter']['Files'] = []
+            self.build['SliceConverter']['Folder'] = ''
+            self.build['SliceConverter']['Files'] = []
             self.save_settings()
             self.window_settings.setValue('geometry', self.saveGeometry())
 

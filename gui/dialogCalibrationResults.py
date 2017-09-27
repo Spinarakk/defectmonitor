@@ -139,10 +139,13 @@ class Ui_dialogCalibrationResults(object):
     def retranslateUi(self, dialogCalibrationResults):
         _translate = QtCore.QCoreApplication.translate
         dialogCalibrationResults.setWindowTitle(_translate("dialogCalibrationResults", "Calibration Results"))
+        self.labelCameraMatrix.setToolTip(_translate("dialogCalibrationResults", "Matrix that describes the mapping of a pinhole camera from 3D points in the real world to 2D points in an image."))
         self.labelCameraMatrix.setText(_translate("dialogCalibrationResults", "Camera Matrix"))
+        self.labelDistortionCoefficients.setToolTip(_translate("dialogCalibrationResults", "Values that specify how to undistort the image to correct any radial and tangential distortion caused by pinhole cameras."))
         self.labelDistortionCoefficients.setText(_translate("dialogCalibrationResults", "Distortion Coefficients"))
+        self.labelHomographyMatrix.setToolTip(_translate("dialogCalibrationResults", "Matrix that describes the relation of two images with the same planar surface in space that is used to warp the perspective of an image onto another."))
         self.labelHomographyMatrix.setText(_translate("dialogCalibrationResults", "Homography Matrix"))
-        self.labelRMS.setToolTip(_translate("dialogCalibrationResults", "An acceptable error should be less than 1 pixel."))
+        self.labelRMS.setToolTip(_translate("dialogCalibrationResults", "Geometric error corresponding to the image distance between a projected point and a measured one. An acceptable error should be less than 1 pixel."))
         self.labelRMS.setText(_translate("dialogCalibrationResults", "Re-Projection Error: 0.000000000"))
         self.pushDone.setText(_translate("dialogCalibrationResults", "Done"))
         item = self.tableCameraMatrix.horizontalHeaderItem(0)

@@ -1,4 +1,4 @@
-import os
+# Import PyQt modules
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -31,14 +31,11 @@ class ImageViewer(QGraphicsView):
         self.zoom_flag = False
 
     def set_image(self, image):
-        """Set the scene's current image pixmap to the input QImage or QPixmap"""
+        """Set the scene's current image to the received image after converting it to QPixmap"""
 
-        if type(image) is QPixmap:
-            pixmap = image
-        elif type(image) is QImage:
-            pixmap = QPixmap.fromImage(image)
-        else:
-            raise RuntimeError("ImageViewer.set_image: Argument must be a QImage or QPixmap.")
+        # Convert the received image into a QPixmap that can be displayed on the graphics viewer
+        qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
 
         if self._pixmap_handle is not None:
             self._pixmap_handle.setPixmap(pixmap)
@@ -63,6 +60,19 @@ class ImageViewer(QGraphicsView):
         if self._pixmap_handle is not None:
             self.scene.removeItem(self._pixmap_handle)
             self._pixmap_handle = None
+
+    @staticmethod
+    def convert2pixmap(image):
+        """Converts the received image into a QPixmap that can be displayed on the graphics viewer"""
+
+        # If the image is a BGR image, convert to RGB so that colours can be displayed properly
+        # if len(image.shape) == 3:
+        #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Convert to QPixmap using in-built Qt functions
+        qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
+
+        return QPixmap.fromImage(qimage)
 
     def update_viewer(self):
         """Update the image viewer with the image, taking into account aspect ratio and zoom options"""

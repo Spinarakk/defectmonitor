@@ -5,15 +5,12 @@ import math
 import json
 import cv2
 import numpy as np
-from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 
 
 class Calibration(QThread):
     """Module used to calibrate the connected Basler Ace acA3800-10gm GigE camera if attached
-    User specifies a folder of checkboard images taken using the camera and outputs the camera parameters to a text file
-    Default calibration settings stored in camera_parameters.txt
+    User specifies a folder of chessboard images taken using the camera and outputs the camera intrinsics and parameters
     """
 
     def __init__(self, calibration_folder, save_chess_flag=False, save_undistort_flag=False):
@@ -21,8 +18,7 @@ class Calibration(QThread):
         # Defines the class as a thread
         QThread.__init__(self)
 
-        with open('config.json') as config:
-            self.config = json.load(config)
+        self.load_config('config.json')
 
         # Save respective values to be used in Calibration functions
         self.ratio = self.config['CameraCalibration']['DownscalingRatio']
@@ -120,7 +116,7 @@ class Calibration(QThread):
 
             # If the homography matrix was successfully found, save the results to a temporary .json file
             if self.find_homography(image_homography):
-                with open('%s/calibration_results.json' % self.config['WorkingDirectory'], 'w+') as results:
+                with open('calibration_results.json', 'w+') as results:
                     json.dump(self.results, results, indent=4, sort_keys=True)
 
                 self.emit(pyqtSignal("update_status(QString)"), 'Calibration completed successfully.')
@@ -252,3 +248,13 @@ class Calibration(QThread):
         else:
             self.emit(pyqtSignal("update_status(QString)"), 'Corner detection failed. Check homography image.')
             return 0
+
+    def load_config(self, filename):
+        """Loads configuration settings from the received json file to the instance's config variable"""
+        with open(filename) as config:
+            self.config = json.load(config)
+
+    def save_config(self, filename):
+        """Saves configuration settings from the instance's config variable to the received json file"""
+        with open(filename, 'r+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)

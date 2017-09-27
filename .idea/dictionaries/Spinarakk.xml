@@ -2,7 +2,9 @@
   <dictionary name="Spinarakk">
     <words>
       <w>clahe</w>
+      <w>filenames</w>
       <w>grayscale</w>
+      <w>homography</w>
       <w>menubar</w>
       <w>modeless</w>
       <w>otsu</w>

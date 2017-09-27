@@ -15,14 +15,14 @@ class ImageCapture:
 
     def __init__(self):
 
-        # Load configuration settings from config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
+        # Load from the build.json file
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
-        self.current_layer = self.config['ImageCapture']['Layer']
-        self.current_phase = self.config['ImageCapture']['Phase']
-        self.single_layer = self.config['ImageCapture']['Single']
+        self.current_layer = self.build['ImageCapture']['Layer']
+        self.current_phase = self.build['ImageCapture']['Phase']
+        self.single_layer = self.build['ImageCapture']['Single']
         self.phases = ['coat', 'scan']
 
         # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
@@ -112,7 +112,7 @@ class ImageCapture:
         else:
             # Save the raw image to the single folder
             cv2.imwrite('%s/raw/single/singleR_%s.png' %
-                        (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
+                        (self.build['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
             status.emit('Processing captured image...')
 
@@ -121,7 +121,7 @@ class ImageCapture:
 
             # Save the processed image to the processed folder
             cv2.imwrite('%s/processed/single/singleP_%s.png' %
-                        (self.config['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
+                        (self.build['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
             # Increment the capture counter
             self.single_layer += 1
@@ -150,7 +150,7 @@ class ImageCapture:
 
         # Save the raw image to the single folder
         cv2.imwrite('%s/raw/%s/%sR_%s.png' %
-                    (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
+                    (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
                      self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
         status.emit('Processing captured image...')
@@ -160,12 +160,12 @@ class ImageCapture:
 
         # Save the processed image to the processed folder
         cv2.imwrite('%s/processed/%s/%sP_%s.png' %
-                    (self.config['ImageCapture']['Folder'], self.phases[self.current_phase],
+                    (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
                      self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
         # Loop used to delay triggering for additional images for however many seconds
         # Also displays remaining timeout on the status bar
-        for seconds in range(self.config['ImageCapture']['TriggerTimeout'], 0, -1):
+        for seconds in range(self.build['ImageCapture']['CameraSettings'], 0, -1):
             status.emit('Image saved. %s second timeout...' % seconds)
             time.sleep(1)
 
@@ -179,9 +179,9 @@ class ImageCapture:
 
     def save_settings(self):
 
-        self.config['ImageCapture']['Layer'] = self.current_layer
-        self.config['ImageCapture']['Phase'] = self.current_phase
-        self.config['ImageCapture']['Single'] = self.single_layer
+        self.build['ImageCapture']['Layer'] = self.current_layer
+        self.build['ImageCapture']['Phase'] = self.current_phase
+        self.build['ImageCapture']['Single'] = self.single_layer
 
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)

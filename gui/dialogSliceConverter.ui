@@ -14,8 +14,8 @@
    <string>Slice Converter</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>logo.ico</normaloff>logo.ico</iconset>
+   <iconset resource="icons.qrc">
+    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="7" column="0" colspan="3">
@@ -140,7 +140,9 @@
   <tabstop>buttonStart</tabstop>
   <tabstop>buttonDone</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="icons.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonDone</sender>
