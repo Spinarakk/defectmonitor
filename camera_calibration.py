@@ -1,39 +1,33 @@
 # Import external libraries
 import os
 import time
-import math
 import json
 import cv2
 import numpy as np
-from PyQt5.QtCore import *
+
+# Import related modules
+import image_processing
 
 
-class Calibration(QThread):
+class Calibration:
     """Module used to calibrate the connected Basler Ace acA3800-10gm GigE camera if attached
     User specifies a folder of chessboard images taken using the camera and outputs the camera intrinsics and parameters
     """
 
-    def __init__(self, calibration_folder, save_chess_flag=False, save_undistort_flag=False):
+    def __init__(self):
 
-        # Defines the class as a thread
-        QThread.__init__(self)
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
 
-        self.load_config('config.json')
-
-        # Save respective values to be used in Calibration functions
+        # Grab certain values to be used in Calibration functions
         self.ratio = self.config['CameraCalibration']['DownscalingRatio']
         self.width = self.config['CameraCalibration']['Width']
         self.height = self.config['CameraCalibration']['Height']
-
-        # Flags are for whether to save the processed images to a folder
-        self.calibration_folder = calibration_folder
-        self.save_chess_flag = save_chess_flag
-        self.save_undistort_flag = save_undistort_flag
-
-        # Initialize a few lists to store pertinent data
-
-        self.images_calibration = list()
-        self.images_valid = list()
+        self.calibration_folder = self.config['CameraCalibration']['Folder']
+        self.chessboard_flag = self.config['CameraCalibration']['Chessboard']
+        self.undistort_flag = self.config['CameraCalibration']['Undistort']
+        self.apply_flag = self.config['CameraCalibration']['Apply']
 
         # Create a copy of the ImageCorrection key of the config.json file to store the calibration results
         self.results = dict()
@@ -41,58 +35,60 @@ class Calibration(QThread):
 
         # Image points are points in the 2D image plane
         # They are represented by the corners of the squares on the chessboard as found by findChessboardCorners
-        self.image_points_list = list()
+        self.points_2d = list()
         # Object Points are the points in the 3D real world space
         # They are represented as a series of points as relative to each other, and are created like (0,0), (1,0)...
-        self.object_points_list = list()
+        self.points_3d = list()
 
         # Create two folders inside the received calibration folder to store chessboard corner and undistorted images
-        if self.save_chess_flag:
-            if not os.path.exists('%s/corners' % self.calibration_folder):
+        # Only if the corresponding save flags were raised and the folders don't already exist
+        if self.chessboard_flag and not os.path.isdir('%s/corners' % self.calibration_folder):
                 os.makedirs('%s/corners' % self.calibration_folder)
-        if self.save_undistort_flag:
-            if not os.path.exists('%s/undistorted' % self.calibration_folder):
+        if self.undistort_flag and not os.path.isdir('%s/undistorted' % self.calibration_folder):
                 os.makedirs('%s/undistorted' % self.calibration_folder)
 
-        # Load the calibration image names
-        for image_calibration in os.listdir(self.calibration_folder):
-            if 'image_calibration' in str(image_calibration):
-                self.images_calibration.append(str(image_calibration))
+    def calibrate(self, status, progress, colour):
 
-        # Count the number of calibration images to use as a progress indicator
-        self.progress_step = 100.0 / self.images_calibration.__len__()
-        self.progress = 0
+        # Assign the status, progress and signals as instance variables so other methods can use them
+        self.status = status
+        self.progress = progress
+        self.colour = colour
 
-    def run(self):
+        # Reset the progress bar
+        self.progress.emit(0)
 
-        # Load homography images into memory
-        image_homography = cv2.imread(self.config['CameraCalibration']['HomographyImage'], 0)
+        # Initialize a few lists to store pertinent data
+        image_list = list()
+        image_list_valid = list()
 
-        # Termination Criteria
-        self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        # Load the calibration image names and store it in a list
+        for image_name in os.listdir(self.calibration_folder):
+            if 'image_calibration' in image_name:
+                image_list.append(image_name)
+
+        # Count the number of calibration images to uose as a progress indicator
+        increment = 100 / len(image_list)
+        progress = 0
 
         # Initiate object points, like (0,0,0), (1,0,0), (2,0,0)...
         self.object_points = np.zeros((self.height * self.width, 3), np.float32)
         self.object_points[:, :2] = np.mgrid[0:self.width, 0:self.height].T.reshape(-1, 2)
 
-        # Reset the progress bar
-        self.emit(pyqtSignal("update_progress(QString)"), '0')
-
         # Go through and find the corners for all the valid images in the folder
-        for index, image_calibration in enumerate(self.images_calibration):
-            valid_image = self.find_draw_corners(image_calibration, index)
-            self.images_valid.append(valid_image)
-            self.progress += self.progress_step
-            self.emit(pyqtSignal("update_progress(QString)"), str(int(math.ceil(self.progress))))
+        for index, image in enumerate(image_list):
+            image_list_valid.append(self.find_draw_corners(image, index))
+
+            progress += increment
+            self.progress.emit(int(round(progress)))
 
         # Check if there's at least one successful chessboard image before continuing to find camera matrix
-        if 1 in self.images_valid:
+        if 1 in image_list_valid:
+            self.status.emit('Calculating camera parameters...')
 
             # Calibrate the camera and output the camera matrix and distortion coefficients
             # RMS is the root mean square re-projection error
-            self.emit(pyqtSignal("update_status(QString)"), 'Calculating camera parameters...')
             rms, self.camera_matrix, self.distortion_coefficients, _, _ = \
-                cv2.calibrateCamera(self.object_points_list, self.image_points_list, self.resolution, None, None, flags=
+                cv2.calibrateCamera(self.points_3d, self.points_2d, self.resolution, None, None, flags=
                 cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
 
             # Save the calibration results to the results dictionary
@@ -101,106 +97,129 @@ class Calibration(QThread):
             self.results['ImageCorrection']['DistortionCoefficients'] = self.distortion_coefficients.tolist()
 
             # If the Save Undistorted Images checkbox is checked
-            if self.save_undistort_flag:
-                # Reset the progress bar and recalculate the progress step
-                self.emit(pyqtSignal("update_progress(QString)"), '0')
-                self.progress_step = 100.0 / self.images_valid.count(1)
-                self.progress = 0
+            if self.undistort_flag:
 
-                for index, image_calibration in enumerate(self.images_calibration):
+                # Reset the progress bar and recalculate the increment
+                self.progress.emit(0)
+                increment = 100 / image_list_valid.count(1)
+                progress = 0
+
+                for index, image in enumerate(image_list):
                     # Only undistort on the images that were valid
-                    if self.images_valid[index]:
-                        self.undistort_image(image_calibration)
-                        self.progress += self.progress_step
-                        self.emit(pyqtSignal("update_progress(QString)"), str(int(math.ceil(self.progress))))
+                    if image_list_valid[index]:
+                        self.undistort_image(image)
 
-            # If the homography matrix was successfully found, save the results to a temporary .json file
+                        progress += increment
+                        self.progress.emit(int(round(progress)))
+
+            # Load the homography image into memory in grayscale
+            image_homography = cv2.imread(self.config['CameraCalibration']['HomographyImage'], 0)
+
+            # If the homography matrix was successfully found
             if self.find_homography(image_homography):
+
+                # Save the results to a temporary .json file
                 with open('calibration_results.json', 'w+') as results:
                     json.dump(self.results, results, indent=4, sort_keys=True)
 
-                self.emit(pyqtSignal("update_status(QString)"), 'Calibration completed successfully.')
+                # If the Apply to Test Image checkbox is checked, apply the recently calculated camera parameters
+                # On the received test image (with corresponding progress indicators)
+                if self.apply_flag:
+                    self.status.emit('Processing test image...')
+                    self.progress.emit(0)
+                    image_test = cv2.imread(self.config['CameraCalibration']['TestImage'])
+                    image_test = image_processing.ImageTransform().distortion_fix(image_test)
+                    self.progress.emit(25)
+                    image_test = image_processing.ImageTransform().perspective_fix(image_test)
+                    self.progress.emit(50)
+                    image_test = image_processing.ImageTransform().crop(image_test)
+                    self.progress.emit(75)
+                    cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image_test)
+                    self.status.emit('Test image successfully processed.')
+                    self.progress.emit(100)
+
+                    # Open the image in the native image viewer for the user to view the results of the calibration
+                    os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
+
+                self.status.emit('Calibration completed successfully.')
+
         else:
-            self.emit(pyqtSignal("update_status(QString)"),
-                      'No valid chessboard images found. Check images or chessboard dimensions.')
+            self.status.emit('No valid chessboard images found. Check images or chessboard dimensions.')
 
     def find_draw_corners(self, image_name, index):
+        """Find the corners in the chessboard and draw the corner points if the flag is raised"""
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Finding corners in %s...' % image_name)
+        self.status.emit('Finding corners in %s...' % image_name)
 
-        # Load the image into memory
-        image = cv2.imread('%s/%s' % (self.calibration_folder, image_name))
-
+        # Load the image into memory and save the resolution of the image
+        image = cv2.imread('%s/%s' % (self.calibration_folder, image_name), 0)
         self.resolution = (image.shape[1], image.shape[0])
 
-        # Determine the resolution of the image after downscaling
-        resolution_scaled = (image.shape[1] / self.ratio, image.shape[0] / self.ratio)
-
-        # Downscale and convert the image to grayscale
+        # Determine the resolution of the image after downscaling and downscale it
+        resolution_scaled = (image.shape[1] // self.ratio, image.shape[0] // self.ratio)
         image_scaled = cv2.resize(image, resolution_scaled, interpolation=cv2.INTER_AREA)
-        image_scaled = cv2.cvtColor(image_scaled, cv2.COLOR_BGR2GRAY)
 
         # Detect the corners of the chessboard
         retval, corners = cv2.findChessboardCorners(image_scaled, (self.width, self.height))
 
         # If chessboard corners were found
         if retval:
-            # Refine the found corner coordinates
-            cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), self.criteria)
+            # Refine the found corner coordinates using the following termination criteria
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+            cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), criteria)
 
-            # Multiply back to the original resolution
+            # Multiply found corner points back to the original resolution
             corners *= self.ratio
 
             # Store the found image points (corners) and their corresponding object points in a list
-            self.image_points_list.append(corners)
-            self.object_points_list.append(self.object_points)
+            self.points_2d.append(corners)
+            self.points_3d.append(self.object_points)
 
             # If the Save Chessboard Image checkbox is checked
-            if self.save_chess_flag:
+            if self.chessboard_flag:
                 # Draw the chessboard corners onto the original calibration image
                 cv2.drawChessboardCorners(image, (self.width, self.height), corners, 1)
 
                 # Change the name and folder of the calibration image and save it to that folder
                 image_name = image_name.replace('.png', '_corners.png')
-                self.emit(pyqtSignal("update_status(QString)"), 'Saving %s...' % image_name)
+                self.status.emit('Saving %s...' % image_name)
                 cv2.imwrite('%s/corners/%s' % (self.calibration_folder, image_name), image)
 
-            self.emit(pyqtSignal("change_colour(QString, QString)"), str(index), '1')
-
+            # Emit the index of the current image and a bool value if the findChessboardCorners was successful or not
+            self.colour.emit(index, True)
             return 1
         else:
-            self.emit(pyqtSignal("update_status(QString)"), 'Failed to detect corners in %s.' % image_name)
-            self.emit(pyqtSignal("change_colour(QString, QString)"), str(index), '0')
+            # If chessboard corners couldn't be found, return a 0 indicating a non-valid image
+            self.status.emit('Failed to detect corners in %s.' % image_name)
+            self.colour.emit(index, False)
             time.sleep(0.5)
             return 0
 
     def undistort_image(self, image_name):
+        """Use the distortion coefficients to undistort the calibration images"""
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Undistorting %s...' % image_name)
+        self.status.emit('Undistorting %s...' % image_name)
 
-        # Load the image into memory
+        # Load the image into memory and undistort it using the calculated camera matrix and distortion coefficients
         image = cv2.imread('%s/%s' % (self.calibration_folder, image_name))
-
-        # Undistort the image using the calculated camera matrix and distortion coefficients
         image = cv2.undistort(image, self.camera_matrix, self.distortion_coefficients)
 
         # Change the name and folder of the calibration image and save it to that folder
         image_name = image_name.replace('.png', '_undistorted.png')
-        self.emit(pyqtSignal("update_status(QString)"), 'Saving %s...' % image_name)
+        self.status.emit('Saving %s...' % image_name)
         cv2.imwrite('%s/undistorted/%s' % (self.calibration_folder, image_name), image)
 
     def find_homography(self, image):
+        """Use the homography image and the found camera matrix to calculate the homography matrix"""
 
-        self.emit(pyqtSignal("update_status(QString)"), 'Determining homography matrix...')
+        self.status.emit('Determining homography matrix...')
 
         # Set the number of chessboard corners in the homography image here
         width = 9
         height = 7
 
-        # Determine the resolution of the image after downscaling
-        resolution_scaled = (image.shape[1] / self.ratio, image.shape[0] / self.ratio)
-
-        # Downscale the image
+        # Determine the resolution of the image after downscaling and downscale it
+        resolution_scaled = (image.shape[1] // self.ratio, image.shape[0] // self.ratio)
         image_scaled = cv2.resize(image, resolution_scaled, interpolation=cv2.INTER_AREA)
 
         # Detect the corners of the chessboard
@@ -208,8 +227,9 @@ class Calibration(QThread):
 
         # If chessboard corners were found
         if retval:
-            # Refine the found corner coordinates
-            cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), self.criteria)
+            # Refine the found corner coordinates using the following termination criteria
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+            cv2.cornerSubPix(image_scaled, corners, (10, 10), (-1, -1), criteria)
 
             # Multiply back to the original resolution
             corners *= self.ratio
@@ -242,19 +262,8 @@ class Calibration(QThread):
             height_output = int(points_transform[:, 0][:, 1].max() - points_transform[:, 0][:, 1].min())
             self.results['ImageCorrection']['Resolution'] = (width_output, height_output)
 
-            self.emit(pyqtSignal("update_status(QString)"), 'Homography matrix found.')
-
+            self.status.emit('Homography matrix found.')
             return 1
         else:
-            self.emit(pyqtSignal("update_status(QString)"), 'Corner detection failed. Check homography image.')
+            self.status.emit('Corner detection failed. Check homography image.')
             return 0
-
-    def load_config(self, filename):
-        """Loads configuration settings from the received json file to the instance's config variable"""
-        with open(filename) as config:
-            self.config = json.load(config)
-
-    def save_config(self, filename):
-        """Saves configuration settings from the instance's config variable to the received json file"""
-        with open(filename, 'r+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)

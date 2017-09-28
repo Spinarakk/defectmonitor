@@ -25,6 +25,10 @@ class SliceConverter:
         # Method that loads the config.json file and checks the run and pause keys
         self.check_flags()
 
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         # Save respective values to be used to draw contours and polygons
         # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
         crop_boundary = self.config['ImageCorrection']['CropBoundary']
@@ -34,9 +38,8 @@ class SliceConverter:
         self.scale_factor = self.config['ImageCorrection']['ScaleFactor']
         self.transform = self.config['ImageCorrection']['TransformParameters']
 
-        # Part names are taken from the config.json file, depending if this method was run from the Slice Converter
+        # Part names are taken from the build.json file, depending if this method was run from the Slice Converter
         # Or as part of a new build, different files will be read and used
-
         if self.build['SliceConverter']['Build']:
             self.part_colours = self.build['BuildInfo']['Colours']
             self.part_names = self.build['BuildInfo']['SliceFiles']
@@ -94,7 +97,7 @@ class SliceConverter:
     def read_cls(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
-        self.status.emit('Current Part: %s | Reading CLS file...' % os.path.basename(filename).replace('.cls', ''))
+        self.status.emit('Current Part: %s | Reading CLS file...' % os.path.splitext(os.path.basename(filename))[0])
 
         # Set up a few flags, counters and lists
         layer_flag = False
@@ -167,10 +170,8 @@ class SliceConverter:
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
         # UI Progress and Status Messages
-        progress_count = 0.0
         progress_previous = None
-        self.status.emit('Current Part: %s | Reading CLI (BINARY) file...' %
-                         os.path.basename(filename).replace('.cli', ''))
+        self.status.emit('Current Part: %s | Reading CLI file...' % os.path.splitext(os.path.basename(filename))[0])
         self.progress.emit(0)
 
         # Set up a few lists, flags, counters
@@ -180,9 +181,6 @@ class SliceConverter:
         polyline_count = 0
         vector_count = 0
         header_length = 0
-
-        # Grab the file size of the cli file in bytes
-        file_size = os.path.getsize(filename)
 
         # File needs to be opened and read as binary as it is encoded in binary
         with open(filename, 'rb') as cli_file:
@@ -205,7 +203,7 @@ class SliceConverter:
             cli_file.seek(header_length)
 
             # Calculate the increment to use to display progress for the rest of the file data
-            increment = 100 / (file_size - header_length)
+            increment = 100 / (os.path.getsize(filename) - header_length)
             progress_count = header_length * increment
 
             # Read the rest of the data
@@ -234,7 +232,7 @@ class SliceConverter:
                     line_ascii = '$$POLYLINE/'
                     polyline_count = 3
 
-                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+                # Put into a conditional to only trigger at every interval of 5 so as to not overload the emit
                 progress_count += increment * 2
                 progress = int(5 * round(progress_count / 5))
                 if not progress == progress_previous:
@@ -247,51 +245,19 @@ class SliceConverter:
                     self.check_flags()
                     while self.pause_flag:
                         self.status.emit('Current Part: %s | Conversion paused.' %
-                                         os.path.basename(filename).replace('.cli', ''))
+                                         os.path.splitext(os.path.basename(filename))[0])
                         time.sleep(1)
                         self.check_flags()
                     if not self.run_flag:
                         self.status.emit('Current Part: %s | Conversion stopped.' %
-                                         os.path.basename(filename).replace('.cli', ''))
+                                         os.path.splitext(os.path.basename(filename))[0])
                         self.draw_flag = False
                         return None
 
-                    self.status.emit('Current Part: %s | Reading CLI (BINARY) file...' %
-                                     os.path.basename(filename).replace('.cli', ''))
+                    self.status.emit('Current Part: %s | Reading CLI file...' %
+                                     os.path.splitext(os.path.basename(filename))[0])
 
         return data_ascii
-
-    def read_cli_ascii(self, filename):
-        # Open the .cli file
-        with open(filename, 'r') as cli_file:
-            # print(len(cli_file.read()))
-            increment = 0.001
-            # increment = 100.0 / sum(1 for _ in cli_file.read())
-            # # Go back to the start of the file as getting the length of the file put the seek head to the EOF
-            # cli_file.seek(0)
-            for line in cli_file.read():
-                # Check if the file is actually encoded in binary, if so, break from this loop
-                if 'BINARY' in line.strip():
-                    binary_flag = True
-                    break
-                # Extract pertinent information from the header and store them in the dictionary
-                elif 'UNITS' in line.strip():
-                    data_ascii.append(float(line[8:-2]))
-                elif 'GEOMETRYSTART' in line.strip():
-                    break
-                progress += increment
-
-            for line in cli_file:
-                if binary_flag:
-                    break
-                # Check if the line is empty or not (because of the removal of random newline characters)
-                if line.rstrip('\r\n/n'):
-                    data_ascii.append(line.rstrip('\r\n/n'))
-
-                if int(round(progress)) is not progress_previous:
-                    self.progress.emit(int(round(progress)))
-                    progress_previous = int(round(progress))
-                progress += increment
 
     def format_contours(self, filename, data_ascii):
         """Formats the data from the slice file into an organized scaled list of contours
@@ -334,7 +300,7 @@ class SliceConverter:
                     line = [int(round(float(element) * units * self.scale_factor)) for element in line[3:]]
                     contours_file.write('%s\n' % line)
 
-                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
+                # Put into a conditional to only trigger at every interval of 5 so as to not overload the emit
                 progress_count += increment
                 progress = int(5 * round(progress_count / 5))
                 if not progress == progress_previous:
@@ -433,14 +399,14 @@ class SliceConverter:
             image_contours = cv2.flip(image_contours, 0)
 
             # Correct the image using calculated transformation parameters to account for the perspective warp
-            image_contours = image_processing.ImageTransform(None).transform(image_contours, self.transform)
+            image_contours = image_processing.ImageTransform().transform(image_contours, self.transform)
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
 
             # Save the part names image to the contours up one folder after transforming it just like the contours image
             if layer == 1:
-                image_names = image_processing.ImageTransform(None).transform(image_names, self.transform)
+                image_names = image_processing.ImageTransform().transform(image_names, self.transform)
                 cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
             # Increment to the next layer
@@ -454,9 +420,11 @@ class SliceConverter:
     def check_flags(self):
         """Checks the respective Run and Pause keys from the config.json file"""
 
-        with open('config.json') as config:
-            self.config = json.load(config)
+        # Load from the build.json file
+        with open('build.json') as build:
+            self.build = json.load(build)
 
+        # Check if the current method was executed by a New Build or the Slice Converter
         if self.build['SliceConverter']['Build']:
             self.run_flag = self.build['BuildInfo']['Run']
             self.pause_flag = self.build['BuildInfo']['Pause']

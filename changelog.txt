@@ -1,5 +1,23 @@
+September 28
+- Converted the Calibration method to now instead use the QThreadPool rather than QThreads
+- Also converted the Notifications method to do the same thing
+- They now work and function properly
+- Now all methods and modules use the QThreadPool rather than QThreads
+- Removed the read_cli_ascii method due to not forseeing this method being used
+- Added a Faux Trigger button so that the trigger can be 'simulated' when access to the trigger is unavailable (part of the advanced mode)
+- Restructured the transform method of the image_processing module into individual smaller modules
+- Fixed more issues in regards to the image capture due to the change in where certain settings are stored
+
 September 27
-- 
+- Went through and changed a bunch of variable names for consistency across modules and methods
+- Went through and added relevant ToolTips to any elements that need it to clarify that element's purpose
+- Split the config.json file into three separate files:
+	- config.json stores any settings that persist across sessions
+	- build.json stores any settings pertinent to the current build
+	- build_default.json stores a blank build dictionary
+- Replaced all the save_config and load_config methods with the two liner save and load functions (should reduce function call overhead by a tiny bit)
+- Moved the pixmap conversion method to the ui_elements module
+- Added the Slice Converter, Capture Single Image and Image Capture Tab to the Advanced Mode
 
 September 26
 - Implemented the compare overlay function that compares the detect scan pattern output with the contour part overlay using template matching

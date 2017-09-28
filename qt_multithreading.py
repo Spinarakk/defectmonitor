@@ -9,10 +9,11 @@ class WorkerSignals(QObject):
     finished = pyqtSignal()
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
-    status = pyqtSignal(str)
+    status = pyqtSignal(object)
     layer = pyqtSignal(int)
     phase = pyqtSignal(str)
     progress = pyqtSignal(int)
+    colour = pyqtSignal(int, bool)
 
 
 class Worker(QRunnable):
@@ -33,9 +34,12 @@ class Worker(QRunnable):
             kwargs['layer'] = self.signals.layer
             kwargs['phase'] = self.signals.phase
 
-        if 'convert' in str(self.function) or 'detector' in str(self.function):
+        if 'convert' in str(self.function) or 'detector' in str(self.function) or 'calibrate' in str(self.function):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
+
+        if 'calibrate' in str(self.function):
+            kwargs['colour'] = self.signals.colour
 
     @pyqtSlot()
     def run(self):
@@ -47,7 +51,7 @@ class Worker(QRunnable):
             # Emit back an error if the function fails in any way
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
-            self.signal.error.emit((exctype, value, traceback.format_exc()))
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
         else:
             # Emit the result of the function
             self.signals.result.emit(result)

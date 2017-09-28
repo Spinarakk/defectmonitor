@@ -4,6 +4,7 @@
       <w>clahe</w>
       <w>filenames</w>
       <w>grayscale</w>
+      <w>headerend</w>
       <w>homography</w>
       <w>menubar</w>
       <w>modeless</w>
@@ -12,6 +13,7 @@
       <w>pyqt</w>
       <w>retval</w>
       <w>threadpool</w>
+      <w>undistort</w>
     </words>
   </dictionary>
 </component>

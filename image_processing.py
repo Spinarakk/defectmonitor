@@ -17,28 +17,50 @@ COLOUR_WHITE = (255, 255, 255)
 class ImageTransform:
     """Module containing methods used to transform or modify any images using a variety of OpenCV functions"""
 
-    def __init__(self, test_flag=False):
+    def __init__(self):
 
-        # Load configuration settings from config.json file
+        # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Checks whether to use the temporary results of the camera calibration, or the ones saved in the config file
-        if test_flag:
-            with open('%s/calibration_results.json' % self.build['WorkingDirectory']) as camera_parameters:
-                self.parameters = json.load(camera_parameters)
-                self.parameters = self.parameters['ImageCorrection']
-        else:
-            self.parameters = self.config['ImageCorrection']
-
     def apply_fixes(self, image):
-        """Applies the distortion, perspective and crop processes to the received image"""
+        """Applies the distortion, perspective and crop processes to the received image using the calibration results"""
+
+        # Checks whether to use the temporary results of the camera calibration, or the ones saved in the config file
+        try:
+            with open('calibration_results.json') as parameters:
+                self.parameters = json.load(parameters)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            self.parameters = self.config['ImageCorrection']
+        else:
+            self.parameters = self.parameters['ImageCorrection']
 
         image = self.distortion_fix(image)
         image = self.perspective_fix(image)
-        image = self.crop(image)
+        return self.crop(image)
 
-        return image
+    def apply_transformation(self, image):
+        """Applies the transformation processes to the received image using the transformation parameters"""
+        
+        try:
+            with open('transformation_parameters.json') as transform:
+                self.transform = json.load(transform)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            self.transform = self.config['ImageCorrection']['TransformParameters']
+        else:
+            self.transform = self.transform['ImageCorrection']['TransformParameters']
+
+        # Grab the image's width and height (for clearer code purposes)
+        self.width = image.shape[1]
+        self.height = image.shape[0]
+
+        image = self.flip(image)
+        image = self.translate(image)
+        image = self.rotate(image)
+        image = self.stretch_nw(image)
+        image = self.stretch_ne(image)
+        image = self.stretch_sw(image)
+        return self.stretch_se(image)
 
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
@@ -50,8 +72,7 @@ class ImageTransform:
 
         # OpenCV distortion fix function
         try:
-            image = cv2.undistort(image, camera_matrix, np.array(self.parameters['DistortionCoefficients']))
-            return image
+            return cv2.undistort(image, camera_matrix, np.array(self.parameters['DistortionCoefficients']))
         except:
             print('Image Distortion fix failed.')
             return False
@@ -60,9 +81,8 @@ class ImageTransform:
         """Fixes the perspective warp due to the off-centre position of the camera"""
 
         try:
-            image = cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']),
+            return cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']),
                                         tuple(self.parameters['Resolution']))
-            return image
         except:
             print('Image Perspective Fix failed.')
             return False
@@ -74,57 +94,54 @@ class ImageTransform:
         crop_boundary = self.config['ImageCorrection']['CropBoundary']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
-        image = image[crop_boundary[0]: crop_boundary[1], crop_boundary[2]: crop_boundary[3]]
+        return image[crop_boundary[0]: crop_boundary[1], crop_boundary[2]: crop_boundary[3]]
 
-        return image
+    def flip(self, image):
+        """Flip the image around the horizontal or vertical axis"""
 
-    @staticmethod
-    def transform(image, transform):
-
-        width = image.shape[1]
-        height = image.shape[0]
-
-        # Flip
-        if transform[3]:
+        if self.transform[3]:
             image = cv2.flip(image, 1)
-        if transform[4]:
+        if self.transform[4]:
             image = cv2.flip(image, 0)
-
-        # Translation
-        translation_matrix = np.float32([[1, 0, transform[1]], [0, 1, transform[0]]])
-        image = cv2.warpAffine(image, translation_matrix, (width, height))
-
-        # Rotation
-        rotation_matrix = cv2.getRotationMatrix2D((width / 2, height / 2), transform[2], 1)
-        image = cv2.warpAffine(image, rotation_matrix, (width, height))
-
-        # Stretching
-        # Top Left Corner
-        points1 = np.float32([[width, 0], [0, 0], [0, height]])
-        points2 = np.float32([[width, transform[5] + transform[12]],
-                              [transform[8], transform[5]],
-                              [transform[8] + transform[13], height + transform[7]]])
-        matrix = cv2.getAffineTransform(points1, points2)
-        image = cv2.warpAffine(image, matrix, (width, height))
-        # Top Right Corner
-        points1 = np.float32([[0, 0], [width, 0], [width, height]])
-        points2 = np.float32([[0, transform[10]],
-                              [width + transform[6], 0],
-                              [width + transform[6] + transform[15], height + transform[7]]])
-        matrix = cv2.getAffineTransform(points1, points2)
-        image = cv2.warpAffine(image, matrix, (width, height))
-        # Bottom Left Corner
-        points1 = np.float32([[0, 0], [0, height], [width, height]])
-        points2 = np.float32([[transform[9], 0], [0, height], [width, height + transform[16]]])
-        matrix = cv2.getAffineTransform(points1, points2)
-        image = cv2.warpAffine(image, matrix, (width, height))
-        # Bottom Right Corner
-        points1 = np.float32([[0, height], [width, height], [width, 0]])
-        points2 = np.float32([[0, height + transform[14]], [width, height], [width + transform[11], 0]])
-        matrix = cv2.getAffineTransform(points1, points2)
-        image = cv2.warpAffine(image, matrix, (width, height))
-
         return image
+
+    def translate(self, image):
+        """Translate the image in any of the four directions"""
+        translation_matrix = np.float32([[1, 0, self.transform[1]], [0, 1, self.transform[0]]])
+        return cv2.warpAffine(image, translation_matrix, (self.width, self.height))
+
+    def rotate(self, image):
+        """Rotate the image a set amount of degrees in the clockwise or anti-clockwise direction"""
+        rotation_matrix = cv2.getRotationMatrix2D((self.width / 2, self.height / 2), self.transform[2], 1)
+        return cv2.warpAffine(image, rotation_matrix, (self.width, self.height))
+
+    def stretch_nw(self, image):
+        points1 = np.float32([[self.width, 0], [0, 0], [0, self.height]])
+        points2 = np.float32([[self.width, self.transform[5] + self.transform[12]],
+                              [self.transform[8], self.transform[5]],
+                              [self.transform[8] + self.transform[13], self.height + self.transform[7]]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        return cv2.warpAffine(image, matrix, (self.width, self.height))
+
+    def stretch_ne(self, image):
+        points1 = np.float32([[0, 0], [self.width, 0], [self.width, self.height]])
+        points2 = np.float32([[0, self.transform[10]],
+                              [self.width + self.transform[6], 0],
+                              [self.width + self.transform[6] + self.transform[15], self.height + self.transform[7]]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        return cv2.warpAffine(image, matrix, (self.width, self.height))
+
+    def stretch_sw(self, image):
+        points1 = np.float32([[0, 0], [0, self.height], [self.width, self.height]])
+        points2 = np.float32([[self.transform[9], 0], [0, self.height], [self.width, self.height + self.transform[16]]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        return cv2.warpAffine(image, matrix, (self.width, self.height))
+
+    def stretch_se(self, image):
+        points1 = np.float32([[0, self.height], [self.width, self.height], [self.width, 0]])
+        points2 = np.float32([[0, self.height + self.transform[14]], [self.width, self.height], [self.width + self.transform[11], 0]])
+        matrix = cv2.getAffineTransform(points1, points2)
+        return cv2.warpAffine(image, matrix, (self.width, self.height))
 
     @staticmethod
     def clahe(image, gray_flag=False, cliplimit=8.0, tilegridsize=(64, 64)):
@@ -159,8 +176,8 @@ class DefectDetector:
     def __init__(self):
 
         # Load configuration settings from config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         # Checking if the received image exists (a blank string may be sent which means the image doesn't exist)
         # Only a problem for the contours and previous images as this method cannot be accessed if the raw doesn't exist

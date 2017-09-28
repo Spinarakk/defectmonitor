@@ -31,8 +31,7 @@
         "Single": 1
     },
     "Notifications": {
-        "Error": true,
-        "Failure": true,
+	"Attachment": "",
         "Major": true,
         "Minor": true,
         "Password": "Amaero2017",

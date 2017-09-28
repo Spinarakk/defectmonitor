@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1080</width>
-    <height>756</height>
+    <width>1122</width>
+    <height>785</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -799,6 +799,19 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="pushFauxTrigger">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Simulates the trigger being triggered.</string>
+            </property>
+            <property name="text">
+             <string>Faux Trigger</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QFrame" name="frameTimer">
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
@@ -1178,7 +1191,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>98</width>
+            <width>136</width>
             <height>91</height>
            </rect>
           </property>
@@ -1232,7 +1245,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>111</width>
+            <width>136</width>
             <height>91</height>
            </rect>
           </property>
@@ -1286,7 +1299,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>125</width>
+            <width>136</width>
             <height>91</height>
            </rect>
           </property>
@@ -1353,7 +1366,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1080</width>
+     <width>1122</width>
      <height>21</height>
     </rect>
    </property>

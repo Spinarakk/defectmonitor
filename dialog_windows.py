@@ -70,8 +70,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
             self.checkMinor.setChecked(self.build['Notifications']['Minor'])
             self.checkMajor.setChecked(self.build['Notifications']['Major'])
-            self.checkFailure.setChecked(self.build['Notifications']['Failure'])
-            self.checkError.setChecked(self.build['Notifications']['Error'])
+
+        self.threadpool = QThreadPool()
 
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
@@ -115,25 +115,21 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.pushCreate.setEnabled(False)
                 self.pushCancel.setEnabled(False)
 
-                self.build['BuildInfo']['Username'] = str(self.lineUsername.text())
-                self.build['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
+                # Save pertinent information that is required to send a notification email
+                self.build['BuildInfo']['Username'] = self.lineUsername.text()
+                self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.text()
+                if self.checkAddAttachment.isChecked():
+                    self.build['Notifications']['Attachment'] = '%s/test_image.jpg' % self.build['WorkingDirectory']
+                else:
+                    self.build['Notifications']['Attachment'] = ''
 
                 # Save to the build.json file
-                with open('build.json', 'r+') as build:
+                with open('build.json', 'w+') as build:
                     json.dump(self.build, build, indent=4, sort_keys=True)
 
-                # Construct the subject lien and message to be sent here
-                subject = 'Test Email Notification'
-                message = 'This is a test email to check if the entered email address is valid.'
-                if self.checkAddAttachment.isChecked():
-                    attachment = 'test_image.jpg'
-                else:
-                    attachment = None
-
-                # Instantiate and run_build a Notifications instance
-                self.N_instance = extra_functions.Notifications(subject, message, attachment)
-                self.N_instance.start()
-                self.N_instance.finished.connect(self.send_test_finished)
+                worker = qt_multithreading.Worker(extra_functions.Notifications().test_message)
+                worker.signals.finished.connect(self.send_test_finished)
+                self.threadpool.start(worker)
             else:
                 # Opens a message box indicating that the entered email address is invalid
                 invalid_email_error = QMessageBox()
@@ -213,8 +209,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.build['BuildInfo']['SliceFiles'] = self.slice_list
             self.build['Notifications']['Minor'] = self.checkMinor.isChecked()
             self.build['Notifications']['Major'] = self.checkMajor.isChecked()
-            self.build['Notifications']['Failure'] = self.checkFailure.isChecked()
-            self.build['Notifications']['Error'] = self.checkError.isChecked()
 
             # Save the selected platform dimensions to the config.json file
             if self.comboPlatform.currentIndex() == 0:
@@ -285,7 +279,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                     return
 
             # Save to the build.json file
-            with open('build.json', 'r+') as build:
+            with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
             # Close the dialog window and return True
@@ -309,7 +303,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         # Restoring the window state needs to go into a try loop as the first time the program is run on a new system
         # There won't be any stored settings and the function throws a TypeError
         try:
-            self.restoreGeometry(self.window_settings.value('geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Camera Calibration Geometry', ''))
         except TypeError:
             pass
 
@@ -337,6 +331,8 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         if os.path.isfile(self.config['CameraCalibration']['TestImage']):
             self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
 
+        self.threadpool = QThreadPool()
+
     def browse_folder(self):
         """Opens a File Dialog, allowing the user to select a folder containing calibration images"""
 
@@ -355,7 +351,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.image_list = list()
 
             # Grab the list of images in the selected folder and store them if the name contains 'calibration_image'
-            for image_name in os.listdir(self.calibration_folder):
+            for image_name in os.listdir(folder):
                 if 'image_calibration' in image_name:
                     self.image_list.append(image_name)
 
@@ -400,6 +396,9 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.pushStart.setEnabled(False)
         self.pushDone.setEnabled(False)
 
+        # This setting is exempt from the other settings as by default, this setting should be False
+        self.config['CameraCalibration']['Apply'] = self.checkApply.isChecked()
+
         # Save calibration settings
         self.apply_settings()
 
@@ -411,14 +410,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         except AttributeError:
             pass
 
-        # Instantiate and run_build a CameraCalibration instance
-        self.CC_instance = camera_calibration.Calibration(self.calibration_folder, self.checkSaveC.isChecked(),
-                                                          self.checkSaveU.isChecked())
-        self.connect(self.CC_instance, pyqtSignal("change_colour(QString, QString)"), self.change_colour)
-        self.connect(self.CC_instance, pyqtSignal("update_status(QString)"), self.update_status)
-        self.connect(self.CC_instance, pyqtSignal("update_progress(QString)"), self.update_progress)
-        self.connect(self.CC_instance, pyqtSignal("finished()"), self.start_finished)
-        self.CC_instance.start()
+        worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate)
+        worker.signals.status.connect(self.update_status)
+        worker.signals.progress.connect(self.update_progress)
+        worker.signals.colour.connect(self.change_colour)
+        worker.signals.finished.connect(self.start_finished)
+        self.threadpool.start(worker)
 
     def start_finished(self):
         """Executes when the CameraCalibration instance has finished"""
@@ -426,23 +423,8 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         # Opens a Dialog Window to view Calibration Results
         self.view_results(True)
 
-        # If the Apply to Sample Image checkbox is checked
-        # Applies the image processing techniques using the updated camera parameters
-        if self.checkApply.isChecked():
-            self.update_status('Processing test image...')
-            self.update_progress(0)
-            image = cv2.imread(self.config['CameraCalibration']['TestImage'])
-            image = image_processing.ImageTransform(None, test_flag=True).distortion_fix(image)
-            self.update_progress(25)
-            image = image_processing.ImageTransform(None, test_flag=True).perspective_fix(image)
-            self.update_progress(50)
-            image = image_processing.ImageTransform(None, test_flag=True).crop(image)
-            self.update_progress(75)
-            cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image)
-            self.update_status('Test Image successfully processed.')
-            self.update_progress(100)
-            # Open the image in the native image viewer for the user to view the results of the calibration
-            os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
+        # Save calibration settings to the config.json file
+        self.apply_settings()
 
         # Enable or disable relevant UI elements to prevent concurrent processes
         self.pushBrowseF.setEnabled(True)
@@ -459,7 +441,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         """
 
         if calibration_flag:
-            with open('%s/calibration_results.json' % self.build['WorkingDirectory']) as file:
+            with open('calibration_results.json') as file:
                 results = json.load(file)
         else:
             results = self.config.copy()
@@ -473,25 +455,32 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.calibration_results_dialog.show()
 
     def save_results(self):
-        """Copies the calibration results from the temporary json file to the config.json file"""
+        """Copies the calibration results from the temporary calibration_results.json file to the config.json file"""
 
+        # Load the results from the temporary calibration_results.json file
         with open('calibration_results.json') as file:
             results = json.load(file)
 
+        # Delete the calibration_results.json file
+        os.remove('calibration_results.json')
+
         # Copy the results dictionary into the config dictionary
         self.config.update(results)
+
+        # Save to the config.json file and disable saving again
         self.apply_settings()
-        self.update_status('Calibration results saved to the config file.')
         self.pushSave.setEnabled(False)
+        self.update_status('Calibration results saved to the config file.')
 
     def change_colour(self, index, valid):
         """Changes the background colour of the received item in the listImages box
         Changes to green if image is valid, red if image is invalid for calibration
         """
-        if int(valid):
-            self.listImages.item(int(index)).setBackground(QColor('green'))
+
+        if valid:
+            self.listImages.item(index).setBackground(QColor('green'))
         else:
-            self.listImages.item(int(index)).setBackground(QColor('red'))
+            self.listImages.item(index).setBackground(QColor('red'))
 
     def enable_checkbox(self):
         """(Re-)Enables the Apply to Test Image checkbox if a test image has been selected"""
@@ -522,7 +511,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.config['CameraCalibration']['Apply'] = self.checkApply.isChecked()
 
         # Save to the config.json file
-        with open('config.json', 'r+') as config:
+        with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
     def update_status(self, string):
@@ -537,8 +526,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         # Save settings so that settings persist across instances
         self.apply_settings()
 
+        # Remove the calibration_results.json file if it exists
+        if os.path.isfile('calibration_results.json'):
+            os.remove('calibration_results.json')
+
         # Save the current position of the Dialog Window before the window is closed
-        self.window_settings.setValue('geometry', self.saveGeometry())
+        self.window_settings.setValue('Camera Calibration Geometry', self.saveGeometry())
 
 
 class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
@@ -555,7 +548,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
         try:
-            self.restoreGeometry(self.window_settings.value('geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Camera Settings Geometry', ''))
         except TypeError:
             pass
 
@@ -602,7 +595,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.config['CameraSettings']['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
         # Save to the config.json file
-        with open('config.json', 'r+') as config:
+        with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Disable the Apply button until another setting is changed
@@ -621,7 +614,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         """Executes when the window is closed or the Cancel button is clicked
         Doesn't save any changed settings at all"""
 
-        self.window_settings.setValue('geometry', self.saveGeometry())
+        self.window_settings.setValue('Camera Settings Geometry', self.saveGeometry())
 
 
 class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
@@ -638,21 +631,22 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
         try:
-            self.restoreGeometry(self.window_settings.value('geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Slice Converter Geometry', ''))
         except TypeError:
             pass
 
+        # Load from the build.json file
         with open('build.json') as build:
             self.build = json.load(build)
 
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.buttonBrowseSF.clicked.connect(self.browse_slice)
         self.buttonBrowseF.clicked.connect(self.browse_folder)
         self.buttonStart.clicked.connect(self.start)
         self.buttonStop.clicked.connect(self.start_finished)
 
-        self.slice_list = list()
+        # Create and display a 'default' contours folder to store the drawn part contours
         self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
-
         self.lineFolder.setText(self.contours_folder)
 
         self.threadpool = QThreadPool()
@@ -746,9 +740,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.checkDraw.setEnabled(True)
 
     def save_settings(self):
-        """Save any changed values to the config.json file"""
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
+        """Save any changed values to the build.json file"""
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
 
     def update_status(self, string):
         string = string.split(' | ')
@@ -774,7 +768,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.build['SliceConverter']['Folder'] = ''
             self.build['SliceConverter']['Files'] = []
             self.save_settings()
-            self.window_settings.setValue('geometry', self.saveGeometry())
+            self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
 
 
 class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustment):
@@ -784,7 +778,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
     """
 
     # Signal that will be emitted anytime one of the transformation buttons is pressed
-    update_overlay = pyqtSignal(list)
+    update_overlay = pyqtSignal(bool)
 
     def __init__(self, parent=None):
 
@@ -794,7 +788,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
         try:
-            self.restoreGeometry(self.window_settings.value('geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Overlay Adjustment Geometry', ''))
         except TypeError:
             pass
 
@@ -964,14 +958,17 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
         self.config['ImageCorrection']['TransformParameters'] = self.transform
 
-        with open('config.json', 'w+') as config:
+        with open('transformation_parameters.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
-        self.update_overlay.emit(self.transform)
+        self.update_overlay.emit(False)
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
-        self.window_settings.setValue('geometry', self.saveGeometry())
+        self.window_settings.setValue('Overlay Adjustment Geometry', self.saveGeometry())
+
+        if os.path.isfile('transformation_parameters.json'):
+            os.remove('transformation_parameters.json')
 
 
 class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
@@ -988,7 +985,7 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
         try:
-            self.restoreGeometry(self.window_settings.value('geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Calibration Results Geometry', ''))
         except TypeError:
             pass
 
@@ -1021,4 +1018,4 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
-        self.window_settings.setValue('geometry', self.saveGeometry())
+        self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())

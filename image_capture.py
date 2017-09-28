@@ -19,6 +19,10 @@ class ImageCapture:
         with open('build.json') as build:
             self.build = json.load(build)
 
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
         self.current_layer = self.build['ImageCapture']['Layer']
         self.current_phase = self.build['ImageCapture']['Phase']
@@ -97,7 +101,7 @@ class ImageCapture:
     def acquire_image_single(self, status, layer, phase):
         """Acquire a single image from the camera"""
 
-        status.emit('Capturing single image...')
+        status.emit(['Capturing...', ''])
 
         # Acquire and open the camera and apply the entered settings to it
         self.acquire_camera()
@@ -108,13 +112,16 @@ class ImageCapture:
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            status.emit('Error grabbing image. Please try again.')
+            status.emit(['Error', ''])
         else:
             # Save the raw image to the single folder
             cv2.imwrite('%s/raw/single/singleR_%s.png' %
                         (self.build['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
-            status.emit('Processing captured image...')
+            # Increment the capture counter
+            self.single_layer += 1
+
+            status.emit(['Image Saved', ''])
 
             # Process the image
             image = image_processing.ImageTransform().apply_fixes(image)
@@ -123,9 +130,7 @@ class ImageCapture:
             cv2.imwrite('%s/processed/single/singleP_%s.png' %
                         (self.build['ImageCapture']['Folder'], str(self.single_layer).zfill(4)), image)
 
-            # Increment the capture counter
-            self.single_layer += 1
-            status.emit('Image captured.')
+            #status.emit('Image captured.')
         finally:
             # Close the camera and save any changed counters to the config.json file
             self.camera.close()
@@ -134,7 +139,7 @@ class ImageCapture:
     def acquire_image_run(self, status, layer, phase):
         """Acquire an images from the camera when trigger is detected, and sleep for a certain amount of time"""
 
-        status.emit('Trigger detected. Capturing image...')
+        status.emit(['Capturing...', 'Detected'])
 
         # Acquire and open the camera and apply the entered settings to it
         self.acquire_camera()
@@ -153,20 +158,24 @@ class ImageCapture:
                     (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
                      self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
-        status.emit('Processing captured image...')
+        status.emit(['Image Saved', ''])
 
-        # Process the image
-        image = image_processing.ImageTransform().apply_fixes(image)
+        #status.emit('Processing captured image...')
 
-        # Save the processed image to the processed folder
-        cv2.imwrite('%s/processed/%s/%sP_%s.png' %
-                    (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
-                     self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
+        # Ignore the very first 'scan' layer with a layer number of 0.5
+        if not layer < 1:
+            # Process the image
+            image = image_processing.ImageTransform().apply_fixes(image)
+
+            # Save the processed image to the processed folder
+            cv2.imwrite('%s/processed/%s/%sP_%s.png' %
+                        (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
+                         self.phases[self.current_phase], str(int(self.current_layer)).zfill(4)), image)
 
         # Loop used to delay triggering for additional images for however many seconds
         # Also displays remaining timeout on the status bar
-        for seconds in range(self.build['ImageCapture']['CameraSettings'], 0, -1):
-            status.emit('Image saved. %s second timeout...' % seconds)
+        for seconds in range(self.config['CameraSettings']['TriggerTimeout'], 0, -1):
+            status.emit(['', 'Timeout: %ss' % seconds])
             time.sleep(1)
 
         # Increment the layer (by 1) every second image, and toggle the phase
@@ -183,5 +192,5 @@ class ImageCapture:
         self.build['ImageCapture']['Phase'] = self.current_phase
         self.build['ImageCapture']['Single'] = self.single_layer
 
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)

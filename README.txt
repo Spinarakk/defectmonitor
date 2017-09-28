@@ -76,28 +76,15 @@ Coat
 - Powder holes
 
 Modules
-main_window.py
-- Contains code to setup the main window when you open the application
-dialog_windows.py
-- Contains code for all the dialog sub-windows that open when you click on various elements on the main window
-image_capture.py
-- Contains code for capturing images
-- If simulation is checked, images are loaded from a sample folder
-camera_calibration.py
-- Contains code for calibrating the camera and generating the camera parameters and intrinsic values
-slice_converter.py
-- Contains code for converting the .cls or .cli file into a format OpenCV can use to draw contours
-image_processing.py
-- Contains code for processing the images
-- Image correction
-- Defect analysis and identification
-extra_functions.py
-- Contains miscellaneous functions that provide various bits of visual or minor QOL functionality
-
-- Image Processing for Defects
-- Slice Overlay & Comparison
-- Report Generation
-- Notification
+- main_window.py
+- dialog_windows.py
+- image_capture.py
+- camera_calibration.py
+- slice_converter.py
+- image_processing.py
+- extra_functions.py
+- qt_multithreading.py
+- ui_elements
 
 Camera
 - Has lots of features and changeable settings
@@ -120,6 +107,9 @@ Nomenclature Notes
 	- XXX_instance (For Qthread instances)
 	- image_XXX (Image arrays)
 - Comments will only be provided for the first time the function or block of code appears in the module, starting from the main_window module
+- The entire functioning of the program requires the presence of config.json and build.json
+- Almost every called function saves and loads settings and values to these files
+- Do not delete these files ever, lest the program stop working entirely
 
 How to Interpret Converted .cls Slice Files
 - Layer X: Layer Height, 
