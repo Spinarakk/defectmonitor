@@ -399,14 +399,14 @@ class SliceConverter:
             image_contours = cv2.flip(image_contours, 0)
 
             # Correct the image using calculated transformation parameters to account for the perspective warp
-            image_contours = image_processing.ImageTransform().transform(image_contours, self.transform)
+            image_contours = image_processing.ImageTransform().apply_transformation(image_contours)
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
 
             # Save the part names image to the contours up one folder after transforming it just like the contours image
             if layer == 1:
-                image_names = image_processing.ImageTransform().transform(image_names, self.transform)
+                image_names = image_processing.ImageTransform().apply_transformation(image_names)
                 cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
             # Increment to the next layer

@@ -10,8 +10,7 @@ class WorkerSignals(QObject):
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
     status = pyqtSignal(object)
-    layer = pyqtSignal(int)
-    phase = pyqtSignal(str)
+    name = pyqtSignal(str)
     progress = pyqtSignal(int)
     colour = pyqtSignal(int, bool)
 
@@ -31,8 +30,7 @@ class Worker(QRunnable):
         # Add any signal keywords to the kwargs here depending on the sent function
         if 'acquire_image' in str(self.function):
             kwargs['status'] = self.signals.status
-            kwargs['layer'] = self.signals.layer
-            kwargs['phase'] = self.signals.phase
+            kwargs['name'] = self.signals.name
 
         if 'convert' in str(self.function) or 'detector' in str(self.function) or 'calibrate' in str(self.function):
             kwargs['status'] = self.signals.status

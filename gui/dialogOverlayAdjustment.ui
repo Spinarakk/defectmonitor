@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>389</width>
-    <height>315</height>
+    <width>358</width>
+    <height>290</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,6 +18,153 @@
     <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_3">
+   <item row="2" column="2" colspan="2">
+    <widget class="QGroupBox" name="groupRotationFlip">
+     <property name="title">
+      <string>Rotation / Flip</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>5</number>
+      </property>
+      <property name="topMargin">
+       <number>3</number>
+      </property>
+      <property name="rightMargin">
+       <number>5</number>
+      </property>
+      <property name="bottomMargin">
+       <number>3</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="pushRotateACW">
+        <property name="minimumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>7</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+          <kerning>true</kerning>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Clocwise rotates the display image by the given degrees.</string>
+        </property>
+        <property name="text">
+         <string>ACW</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushRotateCW">
+        <property name="minimumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+          <kerning>true</kerning>
+         </font>
+        </property>
+        <property name="contextMenuPolicy">
+         <enum>Qt::DefaultContextMenu</enum>
+        </property>
+        <property name="toolTip">
+         <string>Anti-Clocwise rotates the display image by the given degrees.</string>
+        </property>
+        <property name="text">
+         <string>CW</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushFlipHorizontal">
+        <property name="minimumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+          <kerning>true</kerning>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Clocwise rotates the display image by the given degrees.</string>
+        </property>
+        <property name="text">
+         <string>H</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushFlipVertical">
+        <property name="minimumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>34</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+          <kerning>true</kerning>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Clocwise rotates the display image by the given degrees.</string>
+        </property>
+        <property name="text">
+         <string>V</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="0" column="0">
     <widget class="QGroupBox" name="groupValues">
      <property name="enabled">
@@ -84,93 +231,6 @@
      </layout>
     </widget>
    </item>
-   <item row="0" column="1" colspan="2">
-    <widget class="QGroupBox" name="groupGeneral">
-     <property name="title">
-      <string>General</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_5">
-      <property name="leftMargin">
-       <number>10</number>
-      </property>
-      <property name="topMargin">
-       <number>7</number>
-      </property>
-      <property name="rightMargin">
-       <number>10</number>
-      </property>
-      <property name="bottomMargin">
-       <number>7</number>
-      </property>
-      <item row="0" column="0">
-       <widget class="QPushButton" name="pushReset">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>35</width>
-          <height>35</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>35</width>
-          <height>35</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>15</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-          <kerning>true</kerning>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Resets the overlay image.</string>
-        </property>
-        <property name="text">
-         <string>R</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="pushUndo">
-        <property name="minimumSize">
-         <size>
-          <width>35</width>
-          <height>35</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>35</width>
-          <height>35</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>15</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-          <kerning>true</kerning>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
-        </property>
-        <property name="text">
-         <string>U</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
    <item row="0" column="3" rowspan="2">
     <widget class="QGroupBox" name="groupTranslation">
      <property name="title">
@@ -178,22 +238,25 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <property name="leftMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
       <property name="topMargin">
-       <number>7</number>
+       <number>3</number>
       </property>
       <property name="rightMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
       <property name="bottomMargin">
-       <number>7</number>
+       <number>3</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
       </property>
       <item row="0" column="0">
        <widget class="QPushButton" name="pushTranslateUp">
         <property name="font">
          <font>
-          <pointsize>14</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <kerning>true</kerning>
@@ -203,7 +266,7 @@
          <string>Shifts the display image up by the given pixels.</string>
         </property>
         <property name="text">
-         <string>U</string>
+         <string>UP</string>
         </property>
        </widget>
       </item>
@@ -211,7 +274,7 @@
        <widget class="QPushButton" name="pushTranslateDown">
         <property name="font">
          <font>
-          <pointsize>14</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <kerning>true</kerning>
@@ -221,7 +284,7 @@
          <string>Shifts the display image down by the given pixels.</string>
         </property>
         <property name="text">
-         <string>D</string>
+         <string>DOWN</string>
         </property>
        </widget>
       </item>
@@ -229,7 +292,7 @@
        <widget class="QPushButton" name="pushTranslateLeft">
         <property name="font">
          <font>
-          <pointsize>14</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <kerning>true</kerning>
@@ -239,7 +302,7 @@
          <string>Shifts the display image left by the given pixels.</string>
         </property>
         <property name="text">
-         <string>L</string>
+         <string>LEFT</string>
         </property>
        </widget>
       </item>
@@ -247,7 +310,7 @@
        <widget class="QPushButton" name="pushTranslateRight">
         <property name="font">
          <font>
-          <pointsize>14</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <kerning>true</kerning>
@@ -257,162 +320,127 @@
          <string>Shifts the display image right by the given pixels.</string>
         </property>
         <property name="text">
-         <string>R</string>
+         <string>RIGHT</string>
         </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="2" column="2" colspan="2">
-    <widget class="QGroupBox" name="groupRotationFlip">
+   <item row="0" column="1" colspan="2">
+    <widget class="QGroupBox" name="groupGeneral">
      <property name="title">
-      <string>Rotation / Flip</string>
+      <string>General</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QGridLayout" name="gridLayout_5">
       <property name="leftMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
       <property name="topMargin">
-       <number>7</number>
+       <number>3</number>
       </property>
       <property name="rightMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
       <property name="bottomMargin">
-       <number>7</number>
+       <number>3</number>
       </property>
-      <item>
-       <widget class="QPushButton" name="pushRotateACW">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="pushReset">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
          <font>
-          <pointsize>7</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Clocwise rotates the display image by the given degrees.</string>
+         <string>Resets the overlay image.</string>
         </property>
         <property name="text">
-         <string>ACW</string>
+         <string>RE</string>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="pushRotateCW">
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pushUndo">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
          <font>
-          <pointsize>10</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <kerning>true</kerning>
          </font>
         </property>
-        <property name="contextMenuPolicy">
-         <enum>Qt::DefaultContextMenu</enum>
-        </property>
         <property name="toolTip">
-         <string>Anti-Clocwise rotates the display image by the given degrees.</string>
+         <string>Click to move the crop boundary.</string>
         </property>
         <property name="text">
-         <string>CW</string>
+         <string>UN</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="pushFlipHorizontal">
+      <item row="0" column="2">
+       <widget class="QPushButton" name="pushSave">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
-        <property name="toolTip">
-         <string>Clocwise rotates the display image by the given degrees.</string>
-        </property>
         <property name="text">
-         <string>H</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushFlipVertical">
-        <property name="minimumSize">
-         <size>
-          <width>31</width>
-          <height>31</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>31</width>
-          <height>31</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-          <kerning>true</kerning>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Clocwise rotates the display image by the given degrees.</string>
-        </property>
-        <property name="text">
-         <string>V</string>
+         <string>SA</string>
         </property>
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item row="3" column="2" colspan="2">
-    <widget class="QPushButton" name="pushDone">
-     <property name="text">
-      <string>Done</string>
-     </property>
     </widget>
    </item>
    <item row="1" column="0" rowspan="3" colspan="2">
@@ -422,29 +450,32 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
       <property name="leftMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
       <property name="topMargin">
-       <number>7</number>
+       <number>3</number>
       </property>
       <property name="rightMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
       <property name="bottomMargin">
-       <number>7</number>
+       <number>3</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
       </property>
       <item row="0" column="1">
        <widget class="QPushButton" name="pushStretchLeftUp">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -452,7 +483,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -470,14 +500,14 @@
        <widget class="QPushButton" name="pushStretchRightUp">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -485,7 +515,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -503,14 +532,14 @@
        <widget class="QPushButton" name="pushStretchUpLeft">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -518,7 +547,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -536,14 +564,14 @@
        <widget class="QPushButton" name="pushStretchNW">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -551,7 +579,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -569,14 +596,14 @@
        <widget class="QPushButton" name="pushStretchN">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -584,7 +611,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -602,14 +628,14 @@
        <widget class="QPushButton" name="pushStretchNE">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -617,7 +643,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -635,14 +660,14 @@
        <widget class="QPushButton" name="pushStretchUpRight">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -650,7 +675,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -668,14 +692,14 @@
        <widget class="QPushButton" name="pushStretchW">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -683,7 +707,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -701,29 +724,28 @@
        <widget class="QPushButton" name="pushResetStretch">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
          <string>Click to move the crop boundary.</string>
         </property>
         <property name="text">
-         <string>R</string>
+         <string>RE</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -734,14 +756,14 @@
        <widget class="QPushButton" name="pushStretchE">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -749,7 +771,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -767,14 +788,14 @@
        <widget class="QPushButton" name="pushStretchDownLeft">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -782,7 +803,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -800,14 +820,14 @@
        <widget class="QPushButton" name="pushStretchSW">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -815,7 +835,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -833,14 +852,14 @@
        <widget class="QPushButton" name="pushStretchS">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -848,7 +867,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -866,14 +884,14 @@
        <widget class="QPushButton" name="pushStretchSE">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -881,7 +899,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -899,14 +916,14 @@
        <widget class="QPushButton" name="pushStretchDownRight">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -914,7 +931,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -932,14 +948,14 @@
        <widget class="QPushButton" name="pushStretchLeftDown">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -947,7 +963,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -965,14 +980,14 @@
        <widget class="QPushButton" name="pushStretchRightDown">
         <property name="minimumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>31</width>
-          <height>31</height>
+          <width>34</width>
+          <height>34</height>
          </size>
         </property>
         <property name="font">
@@ -980,7 +995,6 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
@@ -997,6 +1011,13 @@
      </layout>
     </widget>
    </item>
+   <item row="3" column="2" colspan="2">
+    <widget class="QPushButton" name="pushDone">
+     <property name="text">
+      <string>Done</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -1005,6 +1026,7 @@
   <tabstop>spinDegrees</tabstop>
   <tabstop>pushReset</tabstop>
   <tabstop>pushUndo</tabstop>
+  <tabstop>pushSave</tabstop>
   <tabstop>pushTranslateUp</tabstop>
   <tabstop>pushTranslateDown</tabstop>
   <tabstop>pushTranslateLeft</tabstop>
@@ -1021,8 +1043,8 @@
   <tabstop>pushStretchE</tabstop>
   <tabstop>pushStretchDownLeft</tabstop>
   <tabstop>pushStretchSW</tabstop>
-  <tabstop>pushStretchSE</tabstop>
   <tabstop>pushStretchS</tabstop>
+  <tabstop>pushStretchSE</tabstop>
   <tabstop>pushStretchDownRight</tabstop>
   <tabstop>pushStretchLeftDown</tabstop>
   <tabstop>pushStretchRightDown</tabstop>

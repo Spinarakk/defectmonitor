@@ -1,3 +1,7 @@
+October 3
+- Note: Image Capture tab is currently broken and has been disabled
+- Fixed up the Overlay Adjustment dialog window
+
 September 28
 - Converted the Calibration method to now instead use the QThreadPool rather than QThreads
 - Also converted the Notifications method to do the same thing

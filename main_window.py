@@ -177,6 +177,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Create a context menu that will appear when the user right-clicks on any of the display labels
         self.menu_display = QMenu()
 
+        # Disable the Image Viewer tab permanently
+        self.widgetDisplay.setTabEnabled(3, False)
+
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
@@ -731,6 +734,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Takes a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_single)
         worker.signals.status.connect(self.update_status)
+        worker.signals.name.connect(self.fix_image)
         worker.signals.finished.connect(self.capture_single_finished)
         self.threadpool.start(worker)
 
@@ -803,6 +807,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.pushStop.setEnabled(False)
                 worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_run)
                 worker.signals.status.connect(self.update_status_ct)
+                worker.signals.name.connect(self.fix_image)
                 worker.signals.finished.connect(self.capture_run_finished)
                 self.threadpool.start(worker)
             else:
@@ -821,7 +826,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.stopwatch_idle = 0
         self.pushPauseResume.setEnabled(True)
         self.pushStop.setEnabled(True)
-        self.update_folders()
+        #self.update_folders()
         self.capture_run('')
 
     def pause_build(self):
@@ -871,6 +876,63 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def reset_idle(self):
         """Resets the stopwatch idle counter whenever an image has been captured"""
         self.stopwatch_idle = 0
+
+    # IMAGE PROCESSING
+
+    def fix_image(self, image_name):
+        """Use the received image name to load the image in order to fix it, then process it"""
+
+        self.image_name = image_name
+
+        self.update_status('Applying image fixes...')
+        worker = qt_multithreading.Worker(self.fix_image_function(image_name))
+        worker.signals.finished.connect(self.fix_image_finished)
+        self.threadpool.start(worker)
+
+    @staticmethod
+    def fix_image_function(image_name):
+        """Function that will be passed to the QThreadPool to be executed"""
+
+        # Load the image into memory
+        image = cv2.imread(image_name)
+
+        # Apply
+        image = image_processing.ImageTransform().distortion_fix(image)
+        image = image_processing.ImageTransform().perspective_fix(image)
+        image = image_processing.ImageTransform().crop(image)
+
+        # Modify the name of
+        if 'coat' in image_name:
+            image_name = image_name.replace('coatR', 'coatP').replace('raw', 'processed')
+        elif 'scan' in image_name:
+            image_name = image_name.replace('scanR', 'scanP').replace('raw', 'processed')
+        elif 'single' in image_name:
+            image_name = image_name.replace('singleR', 'singleP').replace('raw', 'processed')
+
+        # Save the image using a modified image name
+        cv2.imwrite(image_name, image)
+
+    def fix_image_finished(self):
+
+        self.update_status('Image fix successfully applied. Currently detecting defects...')
+        print('FIX IMAGE FINISHED')
+        # Update the image dictionaries and most importantly, the image ranges
+        self.update_folders()
+
+        # Acquire the layer and phase (tab index) from the image name
+        layer = int(os.path.splitext(os.path.basename(self.image_name))[0][-4:])
+        if 'coat' in self.image_name:
+            index = 0
+        elif 'scan' in self.image_name:
+            index = 1
+        else:
+            index = 3
+
+        # Set the tab to focus on the current layer and
+        self.tab_focus(index, layer)
+
+        # Process the image for defects, the image being the one the above method set focus to
+        self.process_current()
 
     # DISPLAY
 
@@ -1162,6 +1224,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Used for when an image has been captured and focus is to be given to the new image
         Also can be used for when an image has just finished processing for defects
         """
+
         self.widgetDisplay.setCurrentIndex(index)
         self.sliderDisplay.setValue(value)
 
@@ -1240,6 +1303,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.display['LayerNumbers'][index][:] = list()
 
                 for filename in os.listdir(self.display['ImageFolder'][index]):
+                    # Skips the first scan picture, which should be 'Layer 0', the picture before the first coat
+                    if '0000' in filename:
+                        continue
+
+                    # Only grab the images and ignore any other files in the folders
                     if '.png' in filename or '.jpg' in filename or '.jpeg' in filename:
                         try:
                             # Check if the last four characters of the file name are numbers, otherwise file is ignored

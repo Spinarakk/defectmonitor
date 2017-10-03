@@ -23,9 +23,6 @@ class ImageTransform:
         with open('config.json') as config:
             self.config = json.load(config)
 
-    def apply_fixes(self, image):
-        """Applies the distortion, perspective and crop processes to the received image using the calibration results"""
-
         # Checks whether to use the temporary results of the camera calibration, or the ones saved in the config file
         try:
             with open('calibration_results.json') as parameters:
@@ -34,10 +31,6 @@ class ImageTransform:
             self.parameters = self.config['ImageCorrection']
         else:
             self.parameters = self.parameters['ImageCorrection']
-
-        image = self.distortion_fix(image)
-        image = self.perspective_fix(image)
-        return self.crop(image)
 
     def apply_transformation(self, image):
         """Applies the transformation processes to the received image using the transformation parameters"""
@@ -202,9 +195,6 @@ class DefectDetector:
 
         # This is the master defect dictionary which stores all the defect results for all the parts
         self.defect_dict = dict()
-
-        # self.defects_on = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
-        # self.defects_off = {'Bright Spots': [], 'Blade Streaks': [], 'Blade Chatter': [], 'Contrast Differences': []}
 
         # Store a dictionary of all the reports to be written to (including the background and combined reports)
         self.part_colours = self.build['BuildInfo']['Colours']
