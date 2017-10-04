@@ -51,7 +51,7 @@ class SliceConverter:
             self.draw_flag = self.build['SliceConverter']['Draw']
             self.contours_folder = self.build['SliceConverter']['Folder']
 
-    def convert(self, status, progress):
+    def run_converter(self, status, progress):
 
         # Assign the status and progress signals as instance variables so other methods can use them
         self.status = status

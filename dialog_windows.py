@@ -22,7 +22,7 @@ import qt_multithreading
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogCameraSettings, dialogOverlayAdjustment
+    dialogSliceConverter, dialogCameraSettings, dialogOverlayAdjustment, dialogDefectReports
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -264,6 +264,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                     with open('%s/reports/%s_report.json' % (image_folder, part_name), 'w+') as report:
                         json.dump(dict_blank, report)
 
+                # Set the 'background' part colour to black and save the dictionary
+                part_colours['background'] = (0, 0, 0)
                 self.build['BuildInfo']['Colours'] = part_colours
             else:
                 # Check if the folder containing the images exist if a build was opened
@@ -708,7 +710,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.build['SliceConverter']['Colours'] = part_colours
             self.save_settings()
 
-            worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
+            worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
             worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
             worker.signals.finished.connect(self.start_finished)
@@ -1019,3 +1021,54 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
     def closeEvent(self, event):
         """Executes when the window is closed"""
         self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
+
+
+class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
+    """Opens a Modeless Dialog Window when the Defect Reports button is clicked
+    Allows user to look at the defect reports in a nice visual way
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup Dialog UI with MainWindow as parent
+        super(DefectReports, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+        self.window_settings = QSettings('MCAM', 'Defect Monitor')
+        try:
+            self.restoreGeometry(self.window_settings.value('Defect Reports Geometry', ''))
+        except TypeError:
+            pass
+
+        # Load from the build.json file
+        with open('build.json') as build:
+            self.build = json.load(build)
+
+        # Setup event listeners for all relevant UI components, and connect them to specific functions
+        self.comboParts.currentIndexChanged.connect(self.display_report)
+
+        # Save the part name list (with combined and background at the start)
+        self.part_names = ['combined', 'background'] + list(self.build['BuildInfo']['Colours'])[:-2]
+
+        # Add the part names to the combo box
+        self.comboParts.addItems(self.part_names)
+
+        # Sets the data table's columns to automatically resize appropriately
+        self.tableCoat.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableScan.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def display_report(self, index):
+
+        # Read the appropriate report into memory
+        with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'],
+                                                 self.part_names[index])) as report:
+            report = json.load(report)
+
+        # Find out the maximum number of layers to set the number of table rows
+        max_layer = max([int(number) for number in list(report)])
+        self.tableCoat.setRowCount(max_layer)
+        self.tableScan.setRowCount(max_layer)
+
+    def closeEvent(self, event):
+        """Executes when the Done button is clicked or when the window is closed"""
+        self.window_settings.setValue('Defect Reports Geometry', self.saveGeometry())

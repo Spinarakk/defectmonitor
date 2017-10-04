@@ -22,6 +22,7 @@ class Ui_mainWindow(object):
         self.gridLayout.setSpacing(7)
         self.gridLayout.setObjectName("gridLayout")
         self.widgetDisplay = QtWidgets.QTabWidget(self.centralWidget)
+        self.widgetDisplay.setTabShape(QtWidgets.QTabWidget.Rounded)
         self.widgetDisplay.setObjectName("widgetDisplay")
         self.tabCoatExplorer = QtWidgets.QWidget()
         self.tabCoatExplorer.setObjectName("tabCoatExplorer")

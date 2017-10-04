@@ -2,29 +2,28 @@ Defect Monitor
 MCAM 3D Printer Software
 
 Installation
-- From the software folder install the following (64-bit Versions)
-	- Python 3.6.2 (Add python.exe to PATH)
-	- Basler Pylon 5.0.5.8999 (Developer Mode)
-	- (Optional) PyCharm Professional 2017.1.2
-- Open an administrator command prompt and run the following to install modules
-	- pip3 install numpy
-	- pip3 install opencv-python
-	- pip3 install PyQt5
-	- pip3 install pyserial
-	- pip3 install validate_email
-- Alternatively, just execute package_installation.bat
+- Python
+    - Latest Version
+    - Add python.exe to PATH
+    - https://www.python.org/downloads/
+- Basler Pylon
+    - Latest Version
+    - Need to install in Developer Mode
+    - https://www.baslerweb.com/en/support/downloads/software-downloads/#type=pylonsoftware;language=all;version=all;os=windows;series=baslerace;model=all
+- Execute package_installation.bat as administrator
 
+- (Optional) PyCharm Professional
 - (Optional) If a pypylon folder isn't in the root directory
-	- pip3 install Cython
-	- Visual C++ 14.0 will need to be installed (Google)
-	- Open an admistrator command prompt
-	- cd "random directory"
-	- git clone https://github.com/mabl/PyPylon
-	- cd PyPylon
-	- python setup.py install
-	- Pypylon should be installed in the site-packages folder of Python
-	- Otherwise, copy the pypylon folder from the build/lib.win-(windowsver)-(pythonver)
-	- To the Defect Monitor root directory
+    - pip3 install Cython
+    - Visual C++ 14.0 will need to be installed (Google)
+    - Open an admistrator command prompt
+    - cd "random directory"
+    - git clone https://github.com/mabl/PyPylon
+    - cd PyPylon
+    - python setup.py install
+    - Pypylon should be installed in the site-packages folder of Python
+    - Otherwise, copy the pypylon folder from the build/lib.win-(windowsver)-(pythonver) to Defect Monitor root directory
+    - To the Defect Monitor root directory
 
 Operation
 - Execute run_program.bat
@@ -40,40 +39,63 @@ Hardware
 Core Functionality
 - Start/Load a build and change settings as appropriate
 - Take an image after the machine does both the scan and coat operations (2 images)
-	- Setup camera parameters
-	- Serial trigger using hall sensors in the machine
+    - Serial trigger using hall sensors in the machine
 - Correct the image for distortions, perspective, crop, move, realign the origin
-- Convert the .cls or .cli files into a format OpenCV can use
+- Convert the .cls or .cli files into contours that OpenCV can draw
 - Camera calibration using pre-taken checkboard images 
 - Process the scan and coat images for defects
-	- See below for defects
+    - See below for defects
 - Check if defects overlap the part countours
-	- No
-		- Ignore
-		- Check if the defects may propogate into the part
-	- Yes
-		- Stop the operation
-		- Send (push) notification to user
-		- Error report
+    - No
+	- Ignore
+	- Check if the defects may propogate into the part
+    - Yes
+	- Stop the operation
+	- Send notification to user
+	- Error report
 - Generate final report after part is completed
 - Notification (instantaneous) for major defects
-- Possible real-time interaction with the machine software to correct minor errors
-	- Re-coating
-	- Re-scanning (missed areas)
+- Possible real-time interaction with the machine software
+    - Correcting minor errors
+    - Re-coating
+    - Re-scanning (missed areas)
+    - Halt for major errors (dosing error)
 - Simple to use User Interface
 
-List of Defects
-Scan
-- Inclusions
-- Blobs of spatter within the part contours
-- Scan failures, misses
-Coat
-- Blade streaks (horizontal divets)
-- Blade chatter (vertical)
-- Blade damage (dark sections near the start of the blade)
-- Part warping bulging into the next coat
-- Not enough powder for the coat
-- Powder holes
+Defect Detection
+- Completed
+    - Coat
+	- Blade Streaks (Horizontal divets)
+	- Blade Chatter (Vertical slits)
+	- Bright Spots (Shiny parts, Part warping)
+	- Contrast Difference (Areas that are too bright/dark compared to the average contrast)
+	- Histogram Comparison (Compares the current layer to the previous layer)
+    - Scan
+	- Blade Streaks
+	- Blade Chatter
+	- Scan Pattern (Tries to detect the scanned area)
+	- Overlay Comparison (Compares the scanned pattern to the part contours)
+	- Histogram Comparison
+- To Do
+    - Coat
+	- Clearly define powder holes or dosing errors
+    - Scan
+	- Vastly improve scan pattern detection
+	- Inclusions
+	- Spatter
+
+Defect Reporting
+- Currently only the following are reported and designated as a defect based on testing-based thresholds
+    - Defect pixel size of Bright Spots and Contrast Difference
+    - Number of occurences of detected blade streaks and blade chatter
+    - Histogram comparison of subsequent layers (coat and scan have different thresholds)
+    - Overlay template matching of scan pattern
+- Possible future implementations
+    - Defect propagation
+    - Severity of blade streaks
+- Notes
+    - Combined report will report different defect coordinates from the individual part reports
+    - This is because individual parts may potentially split up defects that are only partially overlapping
 
 Modules
 - main_window.py

@@ -97,5 +97,12 @@
             0,
             10
         ]
+    },
+    "Threshold": {
+        "HistogramCoat": 2000,
+	"HistogramScan": 3000,
+	"Occurrences": 5,
+	"Overlay": 0.90,
+	"PixelSize": 0.05
     }
 }

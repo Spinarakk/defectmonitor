@@ -158,11 +158,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Flags for various conditions
         self.display_flag = False
         self.processing_flag = False
+        self.all_flag = False
 
         # Instantiate any instances that cannot be run simultaneously
         self.FM_instance = None
 
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
+        self.DR_dialog = None
         self.CC_dialog = None
         self.OA_dialog = None
         self.SC_dialog = None
@@ -250,6 +252,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSave.setEnabled(True)
         self.actionSaveAs.setEnabled(True)
         self.pushAcquireCT.setEnabled(True)
+        self.pushDefectReports.setEnabled(True)
 
         # Store the names of the seven folders (one is a spacer) to be monitored in the display dictionary
         self.display['ImageFolder'] = ['%s/processed/coat' % self.build['ImageCapture']['Folder'],
@@ -284,7 +287,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushStopConversion.setEnabled(True)
             self.toolSidebar.setCurrentIndex(1)
 
-            worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert)
+            worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
             worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
             worker.signals.finished.connect(self.setup_build_finished)
@@ -349,7 +352,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
 
-        filename = QFileDialog.getSaveFileName(self, 'Save Build As', self.build['BuildInfo']['Name'],
+        filename = QFileDialog.getSaveFileName(self, 'Save Build As', '%s/%s' %
+                                               (self.build['BuildInfo']['Folder'], self.build['BuildInfo']['Name']),
                                                'JSON File (*.json)')[0]
 
         # Checking if user has chosen to save the build or clicked cancel
@@ -421,7 +425,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.calibration_results_dialog.show()
 
     def defect_reports(self):
-        pass
+        """Opens a Modeless Dialog Window when the Defect Reports button is clicked
+        Displays the results of the reports as processed by the Defect Detector"""
+
+        if self.DR_dialog is None:
+            self.DR_dialog = dialog_windows.DefectReports(self)
+            self.DR_dialog.destroyed.connect(self.defect_reports_closed)
+            self.DR_dialog.show()
+        else:
+            self.DR_dialog.activateWindow()
+
+    def defect_reports_closed(self):
+        self.DR_dialog = None
 
     def histogram_comparison(self):
         pass
@@ -543,7 +558,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.all_flag = False
         self.tab_index = self.widgetDisplay.currentIndex()
-        self.toggle_processing_buttons(False)
+        self.toggle_processing_buttons(3)
         self.process_settings(self.sliderDisplay.value())
 
     def process_all(self):
@@ -557,7 +572,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessAll.setStyleSheet('QPushButton {color: #ff0000;}')
             self.pushProcessAll.setText('Process Stop')
             self.actionProcessAll.setText('Process Stop')
-            self.toggle_processing_buttons(False)
+            self.toggle_processing_buttons(4)
 
             # Remove the already processed defect images from the image list
             self.layer_numbers = list(set(self.display['LayerNumbers'][self.tab_index]) -
@@ -570,7 +585,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessAll.setStyleSheet('')
             self.pushProcessAll.setText('Process All')
             self.actionProcessAll.setText('Process All')
-            self.toggle_processing_buttons(False)
+            self.toggle_processing_buttons(3)
 
     def process_selected(self):
         """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
@@ -580,6 +595,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def process_settings(self, layer):
         """Saves the settings to be used to process an image for defects to the build.json file
         This method exists as the only difference between the two options is the layer number"""
+
+        self.processing_flag = True
 
         # Load from the build.json file
         with open('build.json') as build:
@@ -603,15 +620,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
 
-        # Disable the Process ... buttons to stop repeated concurrent processes
-        self.pushProcessSelected.setEnabled(False)
-        self.actionProcessSelected.setEnabled(False)
-        self.processing_flag = True
-
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
             self.defect_counter += 1
-            self.toggle_processing_buttons(True)
             self.update_status('Running %s layer %s through the Defect Detector...' % (phase, str(layer).zfill(4)))
         else:
             self.update_status('Running displayed %s image through the Defect Detector...' % phase)
@@ -630,27 +641,57 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Decides whether the Defect Processor needs to be run again for consecutive images
         Otherwise the window is set to its processing finished state"""
 
+        self.processing_flag = False
         self.update_folders()
 
         if self.all_flag and not self.defect_counter == len(self.layer_numbers):
             self.process_settings(self.layer_numbers[self.defect_counter])
         else:
-            self.processing_flag = False
-            self.toggle_processing_buttons(True)
-            self.pushProcessSelected.setEnabled(True)
-            self.actionProcessSelected.setEnabled(True)
             self.update_status('Defect Detection finished successfully.', 10000)
 
-    def toggle_processing_buttons(self, flag):
-        """Enables or disables the following buttons/actions in one fell swoop (if a process isn't currently running)"""
-        if not self.processing_flag:
-            self.pushProcessCurrent.setEnabled(flag)
-            self.pushProcessAll.setEnabled(flag)
-            self.actionProcessCurrent.setEnabled(flag)
-            self.actionProcessAll.setEnabled(flag)
-        else:
-            self.pushProcessAll.setEnabled(flag)
-            self.actionProcessAll.setEnabled(flag)
+    def toggle_processing_buttons(self, state):
+        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
+
+        # State 1 is when the current image CANNOT be processed
+        if state == 1:
+            self.pushProcessCurrent.setEnabled(False)
+            self.actionProcessCurrent.setEnabled(False)
+            self.pushProcessAll.setEnabled(False)
+            self.actionProcessAll.setEnabled(False)
+            self.pushProcessSelected.setEnabled(True)
+            self.actionProcessSelected.setEnabled(True)
+        # State 2 is when the current image CAN be processed
+        elif state == 2:
+            self.pushProcessCurrent.setEnabled(True)
+            self.actionProcessCurrent.setEnabled(True)
+            self.pushProcessAll.setEnabled(True)
+            self.actionProcessAll.setEnabled(True)
+            self.pushProcessSelected.setEnabled(True)
+            self.actionProcessSelected.setEnabled(True)
+        # State 3 is when a Process Current or Process Selected process is running
+        elif state == 3:
+            self.pushProcessCurrent.setEnabled(False)
+            self.actionProcessCurrent.setEnabled(False)
+            self.pushProcessAll.setEnabled(False)
+            self.actionProcessAll.setEnabled(False)
+            self.pushProcessSelected.setEnabled(False)
+            self.actionProcessSelected.setEnabled(False)
+        # State 4 is when a Process All is running
+        elif state == 4:
+            self.pushProcessCurrent.setEnabled(False)
+            self.actionProcessCurrent.setEnabled(False)
+            self.pushProcessAll.setEnabled(True)
+            self.actionProcessAll.setEnabled(True)
+            self.pushProcessSelected.setEnabled(False)
+            self.actionProcessSelected.setEnabled(False)
+        # State 5 is when the current image CANNOT be processed but the tab still has other images that CAN
+        elif state == 5:
+            self.pushProcessCurrent.setEnabled(False)
+            self.actionProcessCurrent.setEnabled(False)
+            self.pushProcessAll.setEnabled(True)
+            self.actionProcessAll.setEnabled(True)
+            self.pushProcessSelected.setEnabled(True)
+            self.actionProcessSelected.setEnabled(True)
 
     # MENUBAR -> SETTINGS
 
@@ -684,7 +725,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushCameraCalibration.setEnabled(flag)
         self.actionSliceConverter.setEnabled(flag)
         self.pushSliceConverter.setEnabled(flag)
-        self.widgetDisplay.setTabEnabled(3, flag)
+        #self.widgetDisplay.setTabEnabled(3, flag)
 
         # Only disable the following button if it is enabled in the first place
         if self.pushCapture.isEnabled():
@@ -826,7 +867,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.stopwatch_idle = 0
         self.pushPauseResume.setEnabled(True)
         self.pushStop.setEnabled(True)
-        #self.update_folders()
         self.capture_run('')
 
     def pause_build(self):
@@ -978,6 +1018,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         value = self.sliderDisplay.value()
         layer = str(value).zfill(4)
 
+        # Assume disabled Processing buttons as default
+        if not self.processing_flag:
+            self.toggle_processing_buttons(1)
+
         # Check if the image folder has an actual image to display
         if list(filter(bool, image_list)):
             # Change the stacked widget to the one with the image viewer
@@ -989,9 +1033,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Check if the Defect Analysis radio button is checked and load the related defect image if so
             if self.radioDefects.isChecked():
-                # Disable the Defect Processor toolbar and actions
-                self.toggle_processing_buttons(False)
-
                 if os.path.isfile(self.display['ImageList'][index + 4][value - 1]):
                     image = cv2.imread(self.display['ImageList'][index + 4][value - 1])
                 else:
@@ -1005,13 +1046,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Otherwise load the layer image based on the current slider value
             else:
-                # Enable the Defect Processor toolbar and actions
-                self.toggle_processing_buttons(True)
-
                 # Check if the image exists (in case it gets deleted between folder checks)
                 if os.path.isfile(image_list[value - 1]):
                     # Load the layer image into memory
                     image = cv2.imread(image_list[value - 1])
+
+                    # Enable the Defect Processor toolbar and actions
+                    if not self.processing_flag and index != 2:
+                        self.toggle_processing_buttons(2)
                 else:
                     # Set the stack to the information label and display the missing layer information
                     label.setText('%s Layer %s Image not in folder.' % (self.display['FolderNames'][index][:-1], layer))
@@ -1019,7 +1061,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                     # Enable the seek buttons if the current layer's image isn't found
                     self.toggle_display_buttons(False, True)
-                    self.toggle_processing_buttons(False)
+
+                    # Enable the Defect Processor toolbar and actions
+                    if not self.processing_flag and index != 2:
+                        self.toggle_processing_buttons(5)
                     return
 
             if self.checkOverlay.isChecked():
@@ -1083,9 +1128,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             else:
                 self.checkPartNames.setEnabled(False)
                 self.checkPartNames.setChecked(False)
-
-            if index == 2:
-                self.toggle_processing_buttons(False)
         else:
             # If the entire folder is empty, change the stacked widget to the one with the information label
             label.setText('%s folder empty. Nothing to display.' % self.display['FolderNames'][index][:-1])
@@ -1094,7 +1136,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Disable all the display related UI elements
             self.groupDisplayOptions.setEnabled(False)
             self.toggle_display_buttons(False)
-            self.toggle_processing_buttons(False)
 
     def toggle_display_buttons(self, flag, seek_flag=False):
         """Enables or disables the following buttons/actions in one fell swoop"""

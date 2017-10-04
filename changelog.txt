@@ -1,6 +1,20 @@
+October 4
+- Finalized the current report structure and temporary threshold values
+- Modified the code to match
+- Modified the toggle_processing_buttons method to now work with states
+- Much longer but clearer code and now the buttons toggle correctly for every situation
+- Tested the camera being hooked up in the new printing machine
+- Ran some tests comparing processing times of the defect detection module
+- Tried to find out why the defect reporting takes so long to process
+- Created a preliminary version of the Defect Reports dialog window
+- Will be used to display the important results in a table with colour codes depending on the set threshold values
+
 October 3
 - Note: Image Capture tab is currently broken and has been disabled
 - Fixed up the Overlay Adjustment dialog window
+- Implemented the defect detection process right after the image is taken
+- Appears to work properly, however the slow process of the defect detection might be an issue down the track
+- Shouldn't be a problem with a faster computer
 
 September 28
 - Converted the Calibration method to now instead use the QThreadPool rather than QThreads
