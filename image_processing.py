@@ -33,62 +33,49 @@ class ImageTransform:
         else:
             self.parameters = self.parameters['ImageCorrection']
 
-    def apply_transformation(self, image):
+    def apply_transformation(self, image, display_flag):
         """Applies the transformation processes to the received image using the transformation parameters"""
 
-        try:
-            with open('transformation_parameters.json') as transform:
-                self.transform = json.load(transform)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            self.transform = self.config['ImageCorrection']['TransformParameters']
+        if display_flag:
+            self.transform = self.config['ImageCorrection']['TransformDisplay']
         else:
-            self.transform = self.transform['ImageCorrection']['TransformParameters']
+            self.transform = self.config['ImageCorrection']['TransformContours']
 
         # Grab the image's width and height (for clearer code purposes)
         self.width = image.shape[1]
         self.height = image.shape[0]
 
+        # Apply all the following transformations
         image = self.flip(image)
         image = self.translate(image)
         image = self.rotate(image)
         image = self.stretch_nw(image)
         image = self.stretch_ne(image)
         image = self.stretch_sw(image)
-        return self.stretch_se(image)
+        image = self.stretch_se(image)
+
+        return image
 
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
 
-        # Store the camera's intrinsic values as a 2x2 matrix
-        camera_matrix = np.array(self.parameters['CameraMatrix'])
-        camera_matrix[0, 2] = image.shape[1] / 2.0  # Half image width
-        camera_matrix[1, 2] = image.shape[0] / 2.0  # Half image height
-
-        # OpenCV distortion fix function
-        try:
-            return cv2.undistort(image, camera_matrix, np.array(self.parameters['DistortionCoefficients']))
-        except:
-            print('Image Distortion fix failed.')
-            return False
+        return cv2.undistort(image, np.array(self.parameters['CameraMatrix']), 
+                             np.array(self.parameters['DistortionCoefficients']))
 
     def perspective_fix(self, image):
         """Fixes the perspective warp due to the off-centre position of the camera"""
 
-        try:
-            return cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']),
-                                       tuple(self.parameters['Resolution']))
-        except:
-            print('Image Perspective Fix failed.')
-            return False
+        return cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']),
+                                   tuple(self.parameters['Resolution']))
 
     def crop(self, image):
         """Crops the image to a more desirable region of interest"""
 
         # Save value to be used to determine region of interest
-        crop_boundary = self.config['ImageCorrection']['CropBoundary']
+        boundary = self.config['ImageCorrection']['CropBoundary']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
-        return image[crop_boundary[0]: crop_boundary[1], crop_boundary[2]: crop_boundary[3]]
+        return image[boundary[0]: boundary[1], boundary[2]: boundary[3]]
 
     def flip(self, image):
         """Flip the image around the horizontal or vertical axis"""
@@ -97,41 +84,55 @@ class ImageTransform:
             image = cv2.flip(image, 1)
         if self.transform[4]:
             image = cv2.flip(image, 0)
+
         return image
 
     def translate(self, image):
         """Translate the image in any of the four directions"""
+
         translation_matrix = np.float32([[1, 0, self.transform[1]], [0, 1, self.transform[0]]])
         return cv2.warpAffine(image, translation_matrix, (self.width, self.height))
 
     def rotate(self, image):
         """Rotate the image a set amount of degrees in the clockwise or anti-clockwise direction"""
+
         rotation_matrix = cv2.getRotationMatrix2D((self.width / 2, self.height / 2), self.transform[2], 1)
         return cv2.warpAffine(image, rotation_matrix, (self.width, self.height))
 
     def stretch_nw(self, image):
+        """Stretches/Pulls the image in the north-west direction"""
+
         points1 = np.float32([[self.width, 0], [0, 0], [0, self.height]])
         points2 = np.float32([[self.width, self.transform[5] + self.transform[12]],
                               [self.transform[8], self.transform[5]],
                               [self.transform[8] + self.transform[13], self.height + self.transform[7]]])
         matrix = cv2.getAffineTransform(points1, points2)
+
         return cv2.warpAffine(image, matrix, (self.width, self.height))
 
     def stretch_ne(self, image):
+        """Stretches/Pulls the image in the north-east direction"""
+
         points1 = np.float32([[0, 0], [self.width, 0], [self.width, self.height]])
         points2 = np.float32([[0, self.transform[10]],
                               [self.width + self.transform[6], 0],
                               [self.width + self.transform[6] + self.transform[15], self.height + self.transform[7]]])
         matrix = cv2.getAffineTransform(points1, points2)
+
         return cv2.warpAffine(image, matrix, (self.width, self.height))
 
     def stretch_sw(self, image):
+        """Stretches/Pulls the image in the south-west direction"""
+
         points1 = np.float32([[0, 0], [0, self.height], [self.width, self.height]])
         points2 = np.float32([[self.transform[9], 0], [0, self.height], [self.width, self.height + self.transform[16]]])
         matrix = cv2.getAffineTransform(points1, points2)
+
         return cv2.warpAffine(image, matrix, (self.width, self.height))
 
     def stretch_se(self, image):
+        """Stretches/Pulls the image in the south-east direction"""
+
         points1 = np.float32([[0, self.height], [self.width, self.height], [self.width, 0]])
         points2 = np.float32(
             [[0, self.height + self.transform[14]], [self.width, self.height], [self.width + self.transform[11], 0]])
@@ -279,7 +280,7 @@ class DefectDetector:
         cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
                                                   self.layer), image_coat)
 
-        print('Compare & Save\nTime = %s' % (time.time() - t0))
+        print('Compare & Save\nTime = %s\n' % (time.time() - t0))
 
     def analyze_scan(self, image_scan):
         """Analyzes the scan image for any potential defects as listed in the order below"""
@@ -311,10 +312,14 @@ class DefectDetector:
         cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
                                                   self.layer), image_scan)
 
-        print('Compare & Save\nTime = %s' % (time.time() - t0))
+        print('Compare & Save\nTime = %s\n' % (time.time() - t0))
 
     def analyze_single(self, image_single):
         """Analyzes the received image using a combination of the coat and scan defect methods"""
+        pass
+
+    def check_results(self):
+        """Checks the results of the defect analysis and sends a notification if any don't meet the threshold values"""
         pass
 
     def detect_blade_streak(self, image):

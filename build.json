@@ -1,172 +1,11 @@
 {
     "BuildInfo": {
-        "Colours": {
-            "A1_13": [
-                100,
-                100,
-                0
-            ],
-            "A2_11": [
-                103,
-                103,
-                0
-            ],
-            "A3_15": [
-                106,
-                106,
-                0
-            ],
-            "B1_12": [
-                109,
-                109,
-                0
-            ],
-            "B2_10": [
-                112,
-                112,
-                0
-            ],
-            "B3_14": [
-                115,
-                115,
-                0
-            ],
-            "C1_2": [
-                118,
-                118,
-                0
-            ],
-            "C2": [
-                121,
-                121,
-                0
-            ],
-            "C3_3": [
-                124,
-                124,
-                0
-            ],
-            "Contour10_6": [
-                154,
-                154,
-                0
-            ],
-            "Contour11_5": [
-                157,
-                157,
-                0
-            ],
-            "Contour12_4": [
-                160,
-                160,
-                0
-            ],
-            "Contour13_3": [
-                163,
-                163,
-                0
-            ],
-            "Contour14_2": [
-                166,
-                166,
-                0
-            ],
-            "Contour15": [
-                169,
-                169,
-                0
-            ],
-            "Contour1_15": [
-                127,
-                127,
-                0
-            ],
-            "Contour2_14": [
-                130,
-                130,
-                0
-            ],
-            "Contour3_13": [
-                133,
-                133,
-                0
-            ],
-            "Contour4_12": [
-                136,
-                136,
-                0
-            ],
-            "Contour5_11": [
-                139,
-                139,
-                0
-            ],
-            "Contour6_10": [
-                142,
-                142,
-                0
-            ],
-            "Contour7_9": [
-                145,
-                145,
-                0
-            ],
-            "Contour8_8": [
-                148,
-                148,
-                0
-            ],
-            "Contour9_7": [
-                151,
-                151,
-                0
-            ],
-            "D1_6": [
-                172,
-                172,
-                0
-            ],
-            "D2_4": [
-                175,
-                175,
-                0
-            ],
-            "D3_8": [
-                178,
-                178,
-                0
-            ],
-            "E1_7": [
-                181,
-                181,
-                0
-            ],
-            "E2_5": [
-                184,
-                184,
-                0
-            ],
-            "E3_9": [
-                187,
-                187,
-                0
-            ],
-            "background": [
-                0,
-                0,
-                0
-            ],
-            "combined": [
-                193,
-                193,
-                0
-            ]
-        },
+        "Colours": {},
         "Convert": false,
         "Draw": false,
-        "EmailAddress": "nicholascklee@gmail.com",
+        "EmailAddress": "",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Test Build 2",
+        "Name": "Default",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
@@ -174,50 +13,19 @@
             406.0
         ],
         "Run": false,
-        "SliceFiles": [
-            "D:/Documents/MCAM/Slice Files/22-09-2017/A1_13.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/A2_11.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/A3_15.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/B1_12.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/B2_10.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/B3_14.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/C1_2.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/C2.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/C3_3.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour1_15.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour2_14.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour3_13.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour4_12.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour5_11.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour6_10.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour7_9.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour8_8.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour9_7.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour10_6.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour11_5.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour12_4.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour13_3.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour14_2.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour15.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/D1_6.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/D2_4.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/D3_8.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/E1_7.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/E2_5.cli",
-            "D:/Documents/MCAM/Slice Files/22-09-2017/E3_9.cli"
-        ],
-        "Username": "Nicholas Lee"
+        "SliceFiles": [],
+        "Username": ""
     },
     "DefectDetector": {
-        "Contours": "D:/Documents/MCAM/Builds/2017-10-04 [16''37'10] Test Build 2/contours/contours_0030.png",
-        "Image": "D:/Documents/MCAM/Builds/2017-10-04 [16''37'10] Test Build 2/processed/scan/scanP_0030.png",
-        "ImagePrevious": "D:/Documents/MCAM/Builds/2017-10-04 [16''37'10] Test Build 2/processed/scan/scanP_0029.png",
-        "Layer": 30,
+        "Contours": "",
+        "Image": "",
+        "ImagePrevious": "",
+        "Layer": 0,
         "Mode": "single",
-        "Phase": "scan"
+        "Phase": "coat"
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-10-04 [16''37'10] Test Build 2",
+        "Folder": "",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1

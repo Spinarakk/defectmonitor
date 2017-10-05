@@ -1,3 +1,15 @@
+October 5
+- Continued building up the Defect Reports dialog window
+- Every cell of data is set to change colour depending on the threshold value
+- Added threshold selection settings to affect the aforementioned colours
+- Double clicking on a cell will display that row/layer's defect analysis image on the Main Window image viewer
+- Completed both the coat and scan report tables and the part selection for all the individual part reports
+- Properly corrected the Overlay Adjustment window and split the transform parameters into two lists, one specifically for the contour drawing and one for the display window
+- Corrected tooltips for the buttons
+- Implemented the Build Settings action to allow the user to change settings of the current build
+- Removed redundant close build button
+- Checked that the entire program is working correctly
+
 October 4
 - Finalized the current report structure and temporary threshold values
 - Modified the code to match

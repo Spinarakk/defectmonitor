@@ -58,11 +58,10 @@
           <pointsize>7</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Clocwise rotates the display image by the given degrees.</string>
+         <string>Rotates the overlay anti-clockwise by the entered degrees.</string>
         </property>
         <property name="text">
          <string>ACW</string>
@@ -88,14 +87,10 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
-        <property name="contextMenuPolicy">
-         <enum>Qt::DefaultContextMenu</enum>
-        </property>
         <property name="toolTip">
-         <string>Anti-Clocwise rotates the display image by the given degrees.</string>
+         <string>Rotates the overlay clockwise by the entered degrees.</string>
         </property>
         <property name="text">
          <string>CW</string>
@@ -121,11 +116,10 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Clocwise rotates the display image by the given degrees.</string>
+         <string>Flips the overlay along the horizontal axis.</string>
         </property>
         <property name="text">
          <string>H</string>
@@ -151,11 +145,10 @@
           <pointsize>11</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Clocwise rotates the display image by the given degrees.</string>
+         <string>Flips the overlay along the vertical axis.</string>
         </property>
         <property name="text">
          <string>V</string>
@@ -259,11 +252,10 @@
           <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Shifts the display image up by the given pixels.</string>
+         <string>Shifts the overlay up by the entered pixels.</string>
         </property>
         <property name="text">
          <string>UP</string>
@@ -277,11 +269,10 @@
           <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Shifts the display image down by the given pixels.</string>
+         <string>Shifts the overlay down by the entered pixels.</string>
         </property>
         <property name="text">
          <string>DOWN</string>
@@ -295,11 +286,10 @@
           <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Shifts the display image left by the given pixels.</string>
+         <string>Shifts the overlay left by the entered pixels.</string>
         </property>
         <property name="text">
          <string>LEFT</string>
@@ -313,11 +303,10 @@
           <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Shifts the display image right by the given pixels.</string>
+         <string>Shifts the overlay right by the entered pixels.</string>
         </property>
         <property name="text">
          <string>RIGHT</string>
@@ -370,11 +359,10 @@
           <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Resets the overlay image.</string>
+         <string>Resets the overlay.</string>
         </property>
         <property name="text">
          <string>RE</string>
@@ -400,11 +388,10 @@
           <pointsize>13</pointsize>
           <weight>75</weight>
           <bold>true</bold>
-          <kerning>true</kerning>
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Undoes the most recent action.</string>
         </property>
         <property name="text">
          <string>UN</string>
@@ -434,6 +421,9 @@
           <weight>75</weight>
           <bold>true</bold>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Saves the current adjustment parameters to be used for part contour drawing.</string>
         </property>
         <property name="text">
          <string>SA</string>
@@ -486,7 +476,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay up from the left by the entered pixels.</string>
         </property>
         <property name="text">
          <string>LU</string>
@@ -518,7 +508,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay up from the right by the entered pixels.</string>
         </property>
         <property name="text">
          <string>RU</string>
@@ -550,7 +540,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay left from the top by the entered pixels.</string>
         </property>
         <property name="text">
          <string>UL</string>
@@ -582,7 +572,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay up-left by the entered pixels.</string>
         </property>
         <property name="text">
          <string>NW</string>
@@ -614,7 +604,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the overlay boundary.</string>
+         <string>Stretches the overlay up by the entered pixels.</string>
         </property>
         <property name="text">
          <string>N</string>
@@ -646,7 +636,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay up-right by the entered pixels.</string>
         </property>
         <property name="text">
          <string>NE</string>
@@ -678,7 +668,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay right from the top by the entered pixels.</string>
         </property>
         <property name="text">
          <string>UR</string>
@@ -710,7 +700,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay left by the entered pixels.</string>
         </property>
         <property name="text">
          <string>W</string>
@@ -742,7 +732,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Resets any stretching or pulling of the overlay.</string>
         </property>
         <property name="text">
          <string>RE</string>
@@ -774,7 +764,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay right by the entered pixels.</string>
         </property>
         <property name="text">
          <string>E</string>
@@ -806,7 +796,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay left from the bottom by the entered pixels.</string>
         </property>
         <property name="text">
          <string>DL</string>
@@ -838,7 +828,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay down-left by the entered pixels.</string>
         </property>
         <property name="text">
          <string>SW</string>
@@ -870,7 +860,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay down by the entered pixels.</string>
         </property>
         <property name="text">
          <string>S</string>
@@ -902,7 +892,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Stretches the overlay down-right by the entered pixels.</string>
         </property>
         <property name="text">
          <string>SE</string>
@@ -934,7 +924,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay right from the bottom by the entered pixels.</string>
         </property>
         <property name="text">
          <string>DR</string>
@@ -966,7 +956,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay down from the left by the entered pixels.</string>
         </property>
         <property name="text">
          <string>LD</string>
@@ -998,7 +988,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to move the crop boundary.</string>
+         <string>Pulls the overlay down from the right by the entered pixels.</string>
         </property>
         <property name="text">
          <string>RD</string>

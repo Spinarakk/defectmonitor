@@ -70,7 +70,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSave.triggered.connect(self.save_build)
         self.actionSaveAs.triggered.connect(self.save_as_build)
         self.actionExportImage.triggered.connect(self.export_image)
-        self.actionClose.triggered.connect(self.close_build)
         self.actionQuit.triggered.connect(self.closeEvent)
 
         # Menubar -> View
@@ -238,7 +237,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             if OB_dialog.exec_():
                 self.setup_build()
 
-    def setup_build(self):
+    def setup_build(self, settings_flag=False):
         """Sets up the widgetDisplay and any background processes for the current build"""
 
         # Reload any modified build settings that the New Build dialog has changed
@@ -248,29 +247,34 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Store config settings as respective variables and update appropriate UI elements
         self.setWindowTitle('Defect Monitor - Build ' + self.build['BuildInfo']['Name'])
 
-        # Enable certain UI elements
-        self.actionSave.setEnabled(True)
-        self.actionSaveAs.setEnabled(True)
-        self.pushAcquireCT.setEnabled(True)
-        self.pushDefectReports.setEnabled(True)
+        # Don't do the following if this method was triggered by changing the build settings
+        if not settings_flag:
+            # Enable certain UI elements
+            self.actionSave.setEnabled(True)
+            self.actionSaveAs.setEnabled(True)
+            self.actionBuildSettings.setEnabled(True)
+            self.pushAcquireCT.setEnabled(True)
+            self.pushDefectReports.setEnabled(True)
+            self.actionDefectReports.setEnabled(True)
 
-        # Store the names of the seven folders (one is a spacer) to be monitored in the display dictionary
-        self.display['ImageFolder'] = ['%s/processed/coat' % self.build['ImageCapture']['Folder'],
-                                       '%s/processed/scan' % self.build['ImageCapture']['Folder'],
-                                       '%s/contours' % self.build['ImageCapture']['Folder'],
-                                       '%s/processed/single' % self.build['ImageCapture']['Folder'],
-                                       '%s/defects/coat' % self.build['ImageCapture']['Folder'],
-                                       '%s/defects/scan' % self.build['ImageCapture']['Folder'],
-                                       '%s/defects' % self.build['ImageCapture']['Folder'],
-                                       '%s/defects/single' % self.build['ImageCapture']['Folder']]
+            # Store the names of the seven folders (one is a spacer) to be monitored in the display dictionary
+            self.display['ImageFolder'] = ['%s/processed/coat' % self.build['ImageCapture']['Folder'],
+                                           '%s/processed/scan' % self.build['ImageCapture']['Folder'],
+                                           '%s/contours' % self.build['ImageCapture']['Folder'],
+                                           '%s/processed/single' % self.build['ImageCapture']['Folder'],
+                                           '%s/defects/coat' % self.build['ImageCapture']['Folder'],
+                                           '%s/defects/scan' % self.build['ImageCapture']['Folder'],
+                                           '%s/defects' % self.build['ImageCapture']['Folder'],
+                                           '%s/defects/single' % self.build['ImageCapture']['Folder']]
 
-        # Start the image viewer to begin displaying images
-        self.start_display()
+            # Start the image viewer to begin displaying images
+            self.start_display()
 
-        # Check for and acquire an attached camera and trigger
-        self.acquire_ct()
+            # Check for and acquire an attached camera and trigger
+            self.acquire_ct()
 
-        time.sleep(1)
+            # TODO Remove if not on crap computer
+            time.sleep(1)
 
         # Converts and draws the contours if set to do so in the build settings
         if self.build['BuildInfo']['Convert']:
@@ -290,10 +294,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
             worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
-            worker.signals.finished.connect(self.setup_build_finished)
+            worker.signals.finished.connect(lambda: self.setup_build_finished(settings_flag))
             self.threadpool.start(worker)
         else:
-            self.setup_build_finished()
+            self.setup_build_finished(settings_flag)
 
     def pause_conversion(self):
         """Executes when the Pause/Resume button in the Slice Conversion group box is clicked"""
@@ -312,7 +316,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
-    def setup_build_finished(self):
+    def setup_build_finished(self, settings_flag):
         """Executes when the slice conversion thread is finished, or the Stop button is pressed"""
 
         self.build['BuildInfo']['Pause'] = False
@@ -326,9 +330,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushStopConversion.setEnabled(False)
         self.toolSidebar.setCurrentIndex(2)
 
-        self.update_folders()
-        self.update_progress(0)
-        self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 10000)
+        if not settings_flag:
+            self.update_folders()
+            self.update_progress(0)
+            self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 5000)
+        else:
+            self.update_status('Build %s settings changed' % self.build['BuildInfo']['Name'], 5000)
 
     def clear_menu(self):
         pass
@@ -381,18 +388,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.export_confirmation.setWindowTitle('Export Image')
             self.export_confirmation.exec_()
 
-    def close_build(self):
-        """Closes the current build when File -> Close is clicked or when a new build is created/opened"""
-
-        # Remove the paths from the QFileSystemWatcher
-        self.folder_monitor.removePaths(self.display['ImageFolder'])
-
-        for index in range(4):
-            self.display['StackNames'][index].setCurrentIndex(0)
-            self.display['LabelNames'][index].setText('Create or Open a Build to View Images')
-
-            # TODO Complete this function
-
     # MENUBAR -> VIEW
 
     def zoom_in(self):
@@ -430,6 +425,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         if self.DR_dialog is None:
             self.DR_dialog = dialog_windows.DefectReports(self)
+            self.DR_dialog.tab_focus.connect(self.tab_focus)
             self.DR_dialog.destroyed.connect(self.defect_reports_closed)
             self.DR_dialog.show()
         else:
@@ -572,7 +568,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessAll.setStyleSheet('QPushButton {color: #ff0000;}')
             self.pushProcessAll.setText('Process Stop')
             self.actionProcessAll.setText('Process Stop')
-            self.toggle_processing_buttons(4)
 
             # Remove the already processed defect images from the image list
             self.layer_numbers = list(set(self.display['LayerNumbers'][self.tab_index]) -
@@ -622,6 +617,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
+            self.toggle_processing_buttons(4)
             self.defect_counter += 1
             self.update_status('Running %s layer %s through the Defect Detector...' % (phase, str(layer).zfill(4)))
         else:
@@ -711,7 +707,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.CS_dialog = None
 
     def build_settings(self):
-        pass
+        """Opens a Modal Window when Settings -> Build Settings is clicked
+        Allows the user to change the current build's settings
+        """
+
+        BS_dialog = dialog_windows.NewBuild(self, open_flag=True, settings_flag=True)
+
+        if BS_dialog.exec_():
+            self.setup_build(True)
 
     def advanced_mode(self):
         """Allows the user to toggle between basic mode or advanced mode which in essence enables or disables buttons
@@ -725,7 +728,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushCameraCalibration.setEnabled(flag)
         self.actionSliceConverter.setEnabled(flag)
         self.pushSliceConverter.setEnabled(flag)
-        #self.widgetDisplay.setTabEnabled(3, flag)
+        self.pushOverlayAdjustment.setEnabled(flag)
+        self.actionOverlayAdjustment.setEnabled(flag)
+
+        if self.actionAdvancedMode.isChecked():
+            self.pushOverlayAdjustment.setEnabled(self.checkOverlay.isChecked())
+            self.actionOverlayAdjustment.setEnabled(self.checkOverlay.isChecked())
+
+        self.update_display(self.widgetDisplay.currentIndex())
 
         # Only disable the following button if it is enabled in the first place
         if self.pushCapture.isEnabled():
@@ -1076,7 +1086,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                     overlay = cv2.resize(overlay, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
                 # Apply the stored transformation values to the overlay image
-                overlay = image_processing.ImageTransform().apply_transformation(overlay)
+                overlay = image_processing.ImageTransform().apply_transformation(overlay, True)
 
                 # self.update_status('Translation X - 0 Y - 0 | Rotation - 0.00 | Stretch X - 0 Y - 0', 10000)
                 # Display a status message with the current transformation of the overlay image
@@ -1148,9 +1158,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionExportImage.setEnabled(flag)
         self.actionZoomIn.setChecked(False)
 
-        if self.checkOverlay.isChecked():
-            self.pushOverlayAdjustment.setEnabled(flag)
-
         if self.widgetDisplay.currentIndex() == 3:
             self.pushDisplayUpSeek.setEnabled(False)
             self.pushDisplayDownSeek.setEnabled(False)
@@ -1179,12 +1186,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.checkOverlay.isChecked():
             # Display the message for 5 seconds
             self.update_status('Displaying part contours.', 3000)
-            self.pushOverlayAdjustment.setEnabled(True)
-            self.toolSidebar.setCurrentIndex(0)
         else:
             self.update_status('Hiding part contours.', 3000)
-            self.pushOverlayAdjustment.setEnabled(False)
-            self.toolSidebar.setCurrentIndex(2)
+
+        if self.actionAdvancedMode.isChecked():
+            self.pushOverlayAdjustment.setEnabled(self.checkOverlay.isChecked())
+            self.actionOverlayAdjustment.setEnabled(self.checkOverlay.isChecked())
 
         self.update_display(self.widgetDisplay.currentIndex())
 
@@ -1220,7 +1227,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Check which action has been clicked and execute the respective methods
         if action:
             # Grab the name of the image using the slider value (subtract 1 due to code starting from 0)
-            name = self.display['ImageList'][self.widgetDisplay.currentIndex()][self.sliderDisplay.value() - 1]
+            # Also check if the displayed image is the Defect Analysis one, then a different list will need to be used
+            if self.radioDefects.isChecked():
+                step = 4
+            else:
+                step = 0
+            name = self.display['ImageList'][self.widgetDisplay.currentIndex() + step][self.sliderDisplay.value() - 1]
+
             if action == action_show_image:
                 # Need to turn the forward slashes into backslash due to windows explorer only working with backslashes
                 subprocess.Popen(r"""explorer /select, %s""" % name.replace('/', '\\'))
@@ -1266,12 +1279,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Also can be used for when an image has just finished processing for defects
         """
 
-        self.widgetDisplay.setCurrentIndex(index)
-        self.sliderDisplay.setValue(value)
+        # Double check if the received value is within the layer's range in the first place
+        if value > self.display['MaxLayers']:
+            self.update_status('Layer %s outside of the available layer range.' % str(value).zfill(4), 3000)
+        else:
+            # Set the display image to be the defect analyzed image
+            if defect_flag:
+                self.radioDefects.setChecked(True)
 
-        # Set the display image to be the defect analyzed image
-        if defect_flag:
-            self.radioDefects.setChecked(True)
+            self.widgetDisplay.setCurrentIndex(index)
+            self.sliderDisplay.setValue(value)
 
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value

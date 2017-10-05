@@ -78,7 +78,7 @@
             5235
         ],
         "ScaleFactor": 5.333333333333333,
-        "TransformParameters": [
+        "TransformContours": [
             20,
             -10,
             0,
@@ -96,13 +96,32 @@
             5,
             0,
             10
+        ],
+        "TransformDisplay": [
+            -20,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            15,
+            0,
+            0,
+            0,
+            20,
+            0,
+            0,
+            0,
+            0,
+            0
         ]
     },
     "Threshold": {
-        "HistogramCoat": 2000,
-	"HistogramScan": 3000,
-	"Occurrences": 5,
-	"Overlay": 0.90,
-	"PixelSize": 0.05
+        "HistogramCoat": 5000,
+        "HistogramScan": 5000,
+        "Occurrences": 5,
+        "Overlay": 90.0,
+        "PixelSize": 0.024999999999999994
     }
 }

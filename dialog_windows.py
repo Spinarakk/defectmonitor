@@ -19,7 +19,6 @@ import extra_functions
 import camera_calibration
 import qt_multithreading
 
-
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
     dialogSliceConverter, dialogCameraSettings, dialogOverlayAdjustment, dialogDefectReports
@@ -30,7 +29,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     Allows the user to setup a new build and change settings
     """
 
-    def __init__(self, parent=None, open_flag=False):
+    def __init__(self, parent=None, open_flag=False, settings_flag=False):
 
         # Setup Dialog UI with MainWindow as parent
         super(NewBuild, self).__init__(parent)
@@ -70,6 +69,14 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
             self.checkMinor.setChecked(self.build['Notifications']['Minor'])
             self.checkMajor.setChecked(self.build['Notifications']['Major'])
+
+        # If this dialog window was opened as a result of the Build Settings... action, then the following is executed
+        # Disable a few of the buttons to disallow changing of the slice files and build folder
+        if settings_flag:
+            self.pushBrowseSF.setEnabled(False)
+            self.pushBrowseBF.setEnabled(False)
+            self.setWindowTitle('Build Settings')
+            self.pushCreate.setText('OK')
 
         self.threadpool = QThreadPool()
 
@@ -147,7 +154,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_test_confirmation = QMessageBox()
         send_test_confirmation.setIcon(QMessageBox.Information)
         send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
-                                            (self.lineEmailAddress.text(), self.lineUsername.text()))
+                                       (self.lineEmailAddress.text(), self.lineUsername.text()))
         send_test_confirmation.setWindowTitle('Send Test Email')
         send_test_confirmation.exec_()
 
@@ -587,8 +594,12 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
 
     def apply(self):
         """Executes when the Apply button is clicked and saves the entered values to the config.json file"""
-        
-        # Save the new index values from the changed settings to both the config and config_default dictionary
+
+        # Reload from the config.json file in case a setting was changed in another window
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Save the new values from the changed settings to the config dictionary
         self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
         self.config['CameraSettings']['ExposureTimeAbs'] = self.spinExposureTime.value()
         self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
@@ -794,17 +805,20 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         except TypeError:
             pass
 
+        # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Transformation Parameters saved as a list of the respective transformation values
-        self.transform = self.config['ImageCorrection']['TransformParameters']
-        self.transform_states = list()
+        # Create two copies of the display transform parameters, one used to reset back to
+        self.transform = self.config['ImageCorrection']['TransformDisplay'].copy()
+        self.transform_reset = self.config['ImageCorrection']['TransformDisplay'].copy()
+        self.states = list()
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # General
         self.pushReset.clicked.connect(self.reset)
         self.pushUndo.clicked.connect(self.undo)
+        self.pushSave.clicked.connect(self.save)
 
         # Translation
         self.pushTranslateUp.clicked.connect(self.translate_up)
@@ -839,139 +853,146 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         self.pushStretchRightDown.clicked.connect(self.stretch_rd)
 
     def reset(self):
-        self.transform = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.save_settings()
+        self.transform = self.transform_reset.copy()
+        self.apply()
 
     def undo(self):
-        del self.transform_states[-1]
-        self.transform = self.transform_states[-1]
-        self.save_settings(True)
+        del self.states[-1]
+        self.transform = self.states[-1]
+        self.apply(True)
 
     def translate_up(self):
         self.transform[0] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def translate_down(self):
         self.transform[0] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def translate_left(self):
         self.transform[1] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def translate_right(self):
         self.transform[1] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def rotate_acw(self):
         self.transform[2] += self.spinDegrees.value()
-        self.save_settings()
+        self.apply()
 
     def rotate_cw(self):
         self.transform[2] -= self.spinDegrees.value()
-        self.save_settings()
+        self.apply()
 
     def flip_horizontal(self):
         self.transform[3] ^= 1
-        self.save_settings()
+        self.apply()
 
     def flip_vertical(self):
         self.transform[4] ^= 1
-        self.save_settings()
+        self.apply()
 
     def stretch_reset(self):
         self.transform[5:] = [0] * (len(self.transform) - 5)
-        self.save_settings()
+        self.apply()
 
     def stretch_n(self):
         self.transform[5] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_ne(self):
         self.transform[5] -= self.spinPixels.value()
         self.transform[6] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_e(self):
         self.transform[6] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_se(self):
         self.transform[7] += self.spinPixels.value()
         self.transform[6] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_s(self):
         self.transform[7] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_sw(self):
         self.transform[7] += self.spinPixels.value()
         self.transform[8] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_w(self):
         self.transform[8] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_nw(self):
         self.transform[5] -= self.spinPixels.value()
         self.transform[8] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_ul(self):
         self.transform[9] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_lu(self):
         self.transform[10] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_ur(self):
         self.transform[11] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_ru(self):
         self.transform[12] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_dl(self):
         self.transform[13] -= self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_ld(self):
         self.transform[14] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_dr(self):
         self.transform[15] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
     def stretch_rd(self):
         self.transform[16] += self.spinPixels.value()
-        self.save_settings()
+        self.apply()
 
-    def save_settings(self, undo_flag=False):
+    def apply(self, undo_flag=False):
+        """Performs the image transformation on the display overlay after saving the new display transform parameters"""
+
         if not undo_flag:
-            self.transform_states.append(self.transform[:])
+            self.states.append(self.transform[:])
 
-        if len(self.transform_states) > 10:
-            del self.transform_states[0]
+        if len(self.states) > 10:
+            del self.states[0]
 
-        self.config['ImageCorrection']['TransformParameters'] = self.transform
+        self.config['ImageCorrection']['TransformDisplay'] = self.transform
 
-        with open('transformation_parameters.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
+        with open('config.json', 'w+') as parameters:
+            json.dump(self.config, parameters, indent=4, sort_keys=True)
 
         self.update_overlay.emit(False)
+
+    def save(self):
+        """Adds the current display transform parameters to the current contour transform parameters"""
+
+        transform_new = [x + y for x, y in zip(self.transform, self.config['ImageCorrection']['TransformContours'])]
+        self.config['ImageCorrection']['TransformContours'] = transform_new
+
+        with open('config.json', 'w+') as parameters:
+            json.dump(self.config, parameters, indent=4, sort_keys=True)
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
         self.window_settings.setValue('Overlay Adjustment Geometry', self.saveGeometry())
-
-        if os.path.isfile('transformation_parameters.json'):
-            os.remove('transformation_parameters.json')
-
 
 class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
     """Opens a Modeless Dialog Window when the CameraCalibration instance has finished
@@ -1028,6 +1049,8 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
     Allows user to look at the defect reports in a nice visual way
     """
 
+    tab_focus = pyqtSignal(int, int, bool)
+
     def __init__(self, parent=None):
 
         # Setup Dialog UI with MainWindow as parent
@@ -1044,8 +1067,15 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         with open('build.json') as build:
             self.build = json.load(build)
 
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         # Setup event listeners for all relevant UI components, and connect them to specific functions
         self.comboParts.currentIndexChanged.connect(self.display_report)
+        self.pushSet.clicked.connect(self.set_thresholds)
+        self.tableCoat.cellDoubleClicked.connect(self.cell_click)
+        self.tableScan.cellDoubleClicked.connect(self.cell_click)
 
         # Save the part name list (with combined and background at the start)
         self.part_names = ['combined', 'background'] + list(self.build['BuildInfo']['Colours'])[:-2]
@@ -1057,17 +1087,157 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.tableCoat.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableScan.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-    def display_report(self, index):
+        # Set the threshold spinboxes with the values from the config.json file
+        self.spinPixelSize.setValue(self.config['Threshold']['PixelSize'])
+        self.spinOccurrences.setValue(self.config['Threshold']['Occurrences'])
+        self.spinOverlay.setValue(self.config['Threshold']['Overlay'])
+        self.spinHistogramCoat.setValue(self.config['Threshold']['HistogramCoat'])
+        self.spinHistogramScan.setValue(self.config['Threshold']['HistogramScan'])
+
+    def display_report(self, part):
 
         # Read the appropriate report into memory
         with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'],
-                                                 self.part_names[index])) as report:
+                                                 self.part_names[part])) as report:
             report = json.load(report)
 
         # Find out the maximum number of layers to set the number of table rows
         max_layer = max([int(number) for number in list(report)])
         self.tableCoat.setRowCount(max_layer)
         self.tableScan.setRowCount(max_layer)
+
+        # Grab the threshold values for the coat and the scan in separate lists
+        threshold_coat = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                          self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
+                          self.config['Threshold']['HistogramCoat']]
+        threshold_scan = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                          self.config['Threshold']['HistogramScan'], self.config['Threshold']['Overlay']]
+
+        # Display all the relevant data in the table, while also filling out the 'missing' rows with blanks
+        for row in range(max_layer):
+            # COAT DATA
+            # Grab the Coat data in a try loop in case the index doesn't exist in the dictionary
+            try:
+                data = report[str(row + 1).zfill(4)]['coat']
+            except (IndexError, KeyError):
+                data = {}
+
+            # Reset a list of colours to colour code each cell
+            data_colours = list()
+            data_coat = list()
+
+            if data:
+                data_coat = [data['BladeStreak'][1], data['BladeChatter'][1], data['BrightSpot'][0],
+                             data['ContrastDifference'][0]]
+
+                # Only append the histogram comparison information if the 'combined' part is being displayed
+                if part == 0:
+                    # And if the histogram result is available in the first place
+                    try:
+                        data_coat.append(round(data['HistogramComparison'], 2))
+                    except (KeyError, IndexError):
+                        data_coat.append(0)
+
+                # Bright Spot and Contrast Difference pixel data needs to be converted to percentages
+                # Rounded to 4 decimal places for clarity as accurate precision isn't required
+                data_coat[2] = round(data_coat[2] / (3470 * 2410) * 100, 4)
+                data_coat[3] = round(data_coat[3] / (3470 * 2410) * 100, 4)
+
+                # Set colours for if the data is over/under the threshold, or there is no data at all
+                # Green for value is GOOD
+                # Red for value is BAD
+                # Yellow for value is NONE
+                # NOTE: Different results have different conditions (over/under) for a good/bad result
+                for index, value in enumerate(data_coat):
+                    if value < threshold_coat[index]:
+                        data_colours.append(QColor(0, 255, 0))
+                    else:
+                        data_colours.append(QColor(255, 0, 0))
+            else:
+                for number in range(5):
+                    data_coat.append(0)
+                    data_colours.append(QColor(255, 255, 0))
+
+            for column in range(len(data_coat)):
+                self.tableCoat.setItem(row, column, QTableWidgetItem(str(data_coat[column])))
+                self.tableCoat.item(row, column).setBackground(data_colours[column])
+
+            # SCAN DATA
+            # Grab the Scan data in a try loop in case the index doesn't exist in the dictionary
+            try:
+                data = report[str(row + 1).zfill(4)]['scan']
+            except (IndexError, KeyError):
+                data = {}
+
+            # Reset a list of colours to colour code each cell
+            data_colours = list()
+            data_scan = list()
+
+            if data:
+                data_scan = [data['BladeStreak'][1], data['BladeChatter'][1]]
+
+                # Only append the histogram comparison information if the 'combined' part is being displayed
+                if part == 0:
+                    # And if the histogram result is available in the first place
+                    try:
+                        data_scan.append(round(data['HistogramComparison'], 2))
+                    except (KeyError, IndexError):
+                        data_scan.append(0)
+                    # Same goes for the overlay comparison information as above
+                    try:
+                        data_scan.append(round(data['OverlayComparison'] * 100, 4))
+                    except (KeyError, IndexError):
+                        data_scan.append(0)
+
+                # Set colours for if the data is over/under the threshold, or there is no data at all
+                # Green for value is GOOD
+                # Red for value is BAD
+                # Yellow for value is NONE
+                # NOTE: Different results have different conditions (over/under) for a good/bad result
+                for index, value in enumerate(data_scan):
+                    if value < threshold_scan[index] and index < 3:
+                        data_colours.append(QColor(0, 255, 0))
+                    elif value > threshold_scan[index] and index == 3:
+                        data_colours.append(QColor(0, 255, 0))
+                    else:
+                        data_colours.append(QColor(255, 0, 0))
+            else:
+                for number in range(4):
+                    data_scan.append(0)
+                    data_colours.append(QColor(255, 255, 0))
+
+            for column in range(len(data_scan)):
+                self.tableScan.setItem(row, column, QTableWidgetItem(str(data_scan[column])))
+                self.tableScan.item(row, column).setBackground(data_colours[column])
+
+        # Sets the row height to as small as possible to fit the text height
+        self.tableCoat.resizeRowsToContents()
+        self.tableScan.resizeRowsToContents()
+
+    def set_thresholds(self):
+
+        # Reload from the config.json file in case a setting was changed in another window
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Save the new values from the changed settings to the config dictionary
+        self.config['Threshold']['PixelSize'] = self.spinPixelSize.value()
+        self.config['Threshold']['Occurrences'] = self.spinOccurrences.value()
+        self.config['Threshold']['Overlay'] = self.spinOverlay.value()
+        self.config['Threshold']['HistogramCoat'] = self.spinHistogramCoat.value()
+        self.config['Threshold']['HistogramScan'] = self.spinHistogramScan.value()
+
+        # Save to the config.json file
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
+
+        # Reload the data and colour code based on the new threshold values
+        self.display_report(self.comboParts.currentIndex())
+
+    def cell_click(self, row):
+        """Send a signal back to the Main Window to display the corresponding defect image
+        When a cell in the report table is clicked"""
+        self.tab_focus.emit(self.widgetReports.currentIndex(), row + 1, True)
 
     def closeEvent(self, event):
         """Executes when the Done button is clicked or when the window is closed"""

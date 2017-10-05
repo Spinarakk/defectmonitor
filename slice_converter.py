@@ -36,7 +36,6 @@ class SliceConverter:
                                  (crop_boundary[3] - crop_boundary[2]), 3)
         self.offset = (self.config['ImageCorrection']['Offset'][0], self.config['ImageCorrection']['Offset'][1])
         self.scale_factor = self.config['ImageCorrection']['ScaleFactor']
-        self.transform = self.config['ImageCorrection']['TransformParameters']
 
         # Part names are taken from the build.json file, depending if this method was run from the Slice Converter
         # Or as part of a new build, different files will be read and used
@@ -399,14 +398,14 @@ class SliceConverter:
             image_contours = cv2.flip(image_contours, 0)
 
             # Correct the image using calculated transformation parameters to account for the perspective warp
-            image_contours = image_processing.ImageTransform().apply_transformation(image_contours)
+            image_contours = image_processing.ImageTransform().apply_transformation(image_contours, False)
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
 
             # Save the part names image to the contours up one folder after transforming it just like the contours image
             if layer == 1:
-                image_names = image_processing.ImageTransform().apply_transformation(image_names)
+                image_names = image_processing.ImageTransform().apply_transformation(image_names, False)
                 cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
             # Increment to the next layer

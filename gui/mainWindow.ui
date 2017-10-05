@@ -1351,7 +1351,7 @@
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Histogram Comparison</string>
+              <string>Report Generation</string>
              </property>
             </widget>
            </item>
@@ -1393,8 +1393,6 @@
     <addaction name="separator"/>
     <addaction name="actionExportImage"/>
     <addaction name="separator"/>
-    <addaction name="actionClose"/>
-    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -1405,9 +1403,7 @@
     <addaction name="actionZoomOut"/>
     <addaction name="separator"/>
     <addaction name="actionCalibrationResults"/>
-    <addaction name="separator"/>
     <addaction name="actionDefectReports"/>
-    <addaction name="actionHistogramComparison"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1428,6 +1424,7 @@
     <addaction name="actionSliceConverter"/>
     <addaction name="actionImageConverter"/>
     <addaction name="actionUpdateFolders"/>
+    <addaction name="actionReport_Generation"/>
     <addaction name="separator"/>
     <addaction name="menuDefectProcessor"/>
    </widget>
@@ -1525,6 +1522,9 @@
    </property>
   </action>
   <action name="actionBuildSettings">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Build Settings...</string>
    </property>
@@ -1653,6 +1653,14 @@
    </property>
    <property name="text">
     <string>Histogram Comparison</string>
+   </property>
+  </action>
+  <action name="actionReport_Generation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Report Generation</string>
    </property>
   </action>
  </widget>
