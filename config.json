@@ -122,6 +122,6 @@
         "HistogramScan": 5000,
         "Occurrences": 5,
         "Overlay": 90.0,
-        "PixelSize": 0.024999999999999994
+        "PixelSize": 0.1
     }
 }

@@ -168,6 +168,9 @@ class SliceConverter:
     def read_cli(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
+        # TODO remove timers if not needed
+        t0 = time.time()
+
         # UI Progress and Status Messages
         progress_previous = None
         self.status.emit('Current Part: %s | Reading CLI file...' % os.path.splitext(os.path.basename(filename))[0])
@@ -256,6 +259,8 @@ class SliceConverter:
                     self.status.emit('Current Part: %s | Reading CLI file...' %
                                      os.path.splitext(os.path.basename(filename))[0])
 
+        print('Read CLI %s Time\n%s\n' % (os.path.splitext(os.path.basename(filename))[0], time.time() - t0))
+
         return data_ascii
 
     def format_contours(self, filename, data_ascii):
@@ -265,6 +270,9 @@ class SliceConverter:
         XX is the layer number, YY is the scaled layer height
         Method also saves the contours to a text file in real-time
         """
+
+        # TODO remove timers if not needed
+        t0 = time.time()
 
         # UI Progress and Status Messages
         progress_count = 0.0
@@ -324,6 +332,8 @@ class SliceConverter:
             # Write the final ENDLAYER to the contours file
             contours_file.write('%s\n' % ['ENDLAYER'])
 
+            print('Format Part %s Time\n%s\n' % (os.path.basename(filename).replace('_contours.txt', ''), time.time() - t0))
+
     def draw_contours(self, filenames, part_colours, folder):
         """Draw all the contours of the selected parts on the same image"""
 
@@ -341,6 +351,9 @@ class SliceConverter:
         layer_max = 10
 
         while layer <= layer_max:
+
+            # TODO remove timers if not needed
+            t0 = time.time()
 
             self.check_flags()
             while self.pause_flag:
@@ -415,6 +428,8 @@ class SliceConverter:
             if int(round(progress)) is not progress_previous:
                 self.progress.emit(int(round(progress)))
                 progress_previous = int(round(progress))
+
+            print('Contour %s Time\n%s\n' % (layer, time.time() - t0))
 
     def check_flags(self):
         """Checks the respective Run and Pause keys from the config.json file"""

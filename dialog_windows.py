@@ -1084,8 +1084,11 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.comboParts.addItems(self.part_names)
 
         # Sets the data table's columns to automatically resize appropriately
+        # Except the first column, the layer number, which will be as small as possible
         self.tableCoat.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableScan.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableCoat.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.tableScan.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
 
         # Set the threshold spinboxes with the values from the config.json file
         self.spinPixelSize.setValue(self.config['Threshold']['PixelSize'])
@@ -1101,118 +1104,146 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                                                  self.part_names[part])) as report:
             report = json.load(report)
 
-        # Find out the maximum number of layers to set the number of table rows
-        max_layer = max([int(number) for number in list(report)])
-        self.tableCoat.setRowCount(max_layer)
-        self.tableScan.setRowCount(max_layer)
+        # Disable sorting while populating the table so things don't get messed up
+        self.tableCoat.setSortingEnabled(False)
+        self.tableScan.setSortingEnabled(False)
 
-        # Grab the threshold values for the coat and the scan in separate lists
-        threshold_coat = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
-                          self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
-                          self.config['Threshold']['HistogramCoat']]
-        threshold_scan = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
-                          self.config['Threshold']['HistogramScan'], self.config['Threshold']['Overlay']]
+        # First of all, check if the report dictionary has anything at all
+        if report:
+            # Find out the maximum number of layers to set the number of table rows
+            max_layer = max([int(number) for number in list(report)])
+            self.tableCoat.setRowCount(max_layer)
+            self.tableScan.setRowCount(max_layer)
 
-        # Display all the relevant data in the table, while also filling out the 'missing' rows with blanks
-        for row in range(max_layer):
-            # COAT DATA
-            # Grab the Coat data in a try loop in case the index doesn't exist in the dictionary
-            try:
-                data = report[str(row + 1).zfill(4)]['coat']
-            except (IndexError, KeyError):
-                data = {}
+            # Grab the threshold values for the coat and the scan in separate lists
+            threshold_coat = [0, self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                              self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
+                              self.config['Threshold']['HistogramCoat']]
+            threshold_scan = [0, self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                              self.config['Threshold']['HistogramScan'], self.config['Threshold']['Overlay']]
 
-            # Reset a list of colours to colour code each cell
-            data_colours = list()
-            data_coat = list()
+            # Display all the relevant data in the table, while also filling out the 'missing' rows with blanks
+            for row in range(max_layer):
+                # COAT DATA
+                # Grab the Coat data in a try loop in case the index doesn't exist in the dictionary
+                try:
+                    data = report[str(row + 1).zfill(4)]['coat']
+                except (IndexError, KeyError):
+                    data = {}
 
-            if data:
-                data_coat = [data['BladeStreak'][1], data['BladeChatter'][1], data['BrightSpot'][0],
-                             data['ContrastDifference'][0]]
+                # Reset a list of colours to colour code each cell
+                data_colours = list()
+                data_coat = list()
 
-                # Only append the histogram comparison information if the 'combined' part is being displayed
-                if part == 0:
-                    # And if the histogram result is available in the first place
-                    try:
-                        data_coat.append(round(data['HistogramComparison'], 2))
-                    except (KeyError, IndexError):
+                if data:
+                    # Grab the data from the report dictionary, with the first element being the layer number
+                    data_coat = [row + 1, data['BladeStreak'][1], data['BladeChatter'][1], data['BrightSpot'][0],
+                                 data['ContrastDifference'][0]]
+
+                    # Only append the histogram comparison information if the 'combined' part is being displayed
+                    if part == 0:
+                        # And if the histogram result is available in the first place
+                        try:
+                            data_coat.append(round(data['HistogramComparison'], 2))
+                        except (KeyError, IndexError):
+                            data_coat.append(0)
+
+                    # Bright Spot and Contrast Difference pixel data needs to be converted to percentages
+                    # Rounded to 4 decimal places for clarity as accurate precision isn't required
+                    data_coat[3] = round(data_coat[3] / (3470 * 2410) * 100, 4)
+                    data_coat[4] = round(data_coat[4] / (3470 * 2410) * 100, 4)
+
+                    # Set colours for if the data is over/under the threshold, or there is no data at all
+                    # Green for value is GOOD
+                    # Red for value is BAD
+                    # Yellow for value is NONE
+                    # NOTE: Different results have different conditions (over/under) for a good/bad result
+                    for index, value in enumerate(data_coat):
+                        if value < threshold_coat[index]:
+                            data_colours.append(QColor(0, 255, 0))
+                        else:
+                            data_colours.append(QColor(255, 0, 0))
+                else:
+                    for number in range(6):
                         data_coat.append(0)
+                        data_colours.append(QColor(255, 255, 0))
 
-                # Bright Spot and Contrast Difference pixel data needs to be converted to percentages
-                # Rounded to 4 decimal places for clarity as accurate precision isn't required
-                data_coat[2] = round(data_coat[2] / (3470 * 2410) * 100, 4)
-                data_coat[3] = round(data_coat[3] / (3470 * 2410) * 100, 4)
+                    # Set the first element to the layer number
+                    data_coat[0] = row + 1
 
-                # Set colours for if the data is over/under the threshold, or there is no data at all
-                # Green for value is GOOD
-                # Red for value is BAD
-                # Yellow for value is NONE
-                # NOTE: Different results have different conditions (over/under) for a good/bad result
-                for index, value in enumerate(data_coat):
-                    if value < threshold_coat[index]:
-                        data_colours.append(QColor(0, 255, 0))
-                    else:
-                        data_colours.append(QColor(255, 0, 0))
-            else:
-                for number in range(5):
-                    data_coat.append(0)
-                    data_colours.append(QColor(255, 255, 0))
+                # Fill the table cells with the corresponding data
+                for column in range(len(data_coat)):
+                    # The following lines allow the data to be sorted numerically (rather than as strings)
+                    item = QTableWidgetItem()
+                    item.setData(Qt.EditRole, data_coat[column])
+                    self.tableCoat.setItem(row, column, item)
 
-            for column in range(len(data_coat)):
-                self.tableCoat.setItem(row, column, QTableWidgetItem(str(data_coat[column])))
-                self.tableCoat.item(row, column).setBackground(data_colours[column])
+                    # Ignore the first column (layer number) when it comes to setting the background colour
+                    if column != 0:
+                        self.tableCoat.item(row, column).setBackground(data_colours[column])
 
-            # SCAN DATA
-            # Grab the Scan data in a try loop in case the index doesn't exist in the dictionary
-            try:
-                data = report[str(row + 1).zfill(4)]['scan']
-            except (IndexError, KeyError):
-                data = {}
+                # SCAN DATA
+                # Grab the Scan data in a try loop in case the index doesn't exist in the dictionary
+                try:
+                    data = report[str(row + 1).zfill(4)]['scan']
+                except (IndexError, KeyError):
+                    data = {}
 
-            # Reset a list of colours to colour code each cell
-            data_colours = list()
-            data_scan = list()
+                # Reset a list of colours to colour code each cell
+                data_colours = list()
+                data_scan = list()
 
-            if data:
-                data_scan = [data['BladeStreak'][1], data['BladeChatter'][1]]
+                if data:
+                    # Grab the data from the report dictionary, with the first element being the layer number
+                    data_scan = [row + 1, data['BladeStreak'][1], data['BladeChatter'][1]]
 
-                # Only append the histogram comparison information if the 'combined' part is being displayed
-                if part == 0:
-                    # And if the histogram result is available in the first place
-                    try:
-                        data_scan.append(round(data['HistogramComparison'], 2))
-                    except (KeyError, IndexError):
+                    # Only append the histogram comparison information if the 'combined' part is being displayed
+                    if part == 0:
+                        # And if the histogram result is available in the first place
+                        try:
+                            data_scan.append(round(data['HistogramComparison'], 2))
+                        except (KeyError, IndexError):
+                            data_scan.append(0)
+                        # Same goes for the overlay comparison information
+                        try:
+                            data_scan.append(round(data['OverlayComparison'] * 100, 4))
+                        except (KeyError, IndexError):
+                            data_scan.append(0)
+
+                    # Set colours for if the data is over/under the threshold, or there is no data at all
+                    for index, value in enumerate(data_scan):
+                        if value < threshold_scan[index] and index < 3:
+                            data_colours.append(QColor(0, 255, 0))
+                        elif value > threshold_scan[index] and index == 3:
+                            data_colours.append(QColor(0, 255, 0))
+                        else:
+                            data_colours.append(QColor(255, 0, 0))
+                else:
+                    for number in range(5):
                         data_scan.append(0)
-                    # Same goes for the overlay comparison information as above
-                    try:
-                        data_scan.append(round(data['OverlayComparison'] * 100, 4))
-                    except (KeyError, IndexError):
-                        data_scan.append(0)
+                        data_colours.append(QColor(255, 255, 0))
 
-                # Set colours for if the data is over/under the threshold, or there is no data at all
-                # Green for value is GOOD
-                # Red for value is BAD
-                # Yellow for value is NONE
-                # NOTE: Different results have different conditions (over/under) for a good/bad result
-                for index, value in enumerate(data_scan):
-                    if value < threshold_scan[index] and index < 3:
-                        data_colours.append(QColor(0, 255, 0))
-                    elif value > threshold_scan[index] and index == 3:
-                        data_colours.append(QColor(0, 255, 0))
-                    else:
-                        data_colours.append(QColor(255, 0, 0))
-            else:
-                for number in range(4):
-                    data_scan.append(0)
-                    data_colours.append(QColor(255, 255, 0))
+                    # Set the first element to the layer number
+                    data_scan[0] = row + 1
 
-            for column in range(len(data_scan)):
-                self.tableScan.setItem(row, column, QTableWidgetItem(str(data_scan[column])))
-                self.tableScan.item(row, column).setBackground(data_colours[column])
+                # Fill the table cells with the corresponding data
+                for column in range(len(data_scan)):
+                    # The following lines allow the data to be sorted numerically (rather than as strings)
+                    item = QTableWidgetItem()
+                    item.setData(Qt.EditRole, data_scan[column])
+                    self.tableScan.setItem(row, column, item)
+
+                    # Ignore the first column (layer number) when it comes to setting the background colour
+                    if column != 0:
+                        self.tableScan.item(row, column).setBackground(data_colours[column])
 
         # Sets the row height to as small as possible to fit the text height
         self.tableCoat.resizeRowsToContents()
         self.tableScan.resizeRowsToContents()
+
+        # Re-enable sorting
+        self.tableCoat.setSortingEnabled(True)
+        self.tableScan.setSortingEnabled(True)
 
     def set_thresholds(self):
 
@@ -1237,7 +1268,16 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
     def cell_click(self, row):
         """Send a signal back to the Main Window to display the corresponding defect image
         When a cell in the report table is clicked"""
-        self.tab_focus.emit(self.widgetReports.currentIndex(), row + 1, True)
+
+        # Grab the layer number from the table as it won't correlate with the row number if the table is sorted
+        # Also depends if it's the coat or scan table being clicked
+        if self.widgetReports.currentIndex() == 0:
+            layer = int(self.tableCoat.item(row, 0).text())
+        else:
+            layer = int(self.tableScan.item(row, 0).text())
+
+        # Emit a signal to change focus to the selected defect layer
+        self.tab_focus.emit(self.widgetReports.currentIndex(), layer, True)
 
     def closeEvent(self, event):
         """Executes when the Done button is clicked or when the window is closed"""

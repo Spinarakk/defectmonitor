@@ -643,6 +643,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.all_flag and not self.defect_counter == len(self.layer_numbers):
             self.process_settings(self.layer_numbers[self.defect_counter])
         else:
+            self.all_flag = False
+            self.pushProcessAll.setStyleSheet('')
+            self.pushProcessAll.setText('Process All')
+            self.actionProcessAll.setText('Process All')
             self.update_status('Defect Detection finished successfully.', 10000)
 
     def toggle_processing_buttons(self, state):
@@ -869,7 +873,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def poll_trigger(self):
         """Function that will be passed to the QThreadPool to be executed"""
-        return str(self.serial_trigger.readline())
+
+        trigger = str(self.serial_trigger.readline())
+
+        if trigger is None:
+            return ''
+        else:
+            return trigger
 
     def capture_run_finished(self):
         """Reset the time idle counter and restart the trigger polling after resetting the serial input"""

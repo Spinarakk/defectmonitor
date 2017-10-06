@@ -30,10 +30,10 @@ Operation
 
 Hardware
 - Basler Ace acA3800-10gm GigE
-	- CMOS Sensor
-	- 10 FPS at 10 megapixels
-	- 3856 x 2764 resolution
-	- Grayscale
+    - CMOS Sensor
+    - 10 FPS at 10 megapixels
+    - 3840 x 2748 resolution
+    - Grayscale
 - Windows 10 64-bit System
 
 Core Functionality
@@ -121,13 +121,13 @@ Nomenclature Notes
 - All PyQt GUI Object names use camelCaps with the first word being what the object is
 - Similar code grouped in boxes with comment describing what that block does
 - Variable naming schemes
-	- filename / XXX_folder (strings that contain a file/folder name)
-	- XXX_name (Strings that contain a file/folder name)
-	- XXX_file (The actual open file used within with blocks, exception: config)
-	- XXX_flag (Flags)
-	- XXX_dialog (For dialog windows)
-	- XXX_instance (For Qthread instances)
-	- image_XXX (Image arrays)
+    - filename / XXX_folder (strings that contain a file/folder name)
+    - XXX_name (Strings that contain a file/folder name)
+    - XXX_file (The actual open file used within with blocks, exception: config)
+    - XXX_flag (Flags)
+    - XXX_dialog (For dialog windows)
+    - XXX_instance (For Qthread instances)
+    - image_XXX (Image arrays)
 - Comments will only be provided for the first time the function or block of code appears in the module, starting from the main_window module
 - The entire functioning of the program requires the presence of config.json and build.json
 - Almost every called function saves and loads settings and values to these files

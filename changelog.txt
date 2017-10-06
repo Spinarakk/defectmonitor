@@ -1,3 +1,9 @@
+October 6
+- Made the defect reporting tables able to be sorted
+- Fixed issues in sorting and redisplaying data due to the sort
+- Table stores the number of the layer so the layer number is also sorted and the correct layer number is used to show focus on the main window
+- Set up another computer to be put in the XLine 1000 concept laser machine
+
 October 5
 - Continued building up the Defect Reports dialog window
 - Every cell of data is set to change colour depending on the threshold value

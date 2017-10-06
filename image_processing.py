@@ -246,6 +246,7 @@ class DefectDetector:
     def analyze_coat(self, image_coat):
         """Analyzes the coat image for any potential defects as listed in the order below"""
 
+        # TODO Remove timers when not needed
         t0 = time.time()
 
         # Blade streak defects will be drawn in red
@@ -285,6 +286,7 @@ class DefectDetector:
     def analyze_scan(self, image_scan):
         """Analyzes the scan image for any potential defects as listed in the order below"""
 
+        # TODO remove timers if not needed
         t0 = time.time()
 
         # Blade streak defects will be drawn in red
