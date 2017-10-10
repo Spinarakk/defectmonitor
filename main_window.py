@@ -273,9 +273,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Check for and acquire an attached camera and trigger
             self.acquire_ct()
 
-            # TODO Remove if not on crap computer
-            time.sleep(1)
-
         # Converts and draws the contours if set to do so in the build settings
         if self.build['BuildInfo']['Convert']:
             # Set the appropriate flags in the config.json file to run the slice conversion

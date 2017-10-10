@@ -213,6 +213,7 @@ class SliceConverter:
 
             # Iterate through every character in the file two at a time
             for i, k in zip(data[0::2], data[1::2]):
+                # Convert into binary and join two elements, then convert to decimal
                 decimal = int(bin(k)[2:].zfill(8) + bin(i)[2:].zfill(8), 2)
                 if layer_flag:
                     line_ascii += (str(decimal) + ',')
@@ -411,7 +412,7 @@ class SliceConverter:
             image_contours = cv2.flip(image_contours, 0)
 
             # Correct the image using calculated transformation parameters to account for the perspective warp
-            image_contours = image_processing.ImageTransform().apply_transformation(image_contours, False)
+            #image_contours = image_processing.ImageTransform().apply_transformation(image_contours, False)
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)

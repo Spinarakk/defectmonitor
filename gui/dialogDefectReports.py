@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_dialogDefectReports(object):
     def setupUi(self, dialogDefectReports):
         dialogDefectReports.setObjectName("dialogDefectReports")
-        dialogDefectReports.resize(488, 695)
+        dialogDefectReports.resize(420, 695)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         dialogDefectReports.setWindowIcon(icon)
