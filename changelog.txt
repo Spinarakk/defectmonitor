@@ -1,3 +1,28 @@
+October 12
+- Added a feature to the Slice Converter dialog to allow the user to specify a specific range of contours to draw instead of just drawing them all
+- However this requires prior knowledge of the number of layers the slice files go up to, and the dialog will throw an error if the entered range is outside the slice file's layer range
+
+October 11
+- Tested two different methods for the slice conversion and drawing of contours
+- Originally was meant to allow CLS, CLI and CLI ASCII files to be converted to the same format, then each formatted the same
+- The formatting has been built into the initial reading and parsing of the file and stored in a dictionary
+- As such the format contours method has been removed
+- First method saved the contour data into a dictionary and then serialized to a JSON file
+- Alternatives to the native JSON serialization was looked into and has been replaced with UJSON (UltraJSON) which saves a dictionary file in 1 second compared to JSON at 12 seconds
+- Second method wrote to the text file as strings just like a previous version
+- The second method was finally used due to being faster than dictionary construction and serialization
+- For contour drawing, reading all the dictionaries into memory caused lots of memory to be taken up for that dictionary
+- As such, an alternative method of writing the contour data and reading and splitting the data was used
+- Allows all the files to be read and uses a small fraction of the memory the dictionary reading did
+- The contour drawing now remains at the same speed across all the layers
+
+October 10
+- Defect Monitor program is now in a working state that can be called "completed"
+- However a lot of aspects can still be improved and/or optimized
+- And there will more than likely be plenty of bugs and crashes to fix along the way
+- Awaiting testing on a full build in the XLine 1000
+- Started testing .cls files
+
 October 6
 - Made the defect reporting tables able to be sorted
 - Fixed issues in sorting and redisplaying data due to the sort

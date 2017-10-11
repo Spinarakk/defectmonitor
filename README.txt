@@ -97,6 +97,11 @@ Defect Reporting
     - Combined report will report different defect coordinates from the individual part reports
     - This is because individual parts may potentially split up defects that are only partially overlapping
 
+Slice Conversion
+- Works by looking for the corresponding JSON file in the same folder as the selected part's CLS or CLI files
+- If not found, the CLS or CLI files will be read, parsed and serialized as a JSON dictionary file
+- If contours are to be drawn, these JSON files are read and contours for every layer are drawn
+
 Modules
 - main_window.py
 - dialog_windows.py
