@@ -11,9 +11,9 @@
         "Width": 9
     },
     "CameraSettings": {
-        "ExposureTimeAbs": 10000,
+        "ExposureTimeAbs": 30000,
         "FrameTransmissionDelay": 0,
-        "InterPacketDelay": 1000,
+        "InterPacketDelay": 0,
         "PacketSize": 1500,
         "PixelFormat": 0,
         "TriggerTimeout": 1
@@ -122,6 +122,6 @@
         "HistogramScan": 5000,
         "Occurrences": 5,
         "Overlay": 90.0,
-        "PixelSize": 0.1
+        "PixelSize": 0.0005
     }
 }

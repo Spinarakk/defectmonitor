@@ -65,16 +65,16 @@ Core Functionality
 Defect Detection
 - Completed
     - Coat
-	- Blade Streaks (Horizontal divets)
-	- Blade Chatter (Vertical slits)
-	- Bright Spots (Shiny parts, Part warping)
-	- Contrast Difference (Areas that are too bright/dark compared to the average contrast)
+	- Blade Streak (Horizontal divets caused by chips in blade)
+	- Blade Chatter (Vertical slits caused by blade hitting parts)
+	- Shiny Patch (Caused by insufficient dosing during coat or part warping)
+	- Contrast Outlier (Areas that are too bright/dark compared to the average contrast)
 	- Histogram Comparison (Compares the current layer to the previous layer)
     - Scan
-	- Blade Streaks
+	- Blade Streak
 	- Blade Chatter
-	- Scan Pattern (Tries to detect the scanned area)
-	- Overlay Comparison (Compares the scanned pattern to the part contours)
+	- Scan Detection (Tries to detect the scanned area)
+	- Overlay Comparison (Compares the scanned area to the part contours)
 	- Histogram Comparison
 - To Do
     - Coat
@@ -86,7 +86,7 @@ Defect Detection
 
 Defect Reporting
 - Currently only the following are reported and designated as a defect based on testing-based thresholds
-    - Defect pixel size of Bright Spots and Contrast Difference
+    - Defect pixel size of Shiny Patches and Contrast Outliers
     - Number of occurences of detected blade streaks and blade chatter
     - Histogram comparison of subsequent layers (coat and scan have different thresholds)
     - Overlay template matching of scan pattern

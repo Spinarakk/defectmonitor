@@ -282,12 +282,12 @@
          </column>
          <column>
           <property name="text">
-           <string>Spots</string>
+           <string>Patches</string>
           </property>
          </column>
          <column>
           <property name="text">
-           <string>Contrast</string>
+           <string>Outliers</string>
           </property>
          </column>
          <column>

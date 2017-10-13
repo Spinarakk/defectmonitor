@@ -23,6 +23,7 @@ import dialog_windows
 import image_capture
 import image_processing
 import slice_converter
+import extra_functions
 import qt_multithreading
 
 # Import PyQt GUIs
@@ -270,9 +271,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Start the image viewer to begin displaying images
             self.start_display()
 
-            # Check for and acquire an attached camera and trigger
-            self.acquire_ct()
-
         # Converts and draws the contours if set to do so in the build settings
         if self.build['BuildInfo']['Convert']:
             # Set the appropriate flags in the config.json file to run the slice conversion
@@ -315,6 +313,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def setup_build_finished(self, settings_flag):
         """Executes when the slice conversion thread is finished, or the Stop button is pressed"""
+
+        # Check for and acquire an attached camera and trigger
+        # This method is here so that the image capture cannot be run unless the slice conversion has stopped
+        self.acquire_ct()
 
         self.build['BuildInfo']['Pause'] = False
         self.build['BuildInfo']['Run'] = False
@@ -595,7 +597,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.build = json.load(build)
 
         # Grab some pertinent information (for clearer code purposes)
-        phase = self.display['FolderNames'][self.tab_index].lower()[:-1]
+        phase = self.display['FolderNames'][self.tab_index][:-1]
 
         self.build['DefectDetector']['Image'] = self.display['ImageList'][self.tab_index][layer - 1]
         self.build['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
@@ -645,6 +647,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessAll.setText('Process All')
             self.actionProcessAll.setText('Process All')
             self.update_status('Defect Detection finished successfully.', 10000)
+
+    def send_notification(self, layer, phase):
+        """Sends an email notification if a detected defect goes above the set threshold values
+        Only works if a current build is in running and if the appropriate checkboxes were checked"""
+
+        if self.build['Notifications']['Major']:
+            worker = qt_multithreading.Worker(extra_functions.Notifications.major_defect_message)
 
     def toggle_processing_buttons(self, state):
         """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
@@ -785,7 +794,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Takes a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_single)
-        worker.signals.status.connect(self.update_status)
+        worker.signals.status.connect(self.update_status_ct)
         worker.signals.name.connect(self.fix_image)
         worker.signals.finished.connect(self.capture_single_finished)
         self.threadpool.start(worker)
@@ -873,10 +882,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         trigger = str(self.serial_trigger.readline())
 
-        if trigger is None:
-            return ''
-        else:
+        if 'TRIG' in trigger:
             return trigger
+        else:
+            return ''
 
     def capture_run_finished(self):
         """Reset the time idle counter and restart the trigger polling after resetting the serial input"""
@@ -1469,12 +1478,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.labelIdleTime.setText(self.format_time(self.stopwatch_idle))
 
     @staticmethod
-    def format_time(time):
+    def format_time(stopwatch):
         """Format the individual seconds, minutes and hours into proper string time format"""
 
-        seconds = str(time % 60).zfill(2)
-        minutes = str(int((time % 3600) / 60)).zfill(2)
-        hours = str(int(time / 3600)).zfill(2)
+        seconds = str(stopwatch % 60).zfill(2)
+        minutes = str(stopwatch % 3600 // 60).zfill(2)
+        hours = str(stopwatch // 3600).zfill(2)
 
         return '%s:%s:%s' % (hours, minutes, seconds)
 

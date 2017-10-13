@@ -1,7 +1,5 @@
 # Import libraries and modules
 import os
-import time
-import cv2
 import numpy as np
 import json
 from datetime import datetime
@@ -14,7 +12,6 @@ from PyQt5.QtWidgets import *
 
 # Import related modules
 import slice_converter
-import image_processing
 import extra_functions
 import camera_calibration
 import qt_multithreading
@@ -266,7 +263,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
                 for index, part_name in enumerate(report_list):
                     part_name = os.path.splitext(os.path.basename(part_name))[0]
-                    part_colours[part_name] = ((100 + 3 * index) % 255, (100 + 3 * index) % 255, 0)
+                    part_colours[part_name] = ((100 + 2 * index) % 255, (100 + 2 * index) % 255, 0)
 
                     with open('%s/reports/%s_report.json' % (image_folder, part_name), 'w+') as report:
                         json.dump(dict_blank, report)
@@ -657,6 +654,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonBrowseF.clicked.connect(self.browse_folder)
         self.buttonStart.clicked.connect(self.start)
         self.buttonStop.clicked.connect(self.start_finished)
+        self.checkDraw.toggled.connect(self.toggle_range)
+        self.spinRangeLow.valueChanged.connect(self.set_range)
 
         # Create and display a 'default' contours folder to store the drawn part contours
         self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
@@ -700,6 +699,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.buttonBrowseF.setEnabled(False)
             self.buttonDone.setEnabled(False)
             self.checkDraw.setEnabled(False)
+            self.checkRange.setEnabled(False)
+            self.spinRangeLow.setEnabled(False)
+            self.spinRangeHigh.setEnabled(False)
             self.update_progress(0)
 
             # Change the Start button into a Pause/Resume button
@@ -709,7 +711,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             part_colours = dict()
             for index, part_name in enumerate(self.slice_list):
                 part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
-                    ((100 + 3 * index) % 255, (100 + 3 * index) % 255, 0)
+                    ((100 + 2 * index) % 255, (100 + 2 * index) % 255, 0)
 
             # Save the slice file list and the draw state to the config.json file
             self.build['SliceConverter']['Draw'] = self.checkDraw.isChecked()
@@ -719,6 +721,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.build['SliceConverter']['Pause'] = False
             self.build['SliceConverter']['Build'] = False
             self.build['SliceConverter']['Colours'] = part_colours
+            self.build['SliceConverter']['Range'] = self.checkRange.isChecked()
+            self.build['SliceConverter']['RangeLow'] = self.spinRangeLow.value()
+            self.build['SliceConverter']['RangeHigh'] = self.spinRangeHigh.value()
             self.save_settings()
 
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
@@ -751,9 +756,25 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.buttonBrowseF.setEnabled(True)
         self.buttonDone.setEnabled(True)
         self.checkDraw.setEnabled(True)
+        if self.checkDraw.isChecked():
+            self.checkRange.setEnabled(True)
+            self.spinRangeLow.setEnabled(True)
+            self.spinRangeHigh.setEnabled(True)
+
+    def toggle_range(self):
+        """Toggles the state of the Draw Range checkbox if the Draw Contours checkbox is unchecked"""
+
+        if not self.checkDraw.isChecked():
+            self.checkRange.setChecked(False)
+
+    def set_range(self, value):
+        """Sets the minimum value of the high spinbox to the current value of the low spinbox"""
+
+        self.spinRangeHigh.setMinimum(value)
 
     def save_settings(self):
         """Save any changed values to the build.json file"""
+
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -1127,7 +1148,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                 # COAT DATA
                 # Grab the Coat data in a try loop in case the index doesn't exist in the dictionary
                 try:
-                    data = report[str(row + 1).zfill(4)]['coat']
+                    data = report[str(row + 1).zfill(4)]['Coat']
                 except (IndexError, KeyError):
                     data = {}
 
@@ -1137,14 +1158,13 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
 
                 if data:
                     # Grab the data from the report dictionary, with the first element being the layer number
-                    data_coat = [row + 1, data['BladeStreak'][1], data['BladeChatter'][1], data['BrightSpot'][0],
-                                 data['ContrastDifference'][0]]
+                    data_coat = [row + 1, data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0]]
 
                     # Only append the histogram comparison information if the 'combined' part is being displayed
                     if part == 0:
                         # And if the histogram result is available in the first place
                         try:
-                            data_coat.append(round(data['HistogramComparison'], 2))
+                            data_coat.append(round(data['HC'], 2))
                         except (KeyError, IndexError):
                             data_coat.append(0)
 
@@ -1185,7 +1205,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                 # SCAN DATA
                 # Grab the Scan data in a try loop in case the index doesn't exist in the dictionary
                 try:
-                    data = report[str(row + 1).zfill(4)]['scan']
+                    data = report[str(row + 1).zfill(4)]['Scan']
                 except (IndexError, KeyError):
                     data = {}
 
@@ -1195,18 +1215,18 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
 
                 if data:
                     # Grab the data from the report dictionary, with the first element being the layer number
-                    data_scan = [row + 1, data['BladeStreak'][1], data['BladeChatter'][1]]
+                    data_scan = [row + 1, data['BS'][1], data['BC'][1]]
 
                     # Only append the histogram comparison information if the 'combined' part is being displayed
                     if part == 0:
                         # And if the histogram result is available in the first place
                         try:
-                            data_scan.append(round(data['HistogramComparison'], 2))
+                            data_scan.append(round(data['HC'], 2))
                         except (KeyError, IndexError):
                             data_scan.append(0)
                         # Same goes for the overlay comparison information
                         try:
-                            data_scan.append(round(data['OverlayComparison'] * 100, 4))
+                            data_scan.append(round(data['OC'] * 100, 4))
                         except (KeyError, IndexError):
                             data_scan.append(0)
 

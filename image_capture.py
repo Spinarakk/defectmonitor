@@ -6,31 +6,9 @@ import pypylon
 import serial
 import serial.tools.list_ports
 
-# Import related modules
-import image_processing
-
 
 class ImageCapture:
     """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached"""
-
-    def __init__(self):
-
-        # Load from the build.json file
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        # Load from the config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
-        self.current_layer = self.build['ImageCapture']['Layer']
-        self.current_phase = self.build['ImageCapture']['Phase']
-        self.single_layer = self.build['ImageCapture']['Single']
-        self.phases = ['coat', 'scan']
-
-        # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
-        self.pixel_format_list = ['Mono8', 'Mono12', 'Mono12Packed']
 
     def acquire_camera(self):
         """Accesses the pypylon wrapper and checks the ethernet ports for a connected camera
@@ -82,6 +60,23 @@ class ImageCapture:
         Some settings are saved as an index value as the pylon wrapper only accepts strings for some properties
         The strings are saved in their respective lists and the index is used to call the respective one
         """
+
+        # Load from the build.json file
+        with open('build.json') as build:
+            self.build = json.load(build)
+
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
+        self.current_layer = self.build['ImageCapture']['Layer']
+        self.current_phase = self.build['ImageCapture']['Phase']
+        self.single_layer = self.build['ImageCapture']['Single']
+        self.phases = ['coat', 'scan']
+
+        # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
+        self.pixel_format_list = ['Mono8', 'Mono12', 'Mono12Packed']
 
         # These properties are changeable through the UI
         self.camera.properties['PixelFormat'] = self.pixel_format_list[self.config['CameraSettings']['PixelFormat']]

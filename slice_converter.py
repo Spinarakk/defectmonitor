@@ -4,7 +4,7 @@ import re
 import time
 import cv2
 import numpy as np
-import ujson as json
+import json
 
 # Import related modules
 import image_processing
@@ -22,7 +22,7 @@ class SliceConverter:
         self.run_flag = True
         self.pause_flag = False
 
-        # Method that loads the config.json file and checks the run and pause keys
+        # Method that loads the build.json file and checks the run and pause keys
         self.check_flags()
 
         # Load from the config.json file
@@ -32,9 +32,8 @@ class SliceConverter:
         # Save respective values to be used to draw contours and polygons
         # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
         crop_boundary = self.config['ImageCorrection']['CropBoundary']
-        self.image_resolution = ((crop_boundary[1] - crop_boundary[0]),
-                                 (crop_boundary[3] - crop_boundary[2]), 3)
-        self.offset = (self.config['ImageCorrection']['Offset'][0], self.config['ImageCorrection']['Offset'][1])
+        self.image_resolution = ((crop_boundary[1] - crop_boundary[0]), (crop_boundary[3] - crop_boundary[2]), 3)
+        self.offset = tuple(self.config['ImageCorrection']['Offset'])
         self.scale_factor = self.config['ImageCorrection']['ScaleFactor']
 
         # Part names are taken from the build.json file, depending if this method was run from the Slice Converter
@@ -43,11 +42,13 @@ class SliceConverter:
             self.part_colours = self.build['BuildInfo']['Colours']
             self.filenames = self.build['BuildInfo']['SliceFiles']
             self.draw_flag = self.build['BuildInfo']['Draw']
+            self.range_flag = False
             self.contours_folder = '%s/contours' % self.build['ImageCapture']['Folder']
         else:
             self.part_colours = self.build['SliceConverter']['Colours']
             self.filenames = self.build['SliceConverter']['Files']
             self.draw_flag = self.build['SliceConverter']['Draw']
+            self.range_flag = self.build['SliceConverter']['Range']
             self.contours_folder = self.build['SliceConverter']['Folder']
 
     def run_converter(self, status, progress):
@@ -60,22 +61,18 @@ class SliceConverter:
             # Executes if the sent file is a .cls file
             if '.cls' in filename:
                 # Look for an already converted contours file, otherwise convert the cls file
-                if not os.path.isfile(filename.replace('.cls', '.txt')):
+                if not os.path.isfile(filename.replace('.cls', '_contours.txt')):
                     self.convert_cls(filename)
             # Executes if the sent file is a .cli file
             elif '.cli' in filename:
                 # Look for an already converted contours file, otherwise convert the cli file
-                if not os.path.isfile(filename.replace('.cli', '.txt')):
+                if not os.path.isfile(filename.replace('.cli', '_contours.txt')):
                     self.convert_cli(filename)
 
         if self.draw_flag:
             # Draw and save the contours to an image file
-            self.draw_contours(self.filenames, self.part_colours, self.contours_folder)
-
-            if not self.run_flag:
-                return
-
-        self.status.emit('Current Part: None | Conversion completed successfully.')
+            if self.draw_contours(self.filenames, self.part_colours, self.contours_folder):
+                self.status.emit('Current Part: None | Conversion completed successfully.')
 
     def convert_cls(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
@@ -147,8 +144,6 @@ class SliceConverter:
                     progress_previous = int(round(progress))
                 progress += increment
 
-        return data_ascii
-
     def convert_cli(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
 
@@ -166,10 +161,9 @@ class SliceConverter:
         polyline_count = 0
         vector_count = 0
         header_length = 0
-        layer_count = 0
+
         # File needs to be opened and read as binary as it is encoded in binary
         with open(filename, 'rb') as cli_file:
-
             # Get unit information from the header by reading the first few lines and storing it to be used later
             for line in cli_file.readlines():
                 if b'UNITS' in line:
@@ -186,16 +180,15 @@ class SliceConverter:
             cli_file.seek(header_length)
 
             # Calculate the increment to use to display progress for the rest of the file data
-            increment = 100 / (os.path.getsize(filename) - header_length)
+            increment = 100 / (os.path.getsize(filename) - header_length) * 2
             progress_count = header_length * increment
 
             # Read the rest of the data
             data = cli_file.read()
 
-        with open(filename.replace('.cli', '.txt'), 'w+') as contours_file:
+        with open(filename.replace('.cli', '_contours.txt'), 'w+') as contours_file:
             # Iterate through every character in the file two at a time
             for one, two in zip(data[0::2], data[1::2]):
-
                 # Convert into binary and join two elements, then convert to decimal
                 decimal = int(bin(two)[2:].zfill(8) + bin(one)[2:].zfill(8), 2)
 
@@ -207,23 +200,21 @@ class SliceConverter:
                     if polyline_count == 0:
                         vector_count = decimal * 2
                 elif vector_count > 0:
-                    # Convert the vectors after taking unit conversion and scale factor into account
-                    decimal = int(decimal * units * self.scale_factor)
                     # Write the converted value to the text file
-                    contours_file.write('%s,' % decimal)
+                    contours_file.write('%s,' % round(decimal * units * self.scale_factor))
                     vector_count -= 1
                 elif decimal == 128:
                     # 128 indicates a new layer
-                    layer_flag = True
                     contours_file.write('\n')
+                    layer_flag = True
                 elif decimal == 129:
                     # 129 indicates a polyline, or a new contour, which will be indicated by a C,
                     contours_file.write('C,')
                     polyline_count = 3
 
                 # Put into a conditional to only trigger at every interval of 5 so as to not overload the emit
-                progress_count += increment * 2
-                progress = int(5 * round(progress_count / 5))
+                progress_count += increment
+                progress = 5 * round(progress_count / 5)
                 if not progress == progress_previous:
                     self.progress.emit(progress)
                     progress_previous = progress
@@ -234,12 +225,12 @@ class SliceConverter:
                     self.check_flags()
                     while self.pause_flag:
                         self.status.emit('Current Part: %s | Conversion paused.' % part_name)
-                        time.sleep(1)
+                        time.sleep(0.5)
                         self.check_flags()
                     if not self.run_flag:
                         self.status.emit('Current Part: %s | Conversion stopped.' % part_name)
                         self.draw_flag = False
-                        return None
+                        return False
 
                     self.status.emit('Current Part: %s | Reading CLI file...' % part_name)
 
@@ -260,46 +251,62 @@ class SliceConverter:
         self.progress.emit(0)
 
         # Set up values and a dictionary
-        layer_max = 1
+        layer_low = 1
+        layer_high = 1
         contour_dict = dict()
 
         self.status.emit('Current Part: All | Loading contours into memory...')
 
         # Read all the contour files into memory and save them to a dictionary
         for filename in filenames:
-            with open(filename.replace('.cli', '.txt')) as contours_file:
+            with open(filename.replace('.cli', '_contours.txt')) as contours_file:
                 contour_dict[os.path.basename(filename)] = contours_file.readlines()
 
                 # Get the maximum number of layers from the number of lines in the contour list
                 # Subtract 1 because of the empty first element (used to correlate layer with index)
                 size = len(contour_dict[os.path.basename(filename)]) - 1
-                if size > layer_max:
-                    layer_max = size
+                if size > layer_high:
+                    layer_high = size
 
-        # Iterate through all the layers
-        for layer in range(1, layer_max):
+        # Change the layer low and high range if the user has specified a range of layers to draw
+        if self.range_flag:
+            # Check if the set range values are within the parts' layer range
+            if self.build['SliceConverter']['RangeLow'] > layer_high or \
+                            self.build['SliceConverter']['RangeHigh'] > layer_high:
+                self.status.emit('Current Part: All | Set range outside of part contour layer range.')
+                return False
+            else:
+                layer_low = self.build['SliceConverter']['RangeLow']
+                layer_high = self.build['SliceConverter']['RangeHigh']
+
+        # Calculate the correct progress increment value to use
+        increment = 100 / (layer_high + 1 - layer_low)
+
+        # Create a black RGB image to write the part names on
+        image_names = np.zeros(self.image_resolution, np.uint8)
+
+        # Iterate through all the layers, the maximum value is raised by 1 so that the last contour is drawn
+        for layer in range(layer_low, layer_high + 1):
 
             # TODO remove timers if not needed
             t0 = time.time()
 
             self.status.emit('Current Part: All | Drawing contours %s of %s.' %
-                             (str(layer).zfill(4), str(layer_max).zfill(4)))
+                             (str(layer).zfill(4), str(layer_high).zfill(4)))
 
             # Check if the process has been paused or stopped
             self.check_flags()
             while self.pause_flag:
                 self.status.emit('Current Part: All | Drawing contours %s of %s paused.' %
-                                 (str(layer).zfill(4), str(layer_max).zfill(4)))
+                                 (str(layer).zfill(4), str(layer_high).zfill(4)))
                 time.sleep(1)
                 self.check_flags()
             if not self.run_flag:
                 self.status.emit('Current Part: All | Conversion stopped.')
-                return None
+                return False
 
             # Create a black RGB image to draw contours on and one to write the part names on
             image_contours = np.zeros(self.image_resolution, np.uint8)
-            if layer == 1:
-                image_names = np.zeros(self.image_resolution, np.uint8)
 
             # Iterate through all the parts
             for filename in filenames:
@@ -329,7 +336,6 @@ class SliceConverter:
                                  part_colours[os.path.splitext(os.path.basename(filename))[0]],
                                  offset=self.offset, thickness=cv2.FILLED)
 
-
                 # For the first layer, find the centre of the contours and put the part names on a blank image
                 if layer == 1:
                     # The first contour is generally the largest one, regardless the exact position isn't important
@@ -343,7 +349,7 @@ class SliceConverter:
             image_contours = cv2.flip(image_contours, 0)
 
             # Correct the image using calculated transformation parameters to account for the perspective warp
-            # image_contours = image_processing.ImageTransform().apply_transformation(image_contours, False)
+            image_contours = image_processing.ImageTransform().apply_transformation(image_contours, False)
 
             # Save the image to the selected image folder
             cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
@@ -353,12 +359,14 @@ class SliceConverter:
                 image_names = image_processing.ImageTransform().apply_transformation(image_names, False)
                 cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
-            progress += 100.0 / layer_max
-            if int(round(progress)) is not progress_previous:
-                self.progress.emit(int(round(progress)))
-                progress_previous = int(round(progress))
+            progress += increment
+            if round(progress) is not progress_previous:
+                self.progress.emit(round(progress))
+                progress_previous = round(progress)
 
             print('Contour %s Time\n%s\n' % (layer, time.time() - t0))
+
+        return True
 
     def check_flags(self):
         """Checks the respective Run and Pause keys from the config.json file"""

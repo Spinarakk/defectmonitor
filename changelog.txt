@@ -1,3 +1,8 @@
+October 13
+- Cleaned up more code
+- UJSON was ditched as the slice file saving didn't require its speed and every other JSON involved operation ran at unnoticeable speeds already
+- Additionally, UJSON required VC Tools 2015 to be installed as well
+
 October 12
 - Added a feature to the Slice Converter dialog to allow the user to specify a specific range of contours to draw instead of just drawing them all
 - However this requires prior knowledge of the number of layers the slice files go up to, and the dialog will throw an error if the entered range is outside the slice file's layer range

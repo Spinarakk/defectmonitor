@@ -36,6 +36,7 @@ class Calibration:
         # Image points are points in the 2D image plane
         # They are represented by the corners of the squares on the chessboard as found by findChessboardCorners
         self.points_2d = list()
+
         # Object Points are the points in the 3D real world space
         # They are represented as a series of points as relative to each other, and are created like (0,0), (1,0)...
         self.points_3d = list()
@@ -66,7 +67,7 @@ class Calibration:
             if 'image_calibration' in image_name:
                 image_list.append(image_name)
 
-        # Count the number of calibration images to uose as a progress indicator
+        # Count the number of calibration images to use as a progress indicator
         increment = 100 / len(image_list)
         progress = 0
 
@@ -79,7 +80,7 @@ class Calibration:
             image_list_valid.append(self.find_draw_corners(image, index))
 
             progress += increment
-            self.progress.emit(int(round(progress)))
+            self.progress.emit(round(progress))
 
         # Check if there's at least one successful chessboard image before continuing to find camera matrix
         if 1 in image_list_valid:
@@ -110,7 +111,7 @@ class Calibration:
                         self.undistort_image(image)
 
                         progress += increment
-                        self.progress.emit(int(round(progress)))
+                        self.progress.emit(round(progress))
 
             # Load the homography image into memory in grayscale
             image_homography = cv2.imread(self.config['CameraCalibration']['HomographyImage'], 0)

@@ -1,9 +1,9 @@
 # Import external libraries
 import os
-import json
+import time
 import cv2
 import numpy as np
-import time
+import json
 
 # Some global colours are defined here (represented as BGR)
 COLOUR_RED = (0, 0, 255)
@@ -96,7 +96,7 @@ class ImageTransform:
     def rotate(self, image):
         """Rotate the image a set amount of degrees in the clockwise or anti-clockwise direction"""
 
-        rotation_matrix = cv2.getRotationMatrix2D((self.width / 2, self.height / 2), self.transform[2], 1)
+        rotation_matrix = cv2.getRotationMatrix2D((self.width // 2, self.height // 2), self.transform[2], 1)
         return cv2.warpAffine(image, rotation_matrix, (self.width, self.height))
 
     def stretch_nw(self, image):
@@ -212,8 +212,8 @@ class DefectDetector:
             # The dictionary needs to be built up if it doesn't already exist
             if self.layer not in self.defect_dict[report_name]:
                 self.defect_dict[report_name][self.layer] = dict()
-                self.defect_dict[report_name][self.layer]['scan'] = dict()
-                self.defect_dict[report_name][self.layer]['coat'] = dict()
+                self.defect_dict[report_name][self.layer]['Scan'] = dict()
+                self.defect_dict[report_name][self.layer]['Coat'] = dict()
 
         # Because blade streaks and blade chatter rely on number of occurrences rather than pixel size
         self.chatter_count = 0
@@ -227,19 +227,18 @@ class DefectDetector:
         self.progress.emit(0)
 
         # Different detection methods will be applied depending on the marked phase (coat, scan or single)
-        if 'coat' in self.phase:
+        if 'Coat' in self.phase:
             self.analyze_coat(self.image_raw.copy())
-        elif 'scan' in self.phase:
+        elif 'Scan' in self.phase:
             self.analyze_scan(self.image_raw.copy())
-        elif 'single' in self.phase:
+        elif 'Single' in self.phase:
             # TODO Fix up single image processing (non-important)
             pass
 
         # Save all the reports to their respective json files
-        for report_name in self.part_colours.keys():
-            with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'], report_name),
-                      'w+') as report:
-                json.dump(self.defect_dict[report_name], report, indent=4, sort_keys=True)
+        for name in self.part_colours.keys():
+            with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'], name), 'w+') as report:
+                json.dump(self.defect_dict[name], report, sort_keys=True)
 
         self.progress.emit(100)
 
@@ -253,35 +252,34 @@ class DefectDetector:
         image_coat = self.detect_blade_streak(image_coat)
         self.progress.emit(20)
 
-        print('Blade Streak\nTime = %s' % (time.time() - t0))
+        print('Blade Streak\n%s' % (time.time() - t0))
 
         # Blade chatter defects will be drawn in blue
         image_coat = self.detect_blade_chatter(image_coat)
         self.progress.emit(40)
 
-        print('Blade Chatter\nTime = %s' % (time.time() - t0))
+        print('Blade Chatter\n%s' % (time.time() - t0))
 
         # Bright spot defects will be drawn in green
-        image_coat = self.detect_bright_spot(image_coat)
+        image_coat = self.detect_shiny_patch(image_coat)
         self.progress.emit(60)
 
-        print('Bright Spot\nTime = %s' % (time.time() - t0))
+        print('Shiny Patch\n%s' % (time.time() - t0))
 
         # Contrast difference defects will be drawn in yellow
-        image_coat = self.detect_contrast_difference(image_coat)
+        image_coat = self.detect_contrast_outlier(image_coat)
         self.progress.emit(80)
 
-        print('Contrast Difference\nTime = %s' % (time.time() - t0))
+        print('Contrast Outlier\n%s' % (time.time() - t0))
 
         # Histogram comparison with the previous layer if the previous layer's image exists
         if self.compare_flag:
             self.compare_histogram(self.image_raw, self.image_previous)
 
         # Save the analyzed coat image with all the defects on it to the correct folder
-        cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                  self.layer), image_coat)
+        cv2.imwrite('%s/defects/coat/coatD_%s.png' % (self.build['ImageCapture']['Folder'], self.layer), image_coat)
 
-        print('Compare & Save\nTime = %s\n' % (time.time() - t0))
+        print('Compare & Save\n%s\n' % (time.time() - t0))
 
     def analyze_scan(self, image_scan):
         """Analyzes the scan image for any potential defects as listed in the order below"""
@@ -293,28 +291,27 @@ class DefectDetector:
         image_scan = self.detect_blade_streak(image_scan)
         self.progress.emit(25)
 
-        print('Blade Streak\nTime = %s' % (time.time() - t0))
+        print('Blade Streak\n%s' % (time.time() - t0))
 
         # Blade chatter defects will be drawn in blue
         image_scan = self.detect_blade_chatter(image_scan)
         self.progress.emit(50)
 
-        print('Blade Chatter\nTime = %s' % (time.time() - t0))
+        print('Blade Chatter\n%s' % (time.time() - t0))
 
         # Scan pattern will be drawn in purple
-        image_scan = self.detect_scan_pattern(image_scan)
+        image_scan = self.scan_detection(image_scan)
         self.progress.emit(75)
 
-        print('Scan Pattern\nTime = %s' % (time.time() - t0))
+        print('Scan Detection\n%s' % (time.time() - t0))
 
         if self.compare_flag:
             self.compare_histogram(self.image_raw, self.image_previous)
 
         # Save the analyzed scan image with all the defects on it to the correct folder
-        cv2.imwrite('%s/defects/%s/%sD_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                  self.layer), image_scan)
+        cv2.imwrite('%s/defects/scan/scanD_%s.png' % (self.build['ImageCapture']['Folder'], self.layer), image_scan)
 
-        print('Compare & Save\nTime = %s\n' % (time.time() - t0))
+        print('Compare & Save\n%s\n' % (time.time() - t0))
 
     def analyze_single(self, image_single):
         """Analyzes the received image using a combination of the coat and scan defect methods"""
@@ -341,18 +338,19 @@ class DefectDetector:
         image_edges = cv2.dilate(image_edges, np.ones((1, 20), np.uint8), iterations=1)
         image_edges = cv2.erode(image_edges, np.ones((1, 20), np.uint8), iterations=3)
 
-        # a list consisting 2 points that forms a line matching the variables
+        # Create a list consisting 2 points that forms a line matching the variables
         lines = cv2.HoughLinesP(image_edges, 1, np.pi / 180, threshold=100, minLineLength=1000, maxLineGap=500)
 
         # Draw blue lines (representing the blade streaks) on the defect image
-        for index in range(len(lines)):
-            for x1, y1, x2, y2 in lines[index]:
-                # Only draw horizontal lines that are not located near the top or bottom of image
-                if abs(y1 - y2) == 0 and 20 < y1 < image_defects.shape[0] - 20:
-                    cv2.line(image_defects, (x1, y1), (x2, y2), COLOUR_RED, 2)
-                    self.streak_count += 1
+        if lines:
+            for index in range(len(lines)):
+                for x1, y1, x2, y2 in lines[index]:
+                    # Only draw horizontal lines that are not located near the top or bottom of image
+                    if abs(y1 - y2) == 0 and 20 < y1 < image_defects.shape[0] - 20:
+                        cv2.line(image_defects, (x1, y1), (x2, y2), COLOUR_RED, 2)
+                        self.streak_count += 1
 
-        self.report_defects(image_defects, COLOUR_RED, 'BladeStreak')
+        self.report_defects(image_defects, COLOUR_RED, 'BS')
 
         # Return an image of the original image with the defects overlayed on top of it
         return self.overlay_defects(image, image_defects, COLOUR_RED)
@@ -387,12 +385,12 @@ class DefectDetector:
                     coordinate_previous = coordinate
                     self.chatter_count += 1
 
-        self.report_defects(image_defects, COLOUR_BLUE, 'BladeChatter')
+        self.report_defects(image_defects, COLOUR_BLUE, 'BC')
 
         return self.overlay_defects(image, image_defects, COLOUR_BLUE)
 
-    def detect_bright_spot(self, image):
-        """Detects any spots in the image that are above a certain contrast threshold, aka are too bright"""
+    def detect_shiny_patch(self, image):
+        """Detects any patches in the image that are above a certain contrast threshold, aka are too shiny"""
 
         # Save a copy of the original defect image
         image_defects = self.image_raw.copy()
@@ -405,11 +403,11 @@ class DefectDetector:
         # Change the colour of the pixels in the original image to red if they're above the threshold
         image_defects[image_threshold == 255] = COLOUR_GREEN
 
-        self.report_defects(image_defects, COLOUR_GREEN, 'BrightSpot')
+        self.report_defects(image_defects, COLOUR_GREEN, 'SP')
 
         return self.overlay_defects(image, image_defects, COLOUR_GREEN)
 
-    def detect_contrast_difference(self, image):
+    def detect_contrast_outlier(self, image):
         """Detects any areas of the image that are too bright or dark compared to the average contrast
         Use this until detect_dark_spots is fixed and working sufficiently"""
 
@@ -456,11 +454,11 @@ class DefectDetector:
         image_inner_shadow = cv2.threshold(image_white, retval * 0.95, 255, cv2.THRESH_TOZERO_INV)[1]
         image_defects[np.where((image_inner_shadow != COLOUR_BLACK).all(axis=2))] = COLOUR_YELLOW
 
-        self.report_defects(image_defects, COLOUR_YELLOW, 'ContrastDifference')
+        self.report_defects(image_defects, COLOUR_YELLOW, 'CO')
 
         return self.overlay_defects(image, image_defects, COLOUR_YELLOW)
 
-    def detect_scan_pattern(self, image):
+    def scan_detection(self, image):
         """Detects any scan patterns on the image and draws them as filled contours"""
 
         image_defects = self.image_raw.copy()
@@ -534,7 +532,7 @@ class DefectDetector:
 
         # Use template matching to compare the two images and save the result to the combined report
         result = cv2.matchTemplate(image_scan, image_contours, cv2.TM_CCOEFF_NORMED)[0][0]
-        self.defect_dict['combined'][self.layer][self.phase]['OverlayComparison'] = float(result)
+        self.defect_dict['combined'][self.layer][self.phase]['OD'] = float(result)
 
     def compare_histogram(self, image_current, image_previous):
         """Compares the histogram of each method and calculates the difference result"""
@@ -555,7 +553,7 @@ class DefectDetector:
         # result = (325853401.3861952 - result) / 325853401.3861952 * 100
 
         # Save the result directly to the combined report
-        self.defect_dict['combined'][self.layer][self.phase]['HistogramComparison'] = result
+        self.defect_dict['combined'][self.layer][self.phase]['HC'] = result
 
     @staticmethod
     def overlay_defects(image, image_defects, defect_colour):
