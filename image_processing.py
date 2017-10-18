@@ -341,8 +341,8 @@ class DefectDetector:
         # Create a list consisting 2 points that forms a line matching the variables
         lines = cv2.HoughLinesP(image_edges, 1, np.pi / 180, threshold=100, minLineLength=1000, maxLineGap=500)
 
-        # Draw blue lines (representing the blade streaks) on the defect image
-        if lines:
+        # Draw blue lines (representing the blade streaks) on the defect image if lines were found
+        if lines.size > 0:
             for index in range(len(lines)):
                 for x1, y1, x2, y2 in lines[index]:
                     # Only draw horizontal lines that are not located near the top or bottom of image

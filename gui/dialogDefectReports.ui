@@ -220,7 +220,7 @@
     </widget>
    </item>
    <item row="3" column="0" colspan="2">
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="labelInformation">
      <property name="text">
       <string>Double click on a row's cell to display that layer's defect image.</string>
      </property>

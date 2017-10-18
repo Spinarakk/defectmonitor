@@ -569,8 +569,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessAll.setText('Process Stop')
 
             # Remove the already processed defect images from the image list
-            self.layer_numbers = list(set(self.display['LayerNumbers'][self.tab_index]) -
-                                      set(self.display['LayerNumbers'][self.tab_index + 4]))
+            self.layer_numbers = sorted(list(set(self.display['LayerNumbers'][self.tab_index]) -
+                                      set(self.display['LayerNumbers'][self.tab_index + 4])))
             self.process_settings(self.layer_numbers[self.defect_counter])
 
         elif 'Process Stop' in self.pushProcessAll.text():
@@ -815,6 +815,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushAcquireCT.setEnabled(False)
         self.pushCapture.setEnabled(False)
         self.checkResume.setEnabled(False)
+        if self.actionAdvancedMode.isChecked():
+            self.pushFauxTrigger.setEnabled(True)
 
         # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
         # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
@@ -855,17 +857,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         The loop is broken if the Pause button is pressed or the build is stopped outright
         """
 
-        # This is here so that the button can be enabled or disabled while the build is running
-        if self.actionAdvancedMode.isChecked():
-            self.pushFauxTrigger.setEnabled(True)
-        else:
-            self.pushFauxTrigger.setEnabled(False)
-
         # Check if the build is still 'running'
         if 'PAUSE' in self.pushPauseResume.text() and self.pushPauseResume.isEnabled():
             if 'TRIG' in result:
                 self.pushPauseResume.setEnabled(False)
                 self.pushStop.setEnabled(False)
+                self.pushFauxTrigger.setEnabled(False)
                 worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_run)
                 worker.signals.status.connect(self.update_status_ct)
                 worker.signals.name.connect(self.fix_image)
@@ -914,6 +911,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.timer_stopwatch.start(1000)
             self.capture_run_finished()
             self.update_status('Current build resumed.')
+            if self.actionAdvancedMode.isChecked():
+                self.pushFauxTrigger.setEnabled(True)
 
     def stop_build(self):
         """Executes when the Stop button is clicked"""
@@ -1335,9 +1334,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex() + 4]
 
-        # All bisect left does is give you an index within the number list below the closest number to the value
-        value = self.sliderDisplay.value()
-        position = bisect.bisect_left(number_list, value)
+        # If the number list is empty (when Defect Analysis is checked but no images have been processed)
+        # Make a list consisting of the first and the last layer
+        if not number_list:
+            number_list = [1, self.display['MaxLayers']]
+
+        # Find the index of the value closest to the current layer value in the layer number list
+        position = bisect.bisect_left(number_list, self.sliderDisplay.value())
 
         if position == 0:
             self.sliderDisplay.setValue(number_list[0])
@@ -1357,8 +1360,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
         else:
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex() + 4]
-        value = self.sliderDisplay.value()
-        position = bisect.bisect_left(number_list, value)
+
+        if not number_list:
+            number_list = [1, self.display['MaxLayers']]
+
+        position = bisect.bisect_left(number_list, self.sliderDisplay.value())
 
         if position == 0:
             self.sliderDisplay.setValue(1)

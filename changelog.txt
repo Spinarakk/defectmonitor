@@ -2,6 +2,8 @@ October 13
 - Cleaned up more code
 - UJSON was ditched as the slice file saving didn't require its speed and every other JSON involved operation ran at unnoticeable speeds already
 - Additionally, UJSON required VC Tools 2015 to be installed as well
+- Found some bugs to fix with the program
+- Tested the camera in the new machine to fix up the lighting and misalignment issues
 
 October 12
 - Added a feature to the Slice Converter dialog to allow the user to specify a specific range of contours to draw instead of just drawing them all
