@@ -1,3 +1,10 @@
+October 18
+- Fixed the following issues
+- Defect processor blade streak code wasn't working with some lines
+- Missed layers weren't sorted
+- Clicking on the seek buttons with an empty defect image list caused a crash
+- Changed the behavior of the Faux Trigger button
+
 October 13
 - Cleaned up more code
 - UJSON was ditched as the slice file saving didn't require its speed and every other JSON involved operation ran at unnoticeable speeds already

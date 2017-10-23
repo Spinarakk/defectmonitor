@@ -163,10 +163,10 @@
             ]
         },
         "Convert": false,
-        "Draw": true,
+        "Draw": false,
         "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Test Build 1",
+        "Name": "Demo 1",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
@@ -209,28 +209,28 @@
         "Username": "Nicholas Lee"
     },
     "DefectDetector": {
-        "Contours": "",
-        "Image": "",
-        "ImagePrevious": "",
-        "Layer": 0,
+        "Contours": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1/contours/contours_0561.png",
+        "Image": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1/processed/scan/scanP_0561.png",
+        "ImagePrevious": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1/processed/scan/scanP_0560.png",
+        "Layer": 561,
         "Mode": "single",
-        "Phase": "coat"
+        "Phase": "Scan"
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-10-13 [12''47'48] Test Build 1",
+        "Folder": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1
     },
     "Notifications": {
         "Attachment": "",
-        "Major": false,
-        "Minor": false,
+        "Major": true,
+        "Minor": true,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Build": true,
+        "Build": false,
         "Colours": {},
         "Draw": false,
         "Files": [],

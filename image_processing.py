@@ -180,6 +180,9 @@ class DefectDetector:
         # image_raw refers to the original image and will remain unmodified throughout the class
         self.image_raw = cv2.imread(self.build['DefectDetector']['Image'])
 
+        # Grab the total number of pixels in the image
+        self.total_pixels = self.image_raw.size / 3
+
         # image_contours refers to the image with all the part contours drawn on them
         if os.path.isfile(self.build['DefectDetector']['Contours']):
             self.image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
@@ -342,13 +345,14 @@ class DefectDetector:
         lines = cv2.HoughLinesP(image_edges, 1, np.pi / 180, threshold=100, minLineLength=1000, maxLineGap=500)
 
         # Draw blue lines (representing the blade streaks) on the defect image if lines were found
-        if lines.size > 0:
-            for index in range(len(lines)):
-                for x1, y1, x2, y2 in lines[index]:
-                    # Only draw horizontal lines that are not located near the top or bottom of image
-                    if abs(y1 - y2) == 0 and 20 < y1 < image_defects.shape[0] - 20:
-                        cv2.line(image_defects, (x1, y1), (x2, y2), COLOUR_RED, 2)
-                        self.streak_count += 1
+        if lines is not None:
+            if lines.size > 0:
+                for index in range(len(lines)):
+                    for x1, y1, x2, y2 in lines[index]:
+                        # Only draw horizontal lines that are not located near the top or bottom of image
+                        if abs(y1 - y2) == 0 and 20 < y1 < image_defects.shape[0] - 20:
+                            cv2.line(image_defects, (x1, y1), (x2, y2), COLOUR_RED, 2)
+                            self.streak_count += 1
 
         self.report_defects(image_defects, COLOUR_RED, 'BS')
 
@@ -517,6 +521,10 @@ class DefectDetector:
                 size, coordinates, occurrences = self.find_coordinates(image_defects, self.image_contours,
                                                                        tuple(part_colour), defect_colour)
 
+                # Convert the pixel size data into a percentage based on the total number of pixels in the image
+                if 'SP' in defect_type or 'CO' in defect_type:
+                    size = round(size / self.total_pixels * 100 , 4)
+
                 if size > 0:
                     # Add these to the defect dictionary for the current part, and the combined dictionary
                     self.defect_dict[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
@@ -532,7 +540,7 @@ class DefectDetector:
 
         # Use template matching to compare the two images and save the result to the combined report
         result = cv2.matchTemplate(image_scan, image_contours, cv2.TM_CCOEFF_NORMED)[0][0]
-        self.defect_dict['combined'][self.layer][self.phase]['OD'] = float(result)
+        self.defect_dict['combined'][self.layer][self.phase]['OC'] = float(result)
 
     def compare_histogram(self, image_current, image_previous):
         """Compares the histogram of each method and calculates the difference result"""

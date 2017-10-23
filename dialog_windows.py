@@ -1168,11 +1168,6 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                         except (KeyError, IndexError):
                             data_coat.append(0)
 
-                    # Bright Spot and Contrast Difference pixel data needs to be converted to percentages
-                    # Rounded to 4 decimal places for clarity as accurate precision isn't required
-                    data_coat[3] = round(data_coat[3] / (3470 * 2410) * 100, 4)
-                    data_coat[4] = round(data_coat[4] / (3470 * 2410) * 100, 4)
-
                     # Set colours for if the data is over/under the threshold, or there is no data at all
                     # Green for value is GOOD
                     # Red for value is BAD

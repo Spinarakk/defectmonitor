@@ -86,6 +86,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
         self.actionUpdateFolders.triggered.connect(self.update_folders)
+        self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
         self.actionProcessCurrent.triggered.connect(self.process_current)
         self.actionProcessAll.triggered.connect(self.process_all)
         self.actionProcessSelected.triggered.connect(self.process_selected)
@@ -877,12 +878,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def poll_trigger(self):
         """Function that will be passed to the QThreadPool to be executed"""
 
-        trigger = str(self.serial_trigger.readline())
-
-        if 'TRIG' in trigger:
-            return trigger
-        else:
-            return ''
+        return str(self.serial_trigger.readline())
 
     def capture_run_finished(self):
         """Reset the time idle counter and restart the trigger polling after resetting the serial input"""
@@ -890,6 +886,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.stopwatch_idle = 0
         self.pushPauseResume.setEnabled(True)
         self.pushStop.setEnabled(True)
+        # Enables the Faux Trigger button if advanced mode is on
+        if self.actionAdvancedMode.isChecked():
+            self.pushFauxTrigger.setEnabled(True)
         self.capture_run('')
 
     def pause_build(self):
@@ -950,7 +949,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.image_name = image_name
 
         self.update_status('Applying image fixes...')
-        worker = qt_multithreading.Worker(self.fix_image_function(image_name))
+        worker = qt_multithreading.Worker(self.fix_image_function, image_name)
         worker.signals.finished.connect(self.fix_image_finished)
         self.threadpool.start(worker)
 
@@ -980,7 +979,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def fix_image_finished(self):
 
         self.update_status('Image fix successfully applied. Currently detecting defects...')
-        print('FIX IMAGE FINISHED')
+
         # Update the image dictionaries and most importantly, the image ranges
         self.update_folders()
 
@@ -1409,7 +1408,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.display_flag:
             # Reload any images in the current tab
             self.update_display(self.widgetDisplay.currentIndex())
-            self.update_status('Image folders updated.', 5000)
 
     def update_image_list(self, index):
         """Updates the ImageList dictionary with a new list of images"""

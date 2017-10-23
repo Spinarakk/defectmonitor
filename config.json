@@ -1,25 +1,25 @@
 {
-    "CameraCalibration":{
-        "Apply":false,
-        "Chessboard":false,
-        "DownscalingRatio":1,
-        "Folder":"D:\/Documents\/University Work\/2017 Final Year Project\/Kinect\/Calibration",
-        "Height":7,
-        "HomographyImage":"D:\/Documents\/MCAM\/Calibration\/image_homography.png",
-        "TestImage":"D:\/Documents\/MCAM\/Calibration\/image_test.png",
-        "Undistort":false,
-        "Width":9
+    "CameraCalibration": {
+        "Apply": false,
+        "Chessboard": false,
+        "DownscalingRatio": 1,
+        "Folder": "D:/Documents/University Work/2017 Final Year Project/Kinect/Calibration",
+        "Height": 7,
+        "HomographyImage": "D:/Documents/MCAM/Calibration/image_homography.png",
+        "TestImage": "D:/Documents/MCAM/Calibration/image_test.png",
+        "Undistort": false,
+        "Width": 9
     },
-    "CameraSettings":{
-        "ExposureTimeAbs":30000,
-        "FrameTransmissionDelay":0,
-        "InterPacketDelay":0,
-        "PacketSize":1500,
-        "PixelFormat":0,
-        "TriggerTimeout":1
+    "CameraSettings": {
+        "ExposureTimeAbs": 10000,
+        "FrameTransmissionDelay": 0,
+        "InterPacketDelay": 500,
+        "PacketSize": 1500,
+        "PixelFormat": 0,
+        "TriggerTimeout": 1
     },
-    "ImageCorrection":{
-        "CameraMatrix":[
+    "ImageCorrection": {
+        "CameraMatrix": [
             [
                 2573.9702258668,
                 0.0,
@@ -36,13 +36,13 @@
                 1.0
             ]
         ],
-        "CropBoundary":[
+        "CropBoundary": [
             1581,
             3991,
             398,
             3868
         ],
-        "DistortionCoefficients":[
+        "DistortionCoefficients": [
             [
                 -0.2640464569,
                 0.1238091428,
@@ -51,7 +51,7 @@
                 -0.0285638515
             ]
         ],
-        "HomographyMatrix":[
+        "HomographyMatrix": [
             [
                 -1.3717514701,
                 -0.0297079113,
@@ -64,21 +64,21 @@
             ],
             [
                 0.0003135199,
-                -0.0000219168,
+                -2.19168e-05,
                 1.0
             ]
         ],
-        "Offset":[
+        "Offset": [
             39,
             122
         ],
-        "RMS":1.6641703202,
-        "Resolution":[
+        "RMS": 1.6641703202,
+        "Resolution": [
             5605,
             5235
         ],
-        "ScaleFactor":5.3333333333,
-        "TransformContours":[
+        "ScaleFactor": 5.3333333333,
+        "TransformContours": [
             20,
             -10,
             0,
@@ -97,7 +97,7 @@
             0,
             10
         ],
-        "TransformDisplay":[
+        "TransformDisplay": [
             -20,
             5,
             0,
@@ -117,11 +117,11 @@
             0
         ]
     },
-    "Threshold":{
-        "HistogramCoat":5000,
-        "HistogramScan":5000,
-        "Occurrences":5,
-        "Overlay":90.0,
-        "PixelSize":0.002
+    "Threshold": {
+        "HistogramCoat": 5000,
+        "HistogramScan": 5000,
+        "Occurrences": 5,
+        "Overlay": 90.0,
+        "PixelSize": 0.010000000000000002
     }
 }
