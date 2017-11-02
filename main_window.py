@@ -7,10 +7,8 @@ import cv2
 import serial
 import bisect
 import math
-import time
 
 # Import PyQt modules
-from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
@@ -78,7 +76,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
-        self.actionHistogramComparison.triggered.connect(self.histogram_comparison)
+        self.actionDefectGraphs.triggered.connect(self.defect_graphs)
 
         # Menubar -> Tools
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
@@ -125,7 +123,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Sidebar Toolbox Reports / Results
         self.pushCalibrationResults.clicked.connect(self.calibration_results)
         self.pushDefectReports.clicked.connect(self.defect_reports)
-        self.pushHistogramComparison.clicked.connect(self.histogram_comparison)
+        self.pushDefectGraphs.clicked.connect(self.defect_graphs)
 
         # Layer Selection
         self.pushGo.clicked.connect(self.set_layer)
@@ -161,15 +159,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.processing_flag = False
         self.all_flag = False
 
-        # Instantiate any instances that cannot be run simultaneously
-        self.FM_instance = None
-
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
-        self.DR_dialog = None
-        self.CC_dialog = None
-        self.OA_dialog = None
-        self.SC_dialog = None
-        self.CS_dialog = None
+        self.DR_dialog = None   # Defect Reports
+        self.CC_dialog = None   # Camera Calibration
+        self.OA_dialog = None   # Overlay Adjustment
+        self.SC_dialog = None   # Slice Converter
+        self.CS_dialog = None   # Camera Settings
 
         # Initiate an empty config file name to be used for saving purposes
         self.build_name = None
@@ -179,9 +174,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Create a context menu that will appear when the user right-clicks on any of the display labels
         self.menu_display = QMenu()
-
-        # Disable the Image Viewer tab permanently
-        self.widgetDisplay.setTabEnabled(3, False)
 
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
@@ -208,7 +200,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Create a new build dialog variable and execute it as a modal window
         NB_dialog = dialog_windows.NewBuild(self)
 
-        # Executes the following if the OK button is clicked, otherwise nothing happens
+        # Executes the build setup if the OK button is clicked, otherwise nothing happens
         if NB_dialog.exec_():
             self.setup_build()
 
@@ -218,7 +210,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Subsequently opens the New Build Dialog Window with all the boxes filled in, allowing the user to make changes
         """
 
-        # Acquire the name of the config file to be opened and read
+        # Acquire the name of the build file to be opened and read
         filename = QFileDialog.getOpenFileName(self, 'Browse...', self.build['BuildInfo']['Folder'],
                                                'JSON File (*.json)')[0]
 
@@ -228,7 +220,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             with open(filename) as build:
                 self.build = json.load(build)
 
-            # Save to the build.json file
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -246,7 +237,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         with open('build.json') as build:
             self.build = json.load(build)
 
-        # Store config settings as respective variables and update appropriate UI elements
+        # Update the window title with the build name
         self.setWindowTitle('Defect Monitor - Build ' + self.build['BuildInfo']['Name'])
 
         # Don't do the following if this method was triggered by changing the build settings
@@ -301,23 +292,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if 'Pause' in self.pushPauseConversion.text():
             self.build['BuildInfo']['Pause'] = True
             self.pushPauseConversion.setText('Resume')
-            # Save to the build.json file
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
         elif 'Resume' in self.pushPauseConversion.text():
             self.build['BuildInfo']['Pause'] = False
             self.pushPauseConversion.setText('Pause')
-            # Save to the build.json file
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
     def setup_build_finished(self, settings_flag):
         """Executes when the slice conversion thread is finished, or the Stop button is pressed"""
-
-        # Check for and acquire an attached camera and trigger
-        # This method is here so that the image capture cannot be run unless the slice conversion has stopped
-        self.acquire_ct()
 
         self.build['BuildInfo']['Pause'] = False
         self.build['BuildInfo']['Run'] = False
@@ -325,6 +310,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Save to the build.json file
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
+
+        # Check for and acquire an attached camera and trigger
+        # This method is here so that the image capture cannot be run unless the slice conversion has stopped
+        self.acquire_ct()
 
         self.pushPauseConversion.setEnabled(False)
         self.pushStopConversion.setEnabled(False)
@@ -434,7 +423,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def defect_reports_closed(self):
         self.DR_dialog = None
 
-    def histogram_comparison(self):
+    def defect_graphs(self):
         pass
 
     # MENUBAR -> TOOLS
@@ -1501,16 +1490,37 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_status(self, string, duration=0):
         """Updates the default status bar at the bottom of the Main Window with the received string argument"""
+
         self.statusBar.showMessage(string, duration)
 
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
+
         self.progressBar.setValue(int(percentage))
 
     # CLEANUP
 
     def closeEvent(self, event):
         """Executes when Menu -> Exit is clicked or the top-right X is clicked"""
+
+        # Only ask to save if the user has actually started/opened a build, aka if the display flag is set
+        if self.display_flag:
+            # Open a message box with a save confirmation message so that the user can save the build before closing
+            save_confirmation = QMessageBox()
+            save_confirmation.setIcon(QMessageBox.Information)
+            save_confirmation.setText('Do you want to save the changes to this build before closing?\n\n'
+                                      'If you don\'t save, changes to your build will be lost.')
+            save_confirmation.setWindowTitle('Save Build?')
+            save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            retval = save_confirmation.exec_()
+
+            # Save the build if the Save button was pressed
+            if retval == 2048:
+                self.save_build()
+            # Ignore the closing of the Main Window if the Cancel button was pressed
+            elif retval == 4194304:
+                event.ignore()
+            # Otherwise just close the Main Window without saving
 
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ import image_processing
 
 
 class Calibration:
-    """Module used to calibrate the connected Basler Ace acA3800-10gm GigE camera if attached
+    """Module used to calibrate the Basler Ace acA3800-10gm GigE camera using images taken by the camera
     User specifies a folder of chessboard images taken using the camera and outputs the camera intrinsics and parameters
     """
 

@@ -1133,7 +1133,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="tabSpacing">
           <number>3</number>
@@ -1346,12 +1346,12 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushHistogramComparison">
+            <widget class="QPushButton" name="pushDefectGraphs">
              <property name="enabled">
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Report Generation</string>
+              <string>Defect Graphs</string>
              </property>
             </widget>
            </item>
@@ -1403,7 +1403,9 @@
     <addaction name="actionZoomOut"/>
     <addaction name="separator"/>
     <addaction name="actionCalibrationResults"/>
+    <addaction name="separator"/>
     <addaction name="actionDefectReports"/>
+    <addaction name="actionDefectGraphs"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1424,7 +1426,6 @@
     <addaction name="actionSliceConverter"/>
     <addaction name="actionImageConverter"/>
     <addaction name="actionUpdateFolders"/>
-    <addaction name="actionReport_Generation"/>
     <addaction name="separator"/>
     <addaction name="menuDefectProcessor"/>
    </widget>
@@ -1661,6 +1662,14 @@
    </property>
    <property name="text">
     <string>Report Generation</string>
+   </property>
+  </action>
+  <action name="actionDefectGraphs">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Defect Graphs</string>
    </property>
   </action>
  </widget>

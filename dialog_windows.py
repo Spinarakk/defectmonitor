@@ -234,7 +234,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                                 str(current_time.minute).zfill(2), str(current_time.second).zfill(2),
                                 self.build['BuildInfo']['Name'])
 
-                # Save the created image folder's name to the config.json file
+                # Save the created image folder's name to the build.json file
                 self.build['ImageCapture']['Folder'] = image_folder
 
                 # Create respective sub-directories for images (and reports)

@@ -13,7 +13,7 @@
     "CameraSettings": {
         "ExposureTimeAbs": 10000,
         "FrameTransmissionDelay": 0,
-        "InterPacketDelay": 500,
+        "InterPacketDelay": 0,
         "PacketSize": 1500,
         "PixelFormat": 0,
         "TriggerTimeout": 1
@@ -120,8 +120,8 @@
     "Threshold": {
         "HistogramCoat": 5000,
         "HistogramScan": 5000,
-        "Occurrences": 5,
+        "Occurrences": 1,
         "Overlay": 90.0,
-        "PixelSize": 0.010000000000000002
+        "PixelSize": 0.01
     }
 }

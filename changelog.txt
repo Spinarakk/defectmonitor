@@ -1,3 +1,19 @@
+November 2
+- Kept trying to crack the CLS code but can't find a consistent signal of a new contour on the same layer
+- One contour is doable but multiple contours isn't
+
+October 30
+- Came up with a simple way of drawing the CLS part contours
+- Not 100% accurate but appears to be close enough
+- Can't draw multiple contours on the same image
+
+October 25
+- Continued trying to crack the CLS file
+
+October 23
+- Fixed more issues in regards to build running and processes
+- Added threshold checking within the defect processor
+
 October 18
 - Fixed the following issues
 - Defect processor blade streak code wasn't working with some lines

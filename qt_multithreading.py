@@ -13,7 +13,7 @@ class WorkerSignals(QObject):
     name = pyqtSignal(str)
     progress = pyqtSignal(int)
     colour = pyqtSignal(int, bool)
-
+    notification = pyqtSignal(str)
 
 class Worker(QRunnable):
     """Worker thread that inherits from QRunnable to handle worker thread setup, signals and wrap-up"""
@@ -35,6 +35,9 @@ class Worker(QRunnable):
         if 'convert' in str(self.function) or 'detector' in str(self.function) or 'calibrate' in str(self.function):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
+
+        if 'run_detector' in str(self.function):
+            kwargs['notification'] = self.signals.notification
 
         if 'calibrate' in str(self.function):
             kwargs['colour'] = self.signals.colour

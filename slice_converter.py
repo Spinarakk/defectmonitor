@@ -1,6 +1,5 @@
 # Import external libraries
 import os
-import re
 import time
 import cv2
 import numpy as np
@@ -75,74 +74,9 @@ class SliceConverter:
                 self.status.emit('Current Part: None | Conversion completed successfully.')
 
     def convert_cls(self, filename):
-        """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
-
-        self.status.emit('Current Part: %s | Reading CLS file...' % os.path.splitext(os.path.basename(filename))[0])
-
-        # Set up a few flags, counters and lists
-        layer_flag = False
-        border_flag = False
-        next_border_flag = False
-        index = 2
-        vector_no = 0
-
-        # Initialize the converted data list with some important information
-        data_ascii = [float(0.001), '']
-
-        # UI Progress and Status Messages
-        progress = 10.0
-        progress_previous = None
-
-        with open(filename, 'rb') as cls_file:
-            # Split the entire file into a massive list if the following strings are found
-            data_binary = re.split('(NEW_LAYER)|(SUPPORT)*(NEW_BORDER)|(NEW_QUADRANT)'
-                                   '|(INC_OFFSETS)|(NEW_ISLAND)|(NEW_SKIN)|(NEW_CORE)', cls_file.read())
-            self.progress.emit(8)
-            # Remove any NoneType data in the list
-            data_binary = filter(None, data_binary)
-            increment = 90.0 / len(data_binary)
-            self.progress.emit(int(round(progress)))
-
-            for line in data_binary:
-                if layer_flag or border_flag:
-                    data_line = list()
-                    data = list()
-                    for character in line:
-                        data_line.append(bin(ord(character))[2:].zfill(8))
-                    data_line = data_line[::-1]
-                    for one, two, three, four in zip(data_line[0::4], data_line[1::4], data_line[2::4],
-                                                     data_line[3::4]):
-                        decimal = int(one + two + three + four, 2)
-                        data.append(decimal)
-                    if layer_flag:
-                        data_ascii[index] += str(data[-1] / 100)
-                        layer_flag = False
-                    elif border_flag:
-                        data = data[::-1]
-                        data_ascii[index] += '%s,%s,' % (data[0], data[1])
-                        for one, two in zip(data[2::4], data[3::4]):
-                            data_ascii[index] += (str(one / 100) + ',' + str(two / 100) + ',')
-                            vector_no += 1
-                        data_ascii[index] = data_ascii[index].replace('1,%s,%s,' % (data[0], data[1]),
-                                                                      '1,%s,%s,' % (data[0], vector_no)).rstrip(',')
-                        border_flag = False
-                        next_border_flag = False
-                    # Reset vector numbers
-                    vector_no = 0
-                    index += 1
-                if 'NEW_LAYER' in line:
-                    data_ascii.append('$$LAYER/')
-                    layer_flag = True
-                    next_border_flag = True
-                if 'NEW_BORDER' in line and next_border_flag:
-                    data_ascii.append('$$POLYLINE/1,')
-                    border_flag = True
-                    layer_flag = False
-                # Put into a conditional to only trigger if the whole number changes so as to not overload the emit
-                if int(round(progress)) is not progress_previous:
-                    self.progress(int(round(progress)))
-                    progress_previous = int(round(progress))
-                progress += increment
+        """Reads the .cli file and converts the contents from binary into an organised ASCII list
+        Right now doesn't work due to multiple contours not being able to be differentiated"""
+        pass
 
     def convert_cli(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""

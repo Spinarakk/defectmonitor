@@ -59,7 +59,7 @@ class ImageTransform:
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
 
-        return cv2.undistort(image, np.array(self.parameters['CameraMatrix']), 
+        return cv2.undistort(image, np.array(self.parameters['CameraMatrix']),
                              np.array(self.parameters['DistortionCoefficients']))
 
     def perspective_fix(self, image):
@@ -171,9 +171,13 @@ class DefectDetector:
 
     def __init__(self):
 
-        # Load configuration settings from config.json file
+        # Load from the build.json file
         with open('build.json') as build:
             self.build = json.load(build)
+
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
 
         # Checking if the received image exists (a blank string may be sent which means the image doesn't exist)
         # Only a problem for the contours and previous images as this method cannot be accessed if the raw doesn't exist
@@ -222,11 +226,12 @@ class DefectDetector:
         self.chatter_count = 0
         self.streak_count = 0
 
-    def run_detector(self, status, progress):
+    def run_detector(self, status, progress, notification):
 
-        # Assign the status and progress signals as instance variables so other methods can use them
+        # Assign the status, progress and notification signals as instance variables so other methods can use them
         self.status = status
         self.progress = progress
+        self.notification = notification
         self.progress.emit(0)
 
         # Different detection methods will be applied depending on the marked phase (coat, scan or single)
@@ -278,6 +283,8 @@ class DefectDetector:
         # Histogram comparison with the previous layer if the previous layer's image exists
         if self.compare_flag:
             self.compare_histogram(self.image_raw, self.image_previous)
+
+        # Compare all the results against the threshold values to see if any are outside of the threshold
 
         # Save the analyzed coat image with all the defects on it to the correct folder
         cv2.imwrite('%s/defects/coat/coatD_%s.png' % (self.build['ImageCapture']['Folder'], self.layer), image_coat)
@@ -523,7 +530,7 @@ class DefectDetector:
 
                 # Convert the pixel size data into a percentage based on the total number of pixels in the image
                 if 'SP' in defect_type or 'CO' in defect_type:
-                    size = round(size / self.total_pixels * 100 , 4)
+                    size = round(size / self.total_pixels * 100, 4)
 
                 if size > 0:
                     # Add these to the defect dictionary for the current part, and the combined dictionary
@@ -562,6 +569,26 @@ class DefectDetector:
 
         # Save the result directly to the combined report
         self.defect_dict['combined'][self.layer][self.phase]['HC'] = result
+
+    def compare_threshold(self):
+        """Compares the results to the threshold values to check if a notification needs to be raised or not"""
+
+        # Grabs the data for clearer code purposes
+        data = self.defect_dict['combined'][self.layer][self.phase]
+
+        if 'coat' in self.phase:
+            # Grab the threshold values from the config.json file
+            threshold = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                         self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
+                         self.config['Threshold']['HistogramCoat']]
+
+            # Format the appropriate data into a list
+            data_coat = [data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0], data['HC']]
+
+        elif 'scan' in self.phase:
+            threshold = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                         self.config['Threshold']['HistogramScan'], self.config['Threshold']['Overlay']]
+            data_scan = [data['BS'][1], data['BC'][1], data['HC'], data['OC']]
 
     @staticmethod
     def overlay_defects(image, image_defects, defect_colour):
