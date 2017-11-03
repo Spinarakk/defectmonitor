@@ -127,7 +127,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 else:
                     self.build['Notifications']['Attachment'] = ''
 
-                # Save to the build.json file
                 with open('build.json', 'w+') as build:
                     json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -284,7 +283,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                     self.done(0)
                     return
 
-            # Save to the build.json file
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -509,6 +507,9 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
     def apply_settings(self):
         """Grab the spinxBox and checkBox values and save them to the working config and default config file"""
 
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         self.config['CameraCalibration']['Width'] = self.spinWidth.value()
         self.config['CameraCalibration']['Height'] = self.spinHeight.value()
         self.config['CameraCalibration']['DownscalingRatio'] = self.spinRatio.value()
@@ -516,7 +517,6 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.config['CameraCalibration']['Undistort'] = self.checkSaveU.isChecked()
         self.config['CameraCalibration']['Apply'] = self.checkApply.isChecked()
 
-        # Save to the config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
@@ -592,7 +592,6 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
     def apply(self):
         """Executes when the Apply button is clicked and saves the entered values to the config.json file"""
 
-        # Reload from the config.json file in case a setting was changed in another window
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -604,7 +603,6 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
         self.config['CameraSettings']['TriggerTimeout'] = self.spinTriggerTimeout.value()
 
-        # Save to the config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
@@ -645,7 +643,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         except TypeError:
             pass
 
-        # Load from the build.json file
         with open('build.json') as build:
             self.build = json.load(build)
 
@@ -692,6 +689,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def start(self):
         """Executes when the Start/Pause/Resume button is clicked and does one of the following depending on the text"""
 
+        with open('build.json') as build:
+            self.build = json.load(build)
+
         if 'Start' in self.buttonStart.text():
             # Disable all buttons to prevent user from doing other tasks
             self.buttonStop.setEnabled(True)
@@ -724,30 +724,37 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.build['SliceConverter']['Range'] = self.checkRange.isChecked()
             self.build['SliceConverter']['RangeLow'] = self.spinRangeLow.value()
             self.build['SliceConverter']['RangeHigh'] = self.spinRangeHigh.value()
-            self.save_settings()
 
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
             worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
             worker.signals.finished.connect(self.start_finished)
-            self.threadpool.start(worker)
 
         elif 'Pause' in self.buttonStart.text():
             self.build['SliceConverter']['Pause'] = True
-            self.save_settings()
             self.buttonStart.setText('Resume')
         elif 'Resume' in self.buttonStart.text():
             self.build['SliceConverter']['Pause'] = False
-            self.save_settings()
             self.buttonStart.setText('Pause')
+
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
+
+        if 'Start' in self.buttonStart.text():
+            self.threadpool.start(worker)
 
     def start_finished(self):
         """Executes when the SliceConverter instance has finished"""
 
+        with open('build.json') as build:
+            self.build = json.load(build)
+
         # Stop the conversion thread
         self.build['SliceConverter']['Pause'] = False
         self.build['SliceConverter']['Run'] = False
-        self.save_settings()
+
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
 
         # Enable/disable respective buttons
         self.buttonStart.setText('Start')
@@ -772,12 +779,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.spinRangeHigh.setMinimum(value)
 
-    def save_settings(self):
-        """Save any changed values to the build.json file"""
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
-
     def update_status(self, string):
         string = string.split(' | ')
         self.labelStatus.setText(string[1])
@@ -788,6 +789,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
+
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         # Check if a conversion is in progress or paused, and block the user from closing the window until stopped
         if not self.buttonDone.isEnabled():
@@ -801,7 +805,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         else:
             self.build['SliceConverter']['Folder'] = ''
             self.build['SliceConverter']['Files'] = []
-            self.save_settings()
+
+            with open('build.json', 'w+') as build:
+                json.dump(self.build, build, indent=4, sort_keys=True)
+
             self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
 
 
@@ -826,7 +833,6 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         except TypeError:
             pass
 
-        # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -995,17 +1001,25 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         if len(self.states) > 10:
             del self.states[0]
 
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         self.config['ImageCorrection']['TransformDisplay'] = self.transform
 
-        with open('config.json', 'w+') as parameters:
-            json.dump(self.config, parameters, indent=4, sort_keys=True)
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         self.update_overlay.emit(False)
 
     def save(self):
         """Adds the current display transform parameters to the current contour transform parameters"""
 
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Add the two transform parameter lists using list comprehension
         transform_new = [x + y for x, y in zip(self.transform, self.config['ImageCorrection']['TransformContours'])]
+
         self.config['ImageCorrection']['TransformContours'] = transform_new
 
         with open('config.json', 'w+') as parameters:
@@ -1014,6 +1028,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
     def closeEvent(self, event):
         """Executes when the window is closed"""
         self.window_settings.setValue('Overlay Adjustment Geometry', self.saveGeometry())
+
 
 class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
     """Opens a Modeless Dialog Window when the CameraCalibration instance has finished
@@ -1261,8 +1276,8 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.tableScan.setSortingEnabled(True)
 
     def set_thresholds(self):
+        """Save the entered threshold values to the config.json file and reload the data based on the new values"""
 
-        # Reload from the config.json file in case a setting was changed in another window
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -1273,7 +1288,6 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.config['Threshold']['HistogramCoat'] = self.spinHistogramCoat.value()
         self.config['Threshold']['HistogramScan'] = self.spinHistogramScan.value()
 
-        # Save to the config.json file
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 

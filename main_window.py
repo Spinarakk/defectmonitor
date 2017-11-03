@@ -42,11 +42,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         super(self.__class__, self).__init__(parent)
         self.setupUi(self)
 
-        # Load default build settings from the hidden non-user accessible build_default.json file
+        # Load default working build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
             self.build = json.load(build)
 
-        # Load config settings from the hidden non-user accessible config.json file
+        # Load config settings from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -65,7 +65,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Menubar -> File
         self.actionNew.triggered.connect(self.new_build)
         self.actionOpen.triggered.connect(self.open_build)
-        self.actionClearMenu.triggered.connect(self.clear_menu)
+        self.actionClearBuilds.triggered.connect(self.clear_recent_builds)
         self.actionSave.triggered.connect(self.save_build)
         self.actionSaveAs.triggered.connect(self.save_as_build)
         self.actionExportImage.triggered.connect(self.export_image)
@@ -175,6 +175,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Create a context menu that will appear when the user right-clicks on any of the display labels
         self.menu_display = QMenu()
 
+        # Fill the Recent Builds drop-down menu with the recent builds
+        self.add_recent_builds('')
+
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
         # Easier to store each of these in a dictionary under a specific key to call on one of the four sets
@@ -205,14 +208,39 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.setup_build()
 
     def open_build(self):
-        """Opens a File Dialog when File -> Open... is clicked
+        """Opens a File Dialog when File -> Open... is clicked or if a recent build action is clicked
         Allows the user to select a previous build's settings
         Subsequently opens the New Build Dialog Window with all the boxes filled in, allowing the user to make changes
         """
 
-        # Acquire the name of the build file to be opened and read
-        filename = QFileDialog.getOpenFileName(self, 'Browse...', self.build['BuildInfo']['Folder'],
-                                               'JSON File (*.json)')[0]
+        filename = ''
+
+        # Because using lambda and sending the build name outright doesn't work, a workaround is needed
+        # The sending QAction is instead queried against a list of QActions in the QMenu for the corresponding index
+        # This index is used to grab the full build name path from the build list
+        # If none of the actions match, it means that this method was called by the Open Builds action
+        for index, action in enumerate(self.menuRecentBuilds.actions()):
+            if action is self.sender():
+                # Set the filename to the corresponding name in the recent builds list
+                filename = self.recent_builds_list[index]
+
+                # Check if the build's json file exists
+                if not os.path.isfile(filename):
+                    missing_file_error = QMessageBox()
+                    missing_file_error.setIcon(QMessageBox.Critical)
+                    missing_file_error.setText('The file %s could not be opened.\n\nNo such file exists.' % filename)
+                    missing_file_error.setWindowTitle('Error')
+                    missing_file_error.exec_()
+
+                    # Reset the Recent Builds menu to account for the missing files
+                    self.add_recent_builds('')
+                    return
+                break
+
+        if not filename:
+            # Open a File Dialog to allow the user to select a file if it wasn't a recent build that was selected
+            filename = QFileDialog.getOpenFileName(self, 'Browse...', self.build['BuildInfo']['Folder'],
+                                                   'JSON File (*.json)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if filename:
@@ -228,6 +256,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             OB_dialog = dialog_windows.NewBuild(self, open_flag=True)
 
             if OB_dialog.exec_():
+                # Add the opened build name to the Recent Builds drop-down menu
+                self.add_recent_builds(self.build_name)
+
                 self.setup_build()
 
     def setup_build(self, settings_flag=False):
@@ -270,7 +301,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.build['BuildInfo']['Run'] = True
             self.build['SliceConverter']['Build'] = True
 
-            # Save to the build.json file
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -289,25 +319,28 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def pause_conversion(self):
         """Executes when the Pause/Resume button in the Slice Conversion group box is clicked"""
 
+        with open('build.json') as build:
+            self.build = json.load(build)
+
         if 'Pause' in self.pushPauseConversion.text():
             self.build['BuildInfo']['Pause'] = True
             self.pushPauseConversion.setText('Resume')
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
-
         elif 'Resume' in self.pushPauseConversion.text():
             self.build['BuildInfo']['Pause'] = False
             self.pushPauseConversion.setText('Pause')
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
+
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
 
     def setup_build_finished(self, settings_flag):
-        """Executes when the slice conversion thread is finished, or the Stop button is pressed"""
+        """Executes when the slice conversion process is finished, or the Stop button is pressed"""
+
+        with open('build.json') as build:
+            self.build = json.load(build)
 
         self.build['BuildInfo']['Pause'] = False
         self.build['BuildInfo']['Run'] = False
 
-        # Save to the build.json file
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -326,8 +359,62 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.update_status('Build %s settings changed' % self.build['BuildInfo']['Name'], 5000)
 
-    def clear_menu(self):
-        pass
+    def add_recent_builds(self, build_name):
+        """Adds a new or opened build to the top of the Recent Builds drop-down menu"""
+
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Add the opened/saved build name to the list, only if a build name was sent
+        # And if it doesn't match a build already in the list, otherwise send that build to the end of the list
+        if build_name:
+            if build_name in self.config['RecentBuilds']:
+                self.config['RecentBuilds'].remove(build_name)
+            self.config['RecentBuilds'].append(build_name)
+
+        # Delete the first element if the Recent Builds list gets longer than 10 builds
+        if len(self.config['RecentBuilds']) > 10:
+            del self.config['RecentBuilds'][0]
+
+        # Store the recent builds list as an instance variable that has been reversed
+        self.recent_builds_list = self.config['RecentBuilds'][::-1]
+
+        # Clear the Recent Builds menu and add the reversed list of Recent Builds as actions with connected slots
+        # Though first check that these builds exist on disk otherwise remove them from the list
+        self.menuRecentBuilds.clear()
+        for build in self.recent_builds_list:
+            if os.path.isfile(build):
+                action = self.menuRecentBuilds.addAction(os.path.basename(build))
+                action.triggered.connect(self.open_build)
+            else:
+                # If the file doesn't exist, remove the build from both lists
+                self.recent_builds_list.remove(build)
+                self.config['RecentBuilds'].remove(build)
+
+        # Add a separator and finally the Clear Builds action
+        self.menuRecentBuilds.addSeparator()
+        self.actionClearBuilds = self.menuRecentBuilds.addAction('Clear Builds')
+        self.actionClearBuilds.triggered.connect(self.clear_recent_builds)
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
+
+    def clear_recent_builds(self):
+        """Clears the Recent Builds drop-down menu and the config.json file of all the listed recent builds"""
+
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Empties the recent builds list in the config.json file
+        self.config['RecentBuilds'] = list()
+
+        # Clear the Recent Builds menu and re-add the Clear Builds QAction
+        self.menuRecentBuilds.clear()
+        self.actionClearBuilds = self.menuRecentBuilds.addAction('Clear Builds')
+        self.actionClearBuilds.triggered.connect(self.clear_recent_builds)
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
     def save_build(self):
         """Saves the current build to the config.json file when File -> Save is clicked
@@ -355,6 +442,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Checking if user has chosen to save the build or clicked cancel
         if filename:
             self.build_name = filename
+
+            # Add the opened build name to the Recent Builds drop-down menu
+            self.add_recent_builds(self.build_name)
+
             self.save_build()
 
     def export_image(self):
@@ -582,7 +673,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.processing_flag = True
 
-        # Load from the build.json file
         with open('build.json') as build:
             self.build = json.load(build)
 
@@ -600,7 +690,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.build['DefectDetector']['ImagePrevious'] = ''
 
-        # Save to the build.json file
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -797,6 +886,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Polls the trigger device for a trigger, subsequently capturing and saving an image if triggered
         """
 
+        with open('build.json') as build:
+            self.build = json.load(build)
+
         # Enable / disable certain UI elements to prevent concurrent processes
         self.update_status('Running build.')
         self.pushRun.setEnabled(False)
@@ -815,7 +907,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.build['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
             self.build['ImageCapture']['Phase'] = 1
 
-            # Save to the build.json file
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 

@@ -1,309 +1,154 @@
 {
     "BuildInfo": {
         "Colours": {
-            "03060 Horizontal_2": [
+            "A1_13": [
                 100,
                 100,
                 0
             ],
-            "03060 Horizontal_3": [
+            "A2_11": [
                 102,
                 102,
                 0
             ],
-            "03060 Horizontal_4": [
+            "A3_15": [
                 104,
                 104,
                 0
             ],
-            "03060 Horizontal_5": [
+            "B1_12": [
                 106,
                 106,
                 0
             ],
-            "03060 Horizontal_6": [
+            "B2_10": [
                 108,
                 108,
                 0
             ],
-            "03060 Horizontal_7": [
+            "B3_14": [
                 110,
                 110,
                 0
             ],
-            "03060 Horizontal_8": [
+            "C1_2": [
                 112,
                 112,
                 0
             ],
-            "03060 Horizontal_9": [
+            "C2": [
                 114,
                 114,
                 0
             ],
-            "03060 Vertical": [
+            "C3_3": [
                 116,
                 116,
                 0
             ],
-            "03060 Vertical_2": [
-                118,
-                118,
-                0
-            ],
-            "03060 Vertical_3": [
-                120,
-                120,
-                0
-            ],
-            "03060 Vertical_4": [
-                122,
-                122,
-                0
-            ],
-            "03060 Vertical_5": [
-                124,
-                124,
-                0
-            ],
-            "03060 Vertical_6": [
-                126,
-                126,
-                0
-            ],
-            "03060 Vertical_7": [
-                128,
-                128,
-                0
-            ],
-            "03060 Vertical_8": [
-                130,
-                130,
-                0
-            ],
-            "03060 Vertical_9": [
-                132,
-                132,
-                0
-            ],
-            "03068 horizontal": [
-                134,
-                134,
-                0
-            ],
-            "03068 horizontal_10": [
-                152,
-                152,
-                0
-            ],
-            "03068 horizontal_11": [
-                154,
-                154,
-                0
-            ],
-            "03068 horizontal_12": [
-                156,
-                156,
-                0
-            ],
-            "03068 horizontal_13": [
-                158,
-                158,
-                0
-            ],
-            "03068 horizontal_14": [
-                160,
-                160,
-                0
-            ],
-            "03068 horizontal_15": [
-                162,
-                162,
-                0
-            ],
-            "03068 horizontal_16": [
-                164,
-                164,
-                0
-            ],
-            "03068 horizontal_17": [
-                166,
-                166,
-                0
-            ],
-            "03068 horizontal_18": [
-                168,
-                168,
-                0
-            ],
-            "03068 horizontal_19": [
-                170,
-                170,
-                0
-            ],
-            "03068 horizontal_2": [
+            "Contour10_6": [
                 136,
                 136,
                 0
             ],
-            "03068 horizontal_20": [
-                172,
-                172,
-                0
-            ],
-            "03068 horizontal_21": [
-                174,
-                174,
-                0
-            ],
-            "03068 horizontal_22": [
-                176,
-                176,
-                0
-            ],
-            "03068 horizontal_3": [
+            "Contour11_5": [
                 138,
                 138,
                 0
             ],
-            "03068 horizontal_4": [
+            "Contour12_4": [
                 140,
                 140,
                 0
             ],
-            "03068 horizontal_5": [
+            "Contour13_3": [
                 142,
                 142,
                 0
             ],
-            "03068 horizontal_6": [
+            "Contour14_2": [
                 144,
                 144,
                 0
             ],
-            "03068 horizontal_7": [
+            "Contour15": [
                 146,
                 146,
                 0
             ],
-            "03068 horizontal_8": [
+            "Contour1_15": [
+                118,
+                118,
+                0
+            ],
+            "Contour2_14": [
+                120,
+                120,
+                0
+            ],
+            "Contour3_13": [
+                122,
+                122,
+                0
+            ],
+            "Contour4_12": [
+                124,
+                124,
+                0
+            ],
+            "Contour5_11": [
+                126,
+                126,
+                0
+            ],
+            "Contour6_10": [
+                128,
+                128,
+                0
+            ],
+            "Contour7_9": [
+                130,
+                130,
+                0
+            ],
+            "Contour8_8": [
+                132,
+                132,
+                0
+            ],
+            "Contour9_7": [
+                134,
+                134,
+                0
+            ],
+            "D1_6": [
                 148,
                 148,
                 0
             ],
-            "03068 horizontal_9": [
+            "D2_4": [
                 150,
                 150,
                 0
             ],
-            "03068 vertical": [
-                178,
-                178,
+            "D3_8": [
+                152,
+                152,
                 0
             ],
-            "03068 vertical_10": [
-                196,
-                196,
+            "E1_7": [
+                154,
+                154,
                 0
             ],
-            "03068 vertical_11": [
-                198,
-                198,
+            "E2_5": [
+                156,
+                156,
                 0
             ],
-            "03068 vertical_12": [
-                200,
-                200,
-                0
-            ],
-            "03068 vertical_13": [
-                202,
-                202,
-                0
-            ],
-            "03068 vertical_14": [
-                204,
-                204,
-                0
-            ],
-            "03068 vertical_15": [
-                206,
-                206,
-                0
-            ],
-            "03068 vertical_16": [
-                208,
-                208,
-                0
-            ],
-            "03068 vertical_17": [
-                210,
-                210,
-                0
-            ],
-            "03068 vertical_18": [
-                212,
-                212,
-                0
-            ],
-            "03068 vertical_19": [
-                214,
-                214,
-                0
-            ],
-            "03068 vertical_2": [
-                180,
-                180,
-                0
-            ],
-            "03068 vertical_20": [
-                216,
-                216,
-                0
-            ],
-            "03068 vertical_21": [
-                218,
-                218,
-                0
-            ],
-            "03068 vertical_22": [
-                220,
-                220,
-                0
-            ],
-            "03068 vertical_3": [
-                182,
-                182,
-                0
-            ],
-            "03068 vertical_4": [
-                184,
-                184,
-                0
-            ],
-            "03068 vertical_5": [
-                186,
-                186,
-                0
-            ],
-            "03068 vertical_6": [
-                188,
-                188,
-                0
-            ],
-            "03068 vertical_7": [
-                190,
-                190,
-                0
-            ],
-            "03068 vertical_8": [
-                192,
-                192,
-                0
-            ],
-            "03068 vertical_9": [
-                194,
-                194,
+            "E3_9": [
+                158,
+                158,
                 0
             ],
             "background": [
@@ -312,16 +157,16 @@
                 0
             ],
             "combined": [
-                224,
-                224,
+                162,
+                162,
                 0
             ]
         },
         "Convert": false,
         "Draw": false,
-        "EmailAddress": "asdf@gmail.com",
+        "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Default",
+        "Name": "Demo ASDFASD",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
@@ -330,88 +175,57 @@
         ],
         "Run": false,
         "SliceFiles": [
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_2.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_3.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_4.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_5.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_6.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_7.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_8.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Horizontal_9.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_2.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_3.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_4.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_5.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_6.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_7.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_8.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03060 Vertical_9.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_2.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_3.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_4.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_5.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_6.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_7.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_8.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_9.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_10.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_11.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_12.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_13.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_14.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_15.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_16.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_17.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_18.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_19.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_20.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_21.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 horizontal_22.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_2.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_3.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_4.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_5.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_6.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_7.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_8.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_9.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_10.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_11.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_12.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_13.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_14.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_15.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_16.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_17.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_18.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_19.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_20.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_21.cli",
-            "D:/Documents/MCAM/Slice Files/28-09-2017/03068 vertical_22.cli"
+            "D:/Documents/MCAM/Slice Files/22-09-2017/A1_13.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/A2_11.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/A3_15.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/B1_12.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/B2_10.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/B3_14.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/C1_2.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/C2.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/C3_3.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour1_15.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour2_14.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour3_13.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour4_12.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour5_11.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour6_10.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour7_9.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour8_8.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour9_7.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour10_6.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour11_5.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour12_4.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour13_3.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour14_2.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/Contour15.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/D1_6.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/D2_4.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/D3_8.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/E1_7.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/E2_5.cli",
+            "D:/Documents/MCAM/Slice Files/22-09-2017/E3_9.cli"
         ],
-        "Username": "asdf"
+        "Username": "Nicholas Lee"
     },
     "DefectDetector": {
-        "Contours": "",
-        "Image": "",
-        "ImagePrevious": "",
-        "Layer": 0,
+        "Contours": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1/contours/contours_0561.png",
+        "Image": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1/processed/scan/scanP_0561.png",
+        "ImagePrevious": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1/processed/scan/scanP_0560.png",
+        "Layer": 561,
         "Mode": "single",
-        "Phase": "coat"
+        "Phase": "Scan"
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-11-02 [15''43'53] Default",
+        "Folder": "D:/Documents/MCAM/Builds/2017-10-23 [12''53'01] Demo 1",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1
     },
     "Notifications": {
         "Attachment": "",
-        "Major": false,
-        "Minor": false,
+        "Major": true,
+        "Minor": true,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },

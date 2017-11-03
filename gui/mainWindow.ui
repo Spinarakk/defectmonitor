@@ -1382,7 +1382,7 @@
       <string>Recent Builds</string>
      </property>
      <addaction name="separator"/>
-     <addaction name="actionClearMenu"/>
+     <addaction name="actionClearBuilds"/>
     </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
@@ -1588,9 +1588,9 @@
     <string>Zooms out the image back to its original size. Double left-clicking the image does the same thing.</string>
    </property>
   </action>
-  <action name="actionClearMenu">
+  <action name="actionClearBuilds">
    <property name="text">
-    <string>Clear Menu</string>
+    <string>Clear Builds</string>
    </property>
   </action>
   <action name="actionClose">

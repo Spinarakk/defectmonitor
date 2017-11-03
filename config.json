@@ -117,6 +117,15 @@
             0
         ]
     },
+    "RecentBuilds": [
+        "D:/Documents/MCAM/Builds/sgdsdgsfddsf.json",
+        "D:/Documents/MCAM/Builds/Demo 1.json",
+        "D:/Documents/MCAM/Builds/Demo 4.json",
+        "D:/Documents/MCAM/Builds/DFASD.json",
+        "D:/Documents/MCAM/Builds/Demo 2.json",
+        "D:/Documents/MCAM/Builds/DFASD - Copy (4).json",
+        "D:/Documents/MCAM/Builds/DFASD - Copy (3).json"
+    ],
     "Threshold": {
         "HistogramCoat": 5000,
         "HistogramScan": 5000,

@@ -1,6 +1,14 @@
+November 3
+- Checked the entire code for cases of saving to the build or config JSON files to make sure that they are loaded in the same method
+- Implemented the Recent Builds feature in its entirety
+- Includes error checking for if the build's JSON file is deleted while the action is accessible
+- Works completely as intended and loads builds perfectly
+
 November 2
 - Kept trying to crack the CLS code but can't find a consistent signal of a new contour on the same layer
 - One contour is doable but multiple contours isn't
+- Added a save on close function that asks the user if he/she would like to save before closing the program
+- Did another cleanup of code
 
 October 30
 - Came up with a simple way of drawing the CLS part contours
