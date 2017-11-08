@@ -10,9 +10,9 @@ import image_processing
 
 
 class SliceConverter:
-    """Module used to convert any slice files from .cls or .cli format into ASCII format
+    """Module used to convert any slice files from .cli format into ASCII format
     Output can then be used to draw contours using OpenCV
-    Currently takes in a .cls or .cli file and parses it, saving it as a .txt file after conversion
+    Currently takes in a .cli file and parses it, saving it as a .txt file after conversion
     """
 
     def __init__(self):
@@ -57,26 +57,16 @@ class SliceConverter:
         self.progress = progress
 
         for filename in self.filenames:
-            # Executes if the sent file is a .cls file
-            if '.cls' in filename:
-                # Look for an already converted contours file, otherwise convert the cls file
-                if not os.path.isfile(filename.replace('.cls', '_contours.txt')):
-                    self.convert_cls(filename)
-            # Executes if the sent file is a .cli file
-            elif '.cli' in filename:
-                # Look for an already converted contours file, otherwise convert the cli file
-                if not os.path.isfile(filename.replace('.cli', '_contours.txt')):
-                    self.convert_cli(filename)
+            # Look for an already converted contours file, otherwise convert the cli file
+            if not os.path.isfile(filename.replace('.cli', '_contours.txt')):
+                self.convert_cli(filename)
 
         if self.draw_flag:
             # Draw and save the contours to an image file
             if self.draw_contours(self.filenames, self.part_colours, self.contours_folder):
                 self.status.emit('Current Part: None | Conversion completed successfully.')
-
-    def convert_cls(self, filename):
-        """Reads the .cli file and converts the contents from binary into an organised ASCII list
-        Right now doesn't work due to multiple contours not being able to be differentiated"""
-        pass
+        else:
+            self.status.emit('Current Part: None | Conversion completed successfully.')
 
     def convert_cli(self, filename):
         """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
@@ -252,7 +242,7 @@ class SliceConverter:
                 try:
                     contour_string = contour_dict[os.path.basename(filename)][layer]
                 except IndexError:
-                    # If the layer doesn't exist (because the part has ended), continue to the next iteration
+                    # If the layer doesn't exist (because the part is finished), continue to the next iteration
                     continue
 
                 # Split up the string into a list based on the C, delimiter (and throw away the first element)

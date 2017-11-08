@@ -12,9 +12,6 @@ class Ui_dialogDefectReports(object):
     def setupUi(self, dialogDefectReports):
         dialogDefectReports.setObjectName("dialogDefectReports")
         dialogDefectReports.resize(420, 695)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogDefectReports.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(dialogDefectReports)
         self.gridLayout.setObjectName("gridLayout")
         self.labelParts = QtWidgets.QLabel(dialogDefectReports)
@@ -222,4 +219,3 @@ class Ui_dialogDefectReports(object):
         self.pushPrint.setText(_translate("dialogDefectReports", "Print Report"))
         self.pushDone.setText(_translate("dialogDefectReports", "Done"))
 
-import icons_rc

@@ -12,9 +12,6 @@ class Ui_dialogOverlayAdjustment(object):
     def setupUi(self, dialogOverlayAdjustment):
         dialogOverlayAdjustment.setObjectName("dialogOverlayAdjustment")
         dialogOverlayAdjustment.resize(358, 290)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogOverlayAdjustment.setWindowIcon(icon)
         self.gridLayout_3 = QtWidgets.QGridLayout(dialogOverlayAdjustment)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.groupRotationFlip = QtWidgets.QGroupBox(dialogOverlayAdjustment)
@@ -469,4 +466,3 @@ class Ui_dialogOverlayAdjustment(object):
         self.pushStretchRightDown.setText(_translate("dialogOverlayAdjustment", "RD"))
         self.pushDone.setText(_translate("dialogOverlayAdjustment", "Done"))
 
-import icons_rc

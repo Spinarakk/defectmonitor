@@ -14,9 +14,6 @@ class Ui_dialogCalibrationResults(object):
         dialogCalibrationResults.resize(319, 362)
         dialogCalibrationResults.setMinimumSize(QtCore.QSize(319, 362))
         dialogCalibrationResults.setMaximumSize(QtCore.QSize(319, 362))
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogCalibrationResults.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(dialogCalibrationResults)
         self.gridLayout.setObjectName("gridLayout")
         self.labelCameraMatrix = QtWidgets.QLabel(dialogCalibrationResults)
@@ -176,4 +173,3 @@ class Ui_dialogCalibrationResults(object):
         self.tableDistortionCoefficients.setSortingEnabled(False)
         self.tableDistortionCoefficients.setSortingEnabled(__sortingEnabled)
 
-import icons_rc

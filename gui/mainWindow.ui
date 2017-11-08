@@ -7,15 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>1122</width>
-    <height>785</height>
+    <height>761</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Defect Monitor</string>
-  </property>
-  <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -1133,7 +1129,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>0</number>
          </property>
          <property name="tabSpacing">
           <number>3</number>
@@ -1194,7 +1190,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>119</width>
             <height>91</height>
            </rect>
           </property>
@@ -1248,7 +1244,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>119</width>
             <height>91</height>
            </rect>
           </property>
@@ -1289,69 +1285,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushProcessSelected">
-             <property name="text">
-              <string>Process Selected...</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="pageReportsResults">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>136</width>
-            <height>91</height>
-           </rect>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <attribute name="label">
-           <string>Reports / Results</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
-            <number>5</number>
-           </property>
-           <item>
-            <widget class="QPushButton" name="pushCalibrationResults">
-             <property name="text">
-              <string>Calibration Results</string>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="pushDefectReports">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
              <property name="text">
               <string>Defect Reports</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushDefectGraphs">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Defect Graphs</string>
              </property>
             </widget>
            </item>
@@ -1393,7 +1329,7 @@
     <addaction name="separator"/>
     <addaction name="actionExportImage"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -1403,9 +1339,7 @@
     <addaction name="actionZoomOut"/>
     <addaction name="separator"/>
     <addaction name="actionCalibrationResults"/>
-    <addaction name="separator"/>
     <addaction name="actionDefectReports"/>
-    <addaction name="actionDefectGraphs"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1417,8 +1351,6 @@
      </property>
      <addaction name="actionProcessCurrent"/>
      <addaction name="actionProcessAll"/>
-     <addaction name="separator"/>
-     <addaction name="actionProcessSelected"/>
     </widget>
     <addaction name="actionCameraCalibration"/>
     <addaction name="actionOverlayAdjustment"/>
@@ -1512,9 +1444,9 @@
     <string>Export Image...</string>
    </property>
   </action>
-  <action name="actionQuit">
+  <action name="actionExit">
    <property name="text">
-    <string>Quit</string>
+    <string>Exit</string>
    </property>
   </action>
   <action name="actionCameraSettings">
@@ -1613,11 +1545,17 @@
    </property>
   </action>
   <action name="actionProcessCurrent">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Process Current</string>
    </property>
   </action>
   <action name="actionProcessAll">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Process All</string>
    </property>
@@ -1701,9 +1639,7 @@
   <tabstop>graphicsPC</tabstop>
   <tabstop>graphicsIC</tabstop>
  </tabstops>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>checkResume</sender>

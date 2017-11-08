@@ -16,9 +16,6 @@ class Ui_dialogNewBuild(object):
         font = QtGui.QFont()
         font.setPointSize(9)
         dialogNewBuild.setFont(font)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogNewBuild.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(dialogNewBuild)
         self.gridLayout.setContentsMargins(10, 10, 10, 10)
         self.gridLayout.setObjectName("gridLayout")
@@ -249,4 +246,3 @@ class Ui_dialogNewBuild(object):
         self.labelEmailAddress.setText(_translate("dialogNewBuild", "Email Address"))
         self.labelBuildPlatform.setText(_translate("dialogNewBuild", "Build Platform"))
 
-import icons_rc

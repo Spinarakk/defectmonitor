@@ -1,3 +1,16 @@
+November 8
+- Added a save confirmation to before running the build
+- The build now autosaves after every picture taken so that the image capture numbering is preserved (might not be necessary for the new machine version)
+- Added a basic About window displaying a bit of information about the application
+- Started version numbering from 0.7.3, 0 indicating an alpha build
+- Recreated a higher resolution Defect Monitor icon
+- Fixed the modality of all the QMessageBoxes
+- Added the new Defect Monitor icon to all the QMessageBoxes and windows as a result of the above fix
+- Fixed a few parts that I accidentally broke while cleaning up other parts
+- Removed the Process Selected button and feature due to it being largely unnecessary
+- Turned the Process Selected button into the Defect Reports button
+- Removed the Reports / Results tab, Calibration Results has been consolidated to the Camera Calibration window
+
 November 3
 - Checked the entire code for cases of saving to the build or config JSON files to make sure that they are loaded in the same method
 - Implemented the Recent Builds feature in its entirety

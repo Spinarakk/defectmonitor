@@ -12,9 +12,6 @@ class Ui_dialogCameraCalibration(object):
     def setupUi(self, dialogCameraCalibration):
         dialogCameraCalibration.setObjectName("dialogCameraCalibration")
         dialogCameraCalibration.resize(338, 350)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogCameraCalibration.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(dialogCameraCalibration)
         self.gridLayout.setObjectName("gridLayout")
         self.frameButtons = QtWidgets.QFrame(dialogCameraCalibration)
@@ -238,4 +235,3 @@ class Ui_dialogCameraCalibration(object):
         self.listImages.setToolTip(_translate("dialogCameraCalibration", "List of calibration images found in the above folder."))
         self.labelCalibrationSettings.setText(_translate("dialogCameraCalibration", "Calibration Settings"))
 
-import icons_rc

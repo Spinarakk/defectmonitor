@@ -101,14 +101,13 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         """Sends a test notification email to the entered email address"""
 
         # Open a message box with a send test email confirmation message so accidental emails don't get sent
-        send_confirmation = QMessageBox()
+        send_confirmation = QMessageBox(self)
+        send_confirmation.setWindowTitle('Send Test Email')
         send_confirmation.setIcon(QMessageBox.Question)
         send_confirmation.setText('Are you sure you want to send a test email notification to %s?\n\n'
                                   'Note: This will save your entered Username and Email Address to the config file.' %
                                   self.lineEmailAddress.text())
-        send_confirmation.setWindowTitle('Send Test Email')
         send_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-
         retval = send_confirmation.exec_()
 
         # If the user clicked Yes
@@ -135,10 +134,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.threadpool.start(worker)
             else:
                 # Opens a message box indicating that the entered email address is invalid
-                invalid_email_error = QMessageBox()
+                invalid_email_error = QMessageBox(self)
+                invalid_email_error.setWindowTitle('Error')
                 invalid_email_error.setIcon(QMessageBox.Critical)
                 invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
-                invalid_email_error.setWindowTitle('Error')
                 invalid_email_error.exec_()
 
     def send_test_finished(self):
@@ -147,11 +146,11 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.pushCreate.setEnabled(True)
         self.pushCancel.setEnabled(True)
 
-        send_test_confirmation = QMessageBox()
+        send_test_confirmation = QMessageBox(self)
+        send_test_confirmation.setWindowTitle('Send Test Email')
         send_test_confirmation.setIcon(QMessageBox.Information)
         send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
                                        (self.lineEmailAddress.text(), self.lineUsername.text()))
-        send_test_confirmation.setWindowTitle('Send Test Email')
         send_test_confirmation.exec_()
 
     def set_list(self, file_list):
@@ -194,10 +193,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             error_message += 'Email Address not valid.\n'
 
         if error_message:
-            missing_folder_error = QMessageBox()
+            missing_folder_error = QMessageBox(self)
+            missing_folder_error.setWindowTitle('Error')
             missing_folder_error.setIcon(QMessageBox.Critical)
             missing_folder_error.setText(error_message.rstrip('\n'))
-            missing_folder_error.setWindowTitle('Error')
             missing_folder_error.exec_()
         else:
             # Save all the entered information to the config.json file
@@ -273,10 +272,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             else:
                 # Check if the folder containing the images exist if a build was opened
                 if not os.path.isdir(self.build['ImageCapture']['Folder']):
-                    missing_folder_error = QMessageBox()
-                    missing_folder_error.setIcon(QMessageBox.Critical)
-                    missing_folder_error.setText('Image folder not found.\nBuild cancelled.')
+                    missing_folder_error = QMessageBox(self)
                     missing_folder_error.setWindowTitle('Error')
+                    missing_folder_error.setIcon(QMessageBox.Critical)
+                    missing_folder_error.setText('Image folder not found.\n\nBuild cancelled.')
                     missing_folder_error.exec_()
 
                     # Close the New Build window, return to the Main Window and do nothing
@@ -553,6 +552,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
         try:
             self.restoreGeometry(self.window_settings.value('Camera Settings Geometry', ''))
         except TypeError:
@@ -638,6 +638,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
         try:
             self.restoreGeometry(self.window_settings.value('Slice Converter Geometry', ''))
         except TypeError:
@@ -663,19 +664,15 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
 
-        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')[0]
+        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cli)')[0]
 
         if filenames:
             self.slice_list = filenames
             self.listSliceFiles.clear()
             self.buttonStart.setEnabled(True)
             self.update_status('Current Part: None | Waiting to start conversion.')
-            for index, item in enumerate(self.slice_list):
+            for item in self.slice_list:
                 self.listSliceFiles.addItem(os.path.basename(item))
-                if '.cls' in item:
-                    self.listSliceFiles.item(index).setBackground(QColor('blue'))
-                elif '.cli' in item:
-                    self.listSliceFiles.item(index).setBackground(QColor('yellow'))
 
     def browse_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
@@ -725,10 +722,14 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.build['SliceConverter']['RangeLow'] = self.spinRangeLow.value()
             self.build['SliceConverter']['RangeHigh'] = self.spinRangeHigh.value()
 
+            with open('build.json', 'w+') as build:
+                json.dump(self.build, build, indent=4, sort_keys=True)
+
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
             worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
             worker.signals.finished.connect(self.start_finished)
+            self.threadpool.start(worker)
 
         elif 'Pause' in self.buttonStart.text():
             self.build['SliceConverter']['Pause'] = True
@@ -739,9 +740,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
-
-        if 'Start' in self.buttonStart.text():
-            self.threadpool.start(worker)
 
     def start_finished(self):
         """Executes when the SliceConverter instance has finished"""
@@ -795,11 +793,11 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Check if a conversion is in progress or paused, and block the user from closing the window until stopped
         if not self.buttonDone.isEnabled():
-            run_error = QMessageBox()
-            run_error.setIcon(QMessageBox.Critical)
-            run_error.setText('Conversion in progress or paused.\n'
-                              'Please stop or wait for the conversion to finish before exiting.')
+            run_error = QMessageBox(self)
             run_error.setWindowTitle('Error')
+            run_error.setIcon(QMessageBox.Critical)
+            run_error.setText('Conversion in progress or paused.\n\n'
+                              'Please stop or wait for the conversion to finish before exiting.')
             run_error.exec_()
             event.ignore()
         else:
@@ -828,6 +826,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
         try:
             self.restoreGeometry(self.window_settings.value('Overlay Adjustment Geometry', ''))
         except TypeError:
@@ -1043,6 +1042,7 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
         try:
             self.restoreGeometry(self.window_settings.value('Calibration Results Geometry', ''))
         except TypeError:
@@ -1094,6 +1094,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
         try:
             self.restoreGeometry(self.window_settings.value('Defect Reports Geometry', ''))
         except TypeError:

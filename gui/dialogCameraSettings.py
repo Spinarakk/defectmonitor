@@ -12,9 +12,6 @@ class Ui_dialogCameraSettings(object):
     def setupUi(self, dialogCameraSettings):
         dialogCameraSettings.setObjectName("dialogCameraSettings")
         dialogCameraSettings.resize(277, 199)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogCameraSettings.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(dialogCameraSettings)
         self.gridLayout.setObjectName("gridLayout")
         self.spinPacketSize = QtWidgets.QSpinBox(dialogCameraSettings)
@@ -160,4 +157,3 @@ class Ui_dialogCameraSettings(object):
         self.pushOK.setText(_translate("dialogCameraSettings", "OK"))
         self.pushCancel.setText(_translate("dialogCameraSettings", "Cancel"))
 
-import icons_rc

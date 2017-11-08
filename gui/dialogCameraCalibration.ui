@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Camera Calibration</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
-  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="11" column="0" colspan="4">
     <widget class="QFrame" name="frameButtons">
@@ -427,9 +423,7 @@
   <tabstop>pushSave</tabstop>
   <tabstop>pushDone</tabstop>
  </tabstops>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>pushDone</sender>

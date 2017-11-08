@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Overlay Adjustment</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
-  </property>
   <layout class="QGridLayout" name="gridLayout_3">
    <item row="2" column="2" colspan="2">
     <widget class="QGroupBox" name="groupRotationFlip">
@@ -1043,9 +1039,7 @@
   <tabstop>pushFlipHorizontal</tabstop>
   <tabstop>pushFlipVertical</tabstop>
  </tabstops>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>pushDone</sender>

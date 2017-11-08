@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Defect Reports</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/resources/logo.ico</normaloff>:/resources/logo.ico</iconset>
-  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
     <widget class="QLabel" name="labelParts">
@@ -400,9 +396,7 @@
   <tabstop>pushDone</tabstop>
   <tabstop>tableScan</tabstop>
  </tabstops>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>pushDone</sender>

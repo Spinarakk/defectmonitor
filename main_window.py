@@ -10,6 +10,7 @@ import math
 
 # Import PyQt modules
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 
@@ -42,6 +43,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         super(self.__class__, self).__init__(parent)
         self.setupUi(self)
 
+        # Set the window icon
+        self.setWindowIcon(QIcon('gui/logo.ico'))
+
         # Load default working build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
             self.build = json.load(build)
@@ -69,14 +73,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSave.triggered.connect(self.save_build)
         self.actionSaveAs.triggered.connect(self.save_as_build)
         self.actionExportImage.triggered.connect(self.export_image)
-        self.actionQuit.triggered.connect(self.closeEvent)
+        self.actionExit.triggered.connect(self.exit_program)
 
         # Menubar -> View
         self.actionZoomIn.triggered.connect(self.zoom_in)
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
-        self.actionDefectGraphs.triggered.connect(self.defect_graphs)
 
         # Menubar -> Tools
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
@@ -87,7 +90,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
         self.actionProcessCurrent.triggered.connect(self.process_current)
         self.actionProcessAll.triggered.connect(self.process_all)
-        self.actionProcessSelected.triggered.connect(self.process_selected)
 
         # Menubar -> Settings
         self.actionCameraSettings.triggered.connect(self.camera_settings)
@@ -118,12 +120,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Sidebar Toolbox Defect Processor
         self.pushProcessCurrent.clicked.connect(self.process_current)
         self.pushProcessAll.clicked.connect(self.process_all)
-        self.pushProcessSelected.clicked.connect(self.process_selected)
-
-        # Sidebar Toolbox Reports / Results
-        self.pushCalibrationResults.clicked.connect(self.calibration_results)
         self.pushDefectReports.clicked.connect(self.defect_reports)
-        self.pushDefectGraphs.clicked.connect(self.defect_graphs)
 
         # Layer Selection
         self.pushGo.clicked.connect(self.set_layer)
@@ -226,10 +223,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                 # Check if the build's json file exists
                 if not os.path.isfile(filename):
-                    missing_file_error = QMessageBox()
+                    missing_file_error = QMessageBox(self)
+                    missing_file_error.setWindowTitle('Error')
                     missing_file_error.setIcon(QMessageBox.Critical)
                     missing_file_error.setText('The file %s could not be opened.\n\nNo such file exists.' % filename)
-                    missing_file_error.setWindowTitle('Error')
                     missing_file_error.exec_()
 
                     # Reset the Recent Builds menu to account for the missing files
@@ -239,7 +236,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         if not filename:
             # Open a File Dialog to allow the user to select a file if it wasn't a recent build that was selected
-            filename = QFileDialog.getOpenFileName(self, 'Browse...', self.build['BuildInfo']['Folder'],
+            filename = QFileDialog.getOpenFileName(self, 'Open', self.build['BuildInfo']['Folder'],
                                                    'JSON File (*.json)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
@@ -435,7 +432,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
 
-        filename = QFileDialog.getSaveFileName(self, 'Save Build As', '%s/%s' %
+        filename = QFileDialog.getSaveFileName(self, 'Save As', '%s/%s' %
                                                (self.build['BuildInfo']['Folder'], self.build['BuildInfo']['Name']),
                                                'JSON File (*.json)')[0]
 
@@ -454,7 +451,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        image_name = QFileDialog.getSaveFileName(self, 'Export Image As', '', 'Image (*.png)')[0]
+        image_name = QFileDialog.getSaveFileName(self, 'Export Image', '', 'Image (*.png)')[0]
 
         # Checking if user has chosen to save the image or clicked cancel
         if image_name:
@@ -462,11 +459,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             cv2.imwrite(image_name, self.display['DisplayImage'][self.widgetDisplay.currentIndex()])
 
             # Open a message box with a save confirmation message
-            self.export_confirmation = QMessageBox()
-            self.export_confirmation.setIcon(QMessageBox.Information)
-            self.export_confirmation.setText('The image has been saved to %s.' % image_name)
-            self.export_confirmation.setWindowTitle('Export Image')
-            self.export_confirmation.exec_()
+            export_confirmation = QMessageBox(self)
+            export_confirmation.setWindowTitle('Export Image')
+            export_confirmation.setIcon(QMessageBox.Information)
+            export_confirmation.setText('The image has been saved as %s.' % image_name)
+            export_confirmation.exec_()
+
+    def exit_program(self):
+        """Connecting actionExit to closeEvent directly doesn't work so the window close needs to be called instead"""
+        self.close()
 
     # MENUBAR -> VIEW
 
@@ -514,9 +515,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def defect_reports_closed(self):
         self.DR_dialog = None
 
-    def defect_graphs(self):
-        pass
-
     # MENUBAR -> TOOLS
 
     def camera_calibration(self):
@@ -549,7 +547,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.OA_dialog = dialog_windows.OverlayAdjustment(self)
             self.OA_dialog.update_overlay.connect(self.update_display)
             self.OA_dialog.destroyed.connect(self.overlay_adjustment_closed)
-
             self.OA_dialog.show()
         else:
             self.OA_dialog.activateWindow()
@@ -579,7 +576,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Get the name of the image file to be processed
-        image_name = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')[0]
+        image_name = QFileDialog.getOpenFileName(self, 'Image Converter', '', 'Image Files (*.png)')[0]
 
         # Checking if user has selected a file or clicked cancel
         if image_name:
@@ -662,11 +659,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessAll.setText('Process All')
             self.toggle_processing_buttons(3)
 
-    def process_selected(self):
-        """Runs the user selected image through the DefectDetector and saves it to the same folder as the input image
-        Both the coat and scan defect processes are executed on the image and saved as separate images"""
-        pass
-
     def process_settings(self, layer):
         """Saves the settings to be used to process an image for defects to the build.json file
         This method exists as the only difference between the two options is the layer number"""
@@ -743,40 +735,30 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessCurrent.setEnabled(False)
             self.pushProcessAll.setEnabled(False)
             self.actionProcessAll.setEnabled(False)
-            self.pushProcessSelected.setEnabled(True)
-            self.actionProcessSelected.setEnabled(True)
         # State 2 is when the current image CAN be processed
         elif state == 2:
             self.pushProcessCurrent.setEnabled(True)
             self.actionProcessCurrent.setEnabled(True)
             self.pushProcessAll.setEnabled(True)
             self.actionProcessAll.setEnabled(True)
-            self.pushProcessSelected.setEnabled(True)
-            self.actionProcessSelected.setEnabled(True)
         # State 3 is when a Process Current or Process Selected process is running
         elif state == 3:
             self.pushProcessCurrent.setEnabled(False)
             self.actionProcessCurrent.setEnabled(False)
             self.pushProcessAll.setEnabled(False)
             self.actionProcessAll.setEnabled(False)
-            self.pushProcessSelected.setEnabled(False)
-            self.actionProcessSelected.setEnabled(False)
         # State 4 is when a Process All is running
         elif state == 4:
             self.pushProcessCurrent.setEnabled(False)
             self.actionProcessCurrent.setEnabled(False)
             self.pushProcessAll.setEnabled(True)
             self.actionProcessAll.setEnabled(True)
-            self.pushProcessSelected.setEnabled(False)
-            self.actionProcessSelected.setEnabled(False)
         # State 5 is when the current image CANNOT be processed but the tab still has other images that CAN
         elif state == 5:
             self.pushProcessCurrent.setEnabled(False)
             self.actionProcessCurrent.setEnabled(False)
             self.pushProcessAll.setEnabled(True)
             self.actionProcessAll.setEnabled(True)
-            self.pushProcessSelected.setEnabled(True)
-            self.actionProcessSelected.setEnabled(True)
 
     # MENUBAR -> SETTINGS
 
@@ -836,7 +818,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         pass
 
     def view_about(self):
-        pass
+        """Opens a Modal About QMessageBox displaying some pertinent information about the application"""
+
+        QMessageBox.about(self, 'About Defect Monitor',
+                          '<b>Defect Monitor</b><br><br>Version 0.7.3<br> Defect Monitor is a monitoring application '
+                          'used to detect defects within the scan and coat layers of a 3D metal printing build.'
+                          '<br><br>Copyright (C) 2017 MCAM.')
 
     # LAYER SELECTION
 
@@ -885,6 +872,23 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Executes when the Run button is clicked
         Polls the trigger device for a trigger, subsequently capturing and saving an image if triggered
         """
+
+        # Check whether the build has been saved before running anything
+        if self.build_name is None:
+            # Open a message box with a save confirmation message so that the user can save the build before running
+            save_confirmation = QMessageBox(self)
+            save_confirmation.setWindowTitle('Run')
+            save_confirmation.setIcon(QMessageBox.Information)
+            save_confirmation.setText('The current build needs to be saved before it can be run.\n\n'
+                                      'Save the current build?')
+            save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+            retval = save_confirmation.exec_()
+
+            # Save the build if prompted, otherwise exit the method
+            if retval == 2048:
+                self.save_as_build()
+            else:
+                return
 
         with open('build.json') as build:
             self.build = json.load(build)
@@ -962,13 +966,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def capture_run_finished(self):
         """Reset the time idle counter and restart the trigger polling after resetting the serial input"""
+
         self.serial_trigger.reset_input_buffer()
         self.stopwatch_idle = 0
         self.pushPauseResume.setEnabled(True)
         self.pushStop.setEnabled(True)
+
         # Enables the Faux Trigger button if advanced mode is on
         if self.actionAdvancedMode.isChecked():
             self.pushFauxTrigger.setEnabled(True)
+
+        # Autosave the build to retain capture numbering
+        self.save_build()
         self.capture_run('')
 
     def pause_build(self):
@@ -1581,12 +1590,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_status(self, string, duration=0):
         """Updates the default status bar at the bottom of the Main Window with the received string argument"""
-
         self.statusBar.showMessage(string, duration)
 
     def update_progress(self, percentage):
         """Updates the progress bar at the bottom of the Main Window with the received percentage argument"""
-
         self.progressBar.setValue(int(percentage))
 
     # CLEANUP
@@ -1597,11 +1604,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Only ask to save if the user has actually started/opened a build, aka if the display flag is set
         if self.display_flag:
             # Open a message box with a save confirmation message so that the user can save the build before closing
-            save_confirmation = QMessageBox()
-            save_confirmation.setIcon(QMessageBox.Information)
+            save_confirmation = QMessageBox(self)
+            save_confirmation.setWindowTitle('Defect Monitor')
+            save_confirmation.setIcon(QMessageBox.Warning)
             save_confirmation.setText('Do you want to save the changes to this build before closing?\n\n'
                                       'If you don\'t save, changes to your build will be lost.')
-            save_confirmation.setWindowTitle('Save Build?')
             save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
             retval = save_confirmation.exec_()
 

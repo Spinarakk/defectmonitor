@@ -11,10 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_dialogSliceConverter(object):
     def setupUi(self, dialogSliceConverter):
         dialogSliceConverter.setObjectName("dialogSliceConverter")
-        dialogSliceConverter.resize(321, 268)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/resources/logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        dialogSliceConverter.setWindowIcon(icon)
+        dialogSliceConverter.resize(321, 240)
         self.gridLayout = QtWidgets.QGridLayout(dialogSliceConverter)
         self.gridLayout.setObjectName("gridLayout")
         self.checkRange = QtWidgets.QCheckBox(dialogSliceConverter)
@@ -100,11 +97,10 @@ class Ui_dialogSliceConverter(object):
         self.checkRange.setText(_translate("dialogSliceConverter", "Draw Range"))
         self.checkDraw.setText(_translate("dialogSliceConverter", "Draw Contours"))
         self.buttonDone.setText(_translate("dialogSliceConverter", "Done"))
-        self.labelStatus.setText(_translate("dialogSliceConverter", "Please select a .cls or .cli file(s) to convert."))
+        self.labelStatus.setText(_translate("dialogSliceConverter", "Please select a .cli file(s) to convert."))
         self.buttonStart.setText(_translate("dialogSliceConverter", "Start"))
         self.buttonStop.setText(_translate("dialogSliceConverter", "Stop"))
         self.labelStatusSlice.setText(_translate("dialogSliceConverter", "Current Part: None"))
         self.buttonBrowseSF.setText(_translate("dialogSliceConverter", "Browse..."))
         self.buttonBrowseF.setText(_translate("dialogSliceConverter", "Browse..."))
 
-import icons_rc
