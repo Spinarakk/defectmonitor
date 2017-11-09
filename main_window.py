@@ -101,7 +101,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionAbout.triggered.connect(self.view_about)
 
         # Display Options Group Box
-        self.radioOriginal.clicked.connect(self.update_display)
+        self.radioProcessed.clicked.connect(self.update_display)
         self.radioDefects.clicked.connect(self.update_display)
         self.checkCLAHE.toggled.connect(self.update_display)
         self.checkOverlay.toggled.connect(self.toggle_overlay)
@@ -157,11 +157,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.all_flag = False
 
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
-        self.DR_dialog = None   # Defect Reports
-        self.CC_dialog = None   # Camera Calibration
-        self.OA_dialog = None   # Overlay Adjustment
-        self.SC_dialog = None   # Slice Converter
-        self.CS_dialog = None   # Camera Settings
+        self.DR_dialog = None  # Defect Reports
+        self.CC_dialog = None  # Camera Calibration
+        self.OA_dialog = None  # Overlay Adjustment
+        self.SC_dialog = None  # Slice Converter
+        self.CS_dialog = None  # Camera Settings
 
         # Initiate an empty config file name to be used for saving purposes
         self.build_name = None
@@ -174,6 +174,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Fill the Recent Builds drop-down menu with the recent builds
         self.add_recent_builds('')
+
+        # Set the data table's columns and rows to automatically resize appropriately to make it as small as possible
+        # self.tableDefects.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableDefects.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.tableDefects.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.update_table_empty()
 
         # Because each tab on the widgetDisplay has its own set of associated images, display labels and sliders
         # And because they all do essentially the same functions
@@ -648,7 +654,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Remove the already processed defect images from the image list
             self.layer_numbers = sorted(list(set(self.display['LayerNumbers'][self.tab_index]) -
-                                      set(self.display['LayerNumbers'][self.tab_index + 4])))
+                                             set(self.display['LayerNumbers'][self.tab_index + 4])))
             self.process_settings(self.layer_numbers[self.defect_counter])
 
         elif 'Process Stop' in self.pushProcessAll.text():
@@ -1081,11 +1087,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             index = 3
 
-        # Set the tab to focus on the current layer and
+        # Set the tab to focus on the current phase and layer number
         self.tab_focus(index, layer)
 
-        # Process the image for defects, the image being the one the above method set focus to
-        self.process_current()
+        # Process only the coat or scan image for defects, the image being the one the above method set focus to
+        if index < 2:
+            self.process_current()
 
     # DISPLAY
 
@@ -1250,6 +1257,102 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.groupDisplayOptions.setEnabled(False)
             self.toggle_display_buttons(False)
 
+    def update_table(self):
+        """Updates the Defect Data table with the current layer's defect data if available"""
+
+        # Load the defect (combined) data from the report JSON file
+        with open('%s/reports/combined_report.json' % self.build['ImageCapture']['Folder']) as report:
+            report = json.load(report)
+
+        index = self.widgetDisplay.currentIndex()
+        layer = str(self.sliderDisplay.value()).zfill(4)
+        colours = list()
+
+        # Process to fill the table is very similar to the display_report method within the DefectReports class
+        # Therefore this section will not be commented at all
+        if report:
+            if index == 0:
+                thresholds = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                              self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
+                              self.config['Threshold']['HistogramCoat'], None]
+
+                try:
+                    data = report[layer]['Coat']
+                except (IndexError, KeyError):
+                    self.update_table_empty()
+                    return
+
+                if data:
+                    data_sorted = [data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0], 0, 0]
+
+                    try:
+                        data_sorted[4] = round(data['HC'], 2)
+                    except (KeyError, IndexError):
+                        pass
+
+                    for index, value in enumerate(data_sorted):
+                        if thresholds[index] is None:
+                            colours.append(QColor(255, 255, 255))
+                        elif value < thresholds[index]:
+                            colours.append(QColor(0, 255, 0))
+                        else:
+                            colours.append(QColor(255, 0, 0))
+                else:
+                    self.update_table_empty()
+                    return
+
+            elif index == 1:
+                thresholds = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
+                              None, None, self.config['Threshold']['HistogramScan'],
+                              self.config['Threshold']['Overlay']]
+
+                try:
+                    data = report[layer]['Scan']
+                except (IndexError, KeyError):
+                    self.update_table_empty()
+                    return
+
+                if data:
+                    data_sorted = [data['BS'][1], data['BC'][1], 0, 0, 0, 0]
+
+                    try:
+                        data_sorted[4] = round(data['HC'], 2)
+                    except (KeyError, IndexError):
+                        pass
+
+                    try:
+                        data_sorted[5] = round(data['OC'] * 100, 4)
+                    except (KeyError, IndexError):
+                        pass
+
+                    for index, value in enumerate(data_sorted):
+                        if thresholds[index] is None:
+                            colours.append(QColor(255, 255, 255))
+                        elif value < thresholds[index] and index < 5:
+                            colours.append(QColor(0, 255, 0))
+                        elif value > thresholds[index] and index == 5:
+                            colours.append(QColor(0, 255, 0))
+                        else:
+                            colours.append(QColor(255, 0, 0))
+
+                else:
+                    self.update_table_empty()
+                    return
+
+            for row in range(6):
+                self.tableDefects.setItem(row, 0, QTableWidgetItem(str(data_sorted[row])))
+                self.tableDefects.item(row, 0).setBackground(colours[row])
+        else:
+            self.update_table_empty()
+
+    def update_table_empty(self):
+        """Updates the Defect Data table with empty 0 values with a white background if the data isn't available
+        Or if the current tab isn't either the coat or scan tabs"""
+
+        for row in range(6):
+            self.tableDefects.setItem(row, 0, QTableWidgetItem('0'))
+            self.tableDefects.item(row, 0).setBackground(QColor(255, 255, 255))
+
     def toggle_display_buttons(self, flag, seek_flag=False):
         """Enables or disables the following buttons/actions in one fell swoop"""
 
@@ -1366,10 +1469,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Set the radio button to Original as contours have no defect images and disable the Defect Processor
             if index == 2:
-                self.radioOriginal.setChecked(True)
+                self.radioProcessed.setChecked(True)
 
             # Update the image on the graphics display with the new image (in case image has been deleted)
             self.update_display(index)
+
+            # Update the Defect Data table if the coat or scan tabs are being displayed, otherwise set to 0
+            if index < 2:
+                self.update_table()
+            else:
+                self.update_table_empty()
 
             # Zoom out and reset the image
             self.display['GraphicsNames'][index].reset_image()
@@ -1409,6 +1518,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Update the image on the graphics display with the new image
         self.update_display(self.widgetDisplay.currentIndex())
 
+        # Update the Defect Data table if the coat or scan tabs are being displayed
+        if self.widgetDisplay.currentIndex() < 2:
+            self.update_table()
+
     def slider_up(self):
         """Increments the slider by 1"""
         self.sliderDisplay.setValue(self.sliderDisplay.value() + 1)
@@ -1417,7 +1530,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Jumps the slider to the first available image in the positive direction"""
 
         # If the Defect Analysis radio button is checked, use the defect image list instead
-        if self.radioOriginal.isChecked():
+        if self.radioProcessed.isChecked():
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
         else:
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex() + 4]
@@ -1444,7 +1557,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def slider_down_seek(self):
         """Jumps the slider to the first available image in the negative direction"""
 
-        if self.radioOriginal.isChecked():
+        if self.radioProcessed.isChecked():
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex()]
         else:
             number_list = self.display['LayerNumbers'][self.widgetDisplay.currentIndex() + 4]
@@ -1618,7 +1731,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Ignore the closing of the Main Window if the Cancel button was pressed
             elif retval == 4194304:
                 event.ignore()
-            # Otherwise just close the Main Window without saving
+                # Otherwise just close the Main Window without saving
 
 
 if __name__ == '__main__':

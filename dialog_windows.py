@@ -567,6 +567,8 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
 
         # Setup event listeners for all the setting boxes to detect a change in an entered value
         self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
+        self.spinGain.valueChanged.connect(self.apply_enable)
+        self.spinBlackLevel.valueChanged.connect(self.apply_enable)
         self.spinExposureTime.valueChanged.connect(self.apply_enable)
         self.spinPacketSize.valueChanged.connect(self.apply_enable)
         self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
@@ -576,17 +578,18 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         # Set the combo box and settings to the previously saved values
         # Combo box settings are saved as their index values in the config.json file
         self.comboPixelFormat.setCurrentIndex(int(self.config['CameraSettings']['PixelFormat']))
-        self.spinExposureTime.setValue(int(self.config['CameraSettings']['ExposureTimeAbs']))
+        self.spinGain.setValue(self.config['CameraSettings']['Gain'])
+        self.spinBlackLevel.setValue(self.config['CameraSettings']['BlackLevel'])
+        self.spinExposureTime.setValue(int(self.config['CameraSettings']['ExposureTime']))
         self.spinPacketSize.setValue(int(self.config['CameraSettings']['PacketSize']))
         self.spinInterPacketDelay.setValue(int(self.config['CameraSettings']['InterPacketDelay']))
-        self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameTransmissionDelay']))
+        self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameDelay']))
         self.spinTriggerTimeout.setValue(int(self.config['CameraSettings']['TriggerTimeout']))
 
         self.pushApply.setEnabled(False)
 
     def apply_enable(self):
         """Enable the Apply button on any change of settings"""
-
         self.pushApply.setEnabled(True)
 
     def apply(self):
@@ -597,7 +600,9 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
 
         # Save the new values from the changed settings to the config dictionary
         self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
-        self.config['CameraSettings']['ExposureTimeAbs'] = self.spinExposureTime.value()
+        self.config['CameraSettings']['Gain'] = self.spinGain.value()
+        self.config['CameraSettings']['BlackLevel'] = self.spinBlackLevel.value()
+        self.config['CameraSettings']['ExposureTime'] = self.spinExposureTime.value()
         self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
         self.config['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
         self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()

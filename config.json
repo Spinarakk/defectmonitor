@@ -11,12 +11,15 @@
         "Width": 9
     },
     "CameraSettings": {
-        "ExposureTimeAbs": 10000,
+        "BlackLevel": 500,
+        "ExposureTime": 20000,
+        "FrameDelay": 0,
         "FrameTransmissionDelay": 0,
+        "Gain": 51,
         "InterPacketDelay": 0,
         "PacketSize": 1500,
         "PixelFormat": 0,
-        "TriggerTimeout": 1
+        "TriggerTimeout": 3
     },
     "ImageCorrection": {
         "CameraMatrix": [
@@ -118,13 +121,6 @@
         ]
     },
     "RecentBuilds": [
-        "D:/Documents/MCAM/Builds/sgdsdgsfddsf.json",
-        "D:/Documents/MCAM/Builds/DFASD - Copy (4).json",
-        "D:/Documents/MCAM/Builds/DFASD - Copy (3).json",
-        "D:/Documents/MCAM/Builds/DFASD.json",
-        "D:/Documents/MCAM/Builds/DFASD - Copy (2).json",
-        "D:/Documents/MCAM/Builds/Demo 4.json",
-        "D:/Documents/MCAM/Builds/Default.json",
         "D:/Documents/MCAM/Builds/Demo 1.json"
     ],
     "Threshold": {

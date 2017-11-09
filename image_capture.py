@@ -61,11 +61,9 @@ class ImageCapture:
         The strings are saved in their respective lists and the index is used to call the respective one
         """
 
-        # Load from the build.json file
         with open('build.json') as build:
             self.build = json.load(build)
 
-        # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -80,10 +78,12 @@ class ImageCapture:
 
         # These properties are changeable through the UI
         self.camera.properties['PixelFormat'] = self.pixel_format_list[self.config['CameraSettings']['PixelFormat']]
-        self.camera.properties['ExposureTimeAbs'] = self.config['CameraSettings']['ExposureTimeAbs']
+        self.camera.properties['GainRaw'] = self.config['CameraSettings']['Gain']
+        self.camera.properties['BlackLevelRaw'] = self.config['CameraSettings']['BlackLevel']
+        self.camera.properties['ExposureTimeAbs'] = self.config['CameraSettings']['ExposureTime']
         self.camera.properties['GevSCPSPacketSize'] = self.config['CameraSettings']['PacketSize']
         self.camera.properties['GevSCPD'] = self.config['CameraSettings']['InterPacketDelay']
-        self.camera.properties['GevSCFTD'] = self.config['CameraSettings']['FrameTransmissionDelay']
+        self.camera.properties['GevSCFTD'] = self.config['CameraSettings']['FrameDelay']
 
         # These properties are here to override the camera's 'default' and can be changed here
         self.camera.properties['TriggerSelector'] = 'AcquisitionStart'

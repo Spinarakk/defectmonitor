@@ -6,210 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>277</width>
-    <height>199</height>
+    <width>282</width>
+    <height>251</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Camera Settings</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="2" colspan="2">
-    <widget class="QSpinBox" name="spinPacketSize">
-     <property name="toolTip">
-      <string>0 - 1,500</string>
-     </property>
-     <property name="minimum">
-      <number>0</number>
-     </property>
-     <property name="maximum">
-      <number>1500</number>
-     </property>
-     <property name="singleStep">
-      <number>4</number>
-     </property>
-     <property name="value">
-      <number>500</number>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QLabel" name="labelOption5">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Sets the frame transfer start delay (in ticks) for the selected stream channel.</string>
-     </property>
-     <property name="text">
-      <string>Frame Transmission Delay</string>
-     </property>
-     <property name="scaledContents">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="labelOption2">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Directly sets the camera's exposure time in microseconds.</string>
-     </property>
-     <property name="text">
-      <string>Exposure Time</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="labelOption4">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Sets the inter-packet delay (in ticks) for the selected stream channel.</string>
-     </property>
-     <property name="text">
-      <string>Inter-Packet Delay</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="labelOption6">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Sets how long (in seconds) until the trigger can be triggered again. Timeout starts upon saving the image.</string>
-     </property>
-     <property name="text">
-      <string>Trigger Timeout</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="labelOption1">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Sets the format of the pixel data transmitted for acquired images.</string>
-     </property>
-     <property name="text">
-      <string>Pixel Format</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="2" colspan="2">
-    <widget class="QComboBox" name="comboPixelFormat">
-     <item>
-      <property name="text">
-       <string>Mono 8</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Mono 12</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Mono 12 Packed</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="1" column="2" colspan="2">
-    <widget class="QSpinBox" name="spinExposureTime">
-     <property name="toolTip">
-      <string>0 - 100,000</string>
-     </property>
-     <property name="minimum">
-      <number>35</number>
-     </property>
-     <property name="maximum">
-      <number>100000</number>
-     </property>
-     <property name="value">
-      <number>23000</number>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="labelOption3">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>Sets the packet size in bytes for the selected stream channel.</string>
-     </property>
-     <property name="text">
-      <string>Packet Size</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="2" colspan="2">
-    <widget class="QSpinBox" name="spinFrameDelay">
-     <property name="toolTip">
-      <string>0 - 10,000</string>
-     </property>
-     <property name="maximum">
-      <number>10000</number>
-     </property>
-     <property name="value">
-      <number>1000</number>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="2" colspan="2">
-    <widget class="QSpinBox" name="spinTriggerTimeout">
-     <property name="toolTip">
-      <string>0 - 60</string>
-     </property>
-     <property name="maximum">
-      <number>60</number>
-     </property>
-     <property name="value">
-      <number>3</number>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="2" colspan="2">
-    <widget class="QSpinBox" name="spinInterPacketDelay">
-     <property name="toolTip">
-      <string>0 - 10,000</string>
-     </property>
-     <property name="suffix">
-      <string/>
-     </property>
-     <property name="maximum">
-      <number>10000</number>
-     </property>
-     <property name="value">
-      <number>6900</number>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="4">
+   <item row="8" column="0" colspan="4">
     <widget class="QFrame" name="frameButtons">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -264,6 +69,262 @@
        </widget>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item row="5" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinInterPacketDelay">
+     <property name="toolTip">
+      <string>0 - 10,000</string>
+     </property>
+     <property name="suffix">
+      <string/>
+     </property>
+     <property name="maximum">
+      <number>10000</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelGain">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets the selected gain control in device specific units.</string>
+     </property>
+     <property name="text">
+      <string>Gain</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="2">
+    <widget class="QLabel" name="labelFrameDelay">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets the frame transfer start delay (in ticks) for the selected stream channel.</string>
+     </property>
+     <property name="text">
+      <string>Frame Transmission Delay</string>
+     </property>
+     <property name="scaledContents">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinPacketSize">
+     <property name="toolTip">
+      <string>0 - 1,500</string>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>1500</number>
+     </property>
+     <property name="singleStep">
+      <number>4</number>
+     </property>
+     <property name="value">
+      <number>1500</number>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="labelPixelFormat">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets the format of the pixel data transmitted for acquired images.</string>
+     </property>
+     <property name="text">
+      <string>Pixel Format</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="labelTriggerTimeout">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets how long (in seconds) until the trigger can be triggered again. Timeout starts upon saving the image.</string>
+     </property>
+     <property name="text">
+      <string>Trigger Timeout</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="labelPacketSize">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets the packet size in bytes for the selected stream channel.</string>
+     </property>
+     <property name="text">
+      <string>Packet Size</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="labelInterPacketDelay">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets the inter-packet delay (in ticks) for the selected stream channel.</string>
+     </property>
+     <property name="text">
+      <string>Inter-Packet Delay</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinTriggerTimeout">
+     <property name="toolTip">
+      <string>0 - 60</string>
+     </property>
+     <property name="maximum">
+      <number>60</number>
+     </property>
+     <property name="value">
+      <number>3</number>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinFrameDelay">
+     <property name="toolTip">
+      <string>0 - 10,000</string>
+     </property>
+     <property name="maximum">
+      <number>10000</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="labelExposureTime">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Directly sets the camera's exposure time in microseconds.</string>
+     </property>
+     <property name="text">
+      <string>Exposure Time</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2" colspan="2">
+    <widget class="QComboBox" name="comboPixelFormat">
+     <item>
+      <property name="text">
+       <string>Mono 8</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Mono 12</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Mono 12 Packed</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="3" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinExposureTime">
+     <property name="toolTip">
+      <string>0 - 100,000</string>
+     </property>
+     <property name="minimum">
+      <number>35</number>
+     </property>
+     <property name="maximum">
+      <number>100000</number>
+     </property>
+     <property name="value">
+      <number>23000</number>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelBlackLevel">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>Sets the value of the selected black level control.</string>
+     </property>
+     <property name="text">
+      <string>Black Level</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinBlackLevel">
+     <property name="toolTip">
+      <string>0 - 1,023</string>
+     </property>
+     <property name="maximum">
+      <number>1023</number>
+     </property>
+     <property name="value">
+      <number>21</number>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2" colspan="2">
+    <widget class="QSpinBox" name="spinGain">
+     <property name="toolTip">
+      <string>51 - 255</string>
+     </property>
+     <property name="minimum">
+      <number>51</number>
+     </property>
+     <property name="maximum">
+      <number>255</number>
+     </property>
+     <property name="value">
+      <number>51</number>
+     </property>
     </widget>
    </item>
   </layout>
