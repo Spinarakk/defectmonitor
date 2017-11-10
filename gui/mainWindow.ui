@@ -715,7 +715,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <property name="tabSpacing">
           <number>3</number>
@@ -872,6 +872,9 @@
            </item>
            <item>
             <widget class="QPushButton" name="pushDefectReports">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Defect Reports</string>
              </property>
@@ -1314,7 +1317,7 @@
            <widget class="QLabel" name="labelLayerNumber">
             <property name="font">
              <font>
-              <pointsize>11</pointsize>
+              <pointsize>12</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -1375,7 +1378,7 @@
            <number>7</number>
           </property>
           <item>
-           <widget class="QRadioButton" name="radioDefects">
+           <widget class="QRadioButton" name="radioRaw">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1383,12 +1386,12 @@
              </font>
             </property>
             <property name="text">
-             <string>Raw (Defect Ana)</string>
+             <string>Raw</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="radioProcessed">
+           <widget class="QRadioButton" name="radioFixed">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1396,7 +1399,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Processed</string>
+             <string>Fixed</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -1417,7 +1420,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkOverlay">
+           <widget class="QCheckBox" name="checkContours">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1430,7 +1433,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkPartNames">
+           <widget class="QCheckBox" name="checkNames">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1446,7 +1449,10 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="groupOverlayDefects">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="font">
           <font>
            <weight>75</weight>
@@ -1470,7 +1476,7 @@
            <number>7</number>
           </property>
           <item>
-           <widget class="QCheckBox" name="checkBox_3">
+           <widget class="QCheckBox" name="checkStreak">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1483,7 +1489,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkBox_2">
+           <widget class="QCheckBox" name="checkChatter">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1496,7 +1502,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkBox">
+           <widget class="QCheckBox" name="checkPatch">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1509,7 +1515,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkBox_4">
+           <widget class="QCheckBox" name="checkOutlier">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1522,7 +1528,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkBox_5">
+           <widget class="QCheckBox" name="checkPattern">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1867,7 +1873,7 @@
   <tabstop>pushDisplayUp</tabstop>
   <tabstop>sliderDisplay</tabstop>
   <tabstop>pushDisplayDown</tabstop>
-  <tabstop>radioProcessed</tabstop>
+  <tabstop>radioFixed</tabstop>
   <tabstop>spinLayer</tabstop>
   <tabstop>pushGo</tabstop>
   <tabstop>pushAcquireCT</tabstop>

@@ -1,3 +1,21 @@
+November 10
+- Revamped some old code
+- Redesigned the way the DefectDetector outputs its results
+- Instead of overlaying the defects over the original image, the defects are each instead saved as a separate image which can be individually overlayed through the MainWindow in the image viewer
+- Removed the defect analysis lists from their corresponding lists and the display dictionary
+
+November 9
+- Added Gain and Black Level to the Camera Settings
+- Added the above setting functionality to the camera capture
+- Slightly fixed up the buggy Image Capture viewer
+- Stopped it from processing single images
+- Disabled Defect Analysis viewing and processing for the Image Capture tab
+- Created a table on the Main Window that will display that layer's defect report data (if available)
+- Added back a Raw view to allow the user to see the original unprocessed image
+- Changed Defect Analysis into a bunch of Checkboxes specifically for the Streaks, Chatter etc. overlay images
+- Because of the above change, the defect analysis overlay will instead be split into their own images which will be added if the user wants to
+- Only the visual interface has been added, functionality yet to be implemented
+
 November 8
 - Added a save confirmation to before running the build
 - The build now autosaves after every picture taken so that the image capture numbering is preserved (might not be necessary for the new machine version)

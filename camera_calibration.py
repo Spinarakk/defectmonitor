@@ -136,7 +136,7 @@ class Calibration:
                     image_test = image_processing.ImageTransform().crop(image_test)
                     self.progress.emit(75)
                     cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image_test)
-                    self.status.emit('Test image successfully processed.')
+                    self.status.emit('Test image successfully fixed.')
                     self.progress.emit(100)
 
                     # Open the image in the native image viewer for the user to view the results of the calibration

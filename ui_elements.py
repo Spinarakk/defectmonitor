@@ -61,19 +61,6 @@ class ImageViewer(QGraphicsView):
             self.scene.removeItem(self._pixmap_handle)
             self._pixmap_handle = None
 
-    @staticmethod
-    def convert2pixmap(image):
-        """Converts the received image into a QPixmap that can be displayed on the graphics viewer"""
-
-        # If the image is a BGR image, convert to RGB so that colours can be displayed properly
-        # if len(image.shape) == 3:
-        #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Convert to QPixmap using in-built Qt functions
-        qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
-
-        return QPixmap.fromImage(qimage)
-
     def update_viewer(self):
         """Update the image viewer with the image, taking into account aspect ratio and zoom options"""
 

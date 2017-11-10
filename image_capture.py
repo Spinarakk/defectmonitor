@@ -155,7 +155,7 @@ class ImageCapture:
         status.emit(['Image Saved', ''])
 
         # Do not process the first scan image however
-        if not self.current_layer < 1:
+        if self.current_layer >= 1:
             name.emit(image_name)
 
         # Loop used to delay triggering for additional images for however many seconds

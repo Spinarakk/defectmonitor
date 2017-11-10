@@ -15,6 +15,7 @@ class WorkerSignals(QObject):
     colour = pyqtSignal(int, bool)
     notification = pyqtSignal(str)
 
+
 class Worker(QRunnable):
     """Worker thread that inherits from QRunnable to handle worker thread setup, signals and wrap-up"""
 

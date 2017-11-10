@@ -206,7 +206,7 @@ class SliceConverter:
         # Calculate the correct progress increment value to use
         increment = 100 / (layer_high + 1 - layer_low)
 
-        # Create a black RGB image to write the part names on
+        # Create a blank black RGB image to write the part names on
         image_names = np.zeros(self.image_resolution, np.uint8)
 
         # Iterate through all the layers, the maximum value is raised by 1 so that the last contour is drawn
@@ -229,7 +229,7 @@ class SliceConverter:
                 self.status.emit('Current Part: All | Conversion stopped.')
                 return False
 
-            # Create a black RGB image to draw contours on and one to write the part names on
+            # Create a blank black RGB image to draw contours on
             image_contours = np.zeros(self.image_resolution, np.uint8)
 
             # Iterate through all the parts

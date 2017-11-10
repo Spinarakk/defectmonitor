@@ -121,7 +121,8 @@
         ]
     },
     "RecentBuilds": [
-        "D:/Documents/MCAM/Builds/Demo 1.json"
+        "D:/Documents/MCAM/Builds/Demo 1.json",
+        "D:/Documents/MCAM/Builds/Demo 2.json"
     ],
     "Threshold": {
         "HistogramCoat": 5000,
