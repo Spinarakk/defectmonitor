@@ -1,3 +1,7 @@
+November 13
+- Fixed the states of all the buttons depending on what is being displayed and what is running in the background
+- Implemented the Overlay Defects functionality that adds the corresponding defect layer over the displayed fixed image in the order that they were clicked in
+
 November 10
 - Revamped some old code
 - Redesigned the way the DefectDetector outputs its results

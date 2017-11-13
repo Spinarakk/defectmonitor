@@ -196,8 +196,9 @@ class DefectDetector:
             # The dictionary needs to be built up if it doesn't already exist
             if self.layer not in self.defects[name]:
                 self.defects[name][self.layer] = dict()
-                self.defects[name][self.layer]['scan'] = dict()
-                self.defects[name][self.layer]['coat'] = dict()
+
+            if self.phase not in self.defects[name][self.layer]:
+                self.defects[name][self.layer][self.phase] = dict()
 
         # Because blade streaks and blade chatter rely on number of occurrences rather than pixel size
         self.chatter_count = 0
@@ -341,9 +342,11 @@ class DefectDetector:
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_RED, 'BS')
 
-        # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/streaks/%sBS_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                           self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder if there are defects on it
+        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
+            cv2.imwrite(
+                '%s/defects/%s/streaks/%sBS_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                       self.layer), image_defects)
 
     def detect_blade_chatter(self, image, image_defects):
         """Detects any vertical lines on the image that are caused as a result of blade chatter
@@ -378,9 +381,11 @@ class DefectDetector:
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_BLUE, 'BC')
 
-        # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/chatter/%sBC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                           self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder if there are defects on it
+        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
+            cv2.imwrite(
+                '%s/defects/%s/chatter/%sBC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                       self.layer), image_defects)
 
     def detect_shiny_patch(self, image, image_defects):
         """Detects any patches in the image that are above a certain contrast threshold, aka are too shiny"""
@@ -397,9 +402,11 @@ class DefectDetector:
 
         self.report_defects(image_defects, COLOUR_GREEN, 'SP')
 
-        # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/patches/%sSP_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                           self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder if there are defects on it
+        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
+            cv2.imwrite(
+                '%s/defects/%s/patches/%sSP_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                       self.layer), image_defects)
 
     def detect_contrast_outlier(self, image, image_defects):
         """Detects any areas of the image that are too bright or dark compared to the average contrast
@@ -448,9 +455,11 @@ class DefectDetector:
 
         self.report_defects(image_defects, COLOUR_YELLOW, 'CO')
 
-        # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/outliers/%sCO_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                           self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder if there are defects on it
+        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
+            cv2.imwrite(
+                '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                        self.layer), image_defects)
 
     def scan_detection(self, image, image_defects):
         """Detects any scan patterns on the image and draws them as filled contours"""
@@ -493,9 +502,11 @@ class DefectDetector:
             result = cv2.matchTemplate(image_defects, image_contours, cv2.TM_CCOEFF_NORMED)[0][0]
             self.defects['combined'][self.layer][self.phase]['OC'] = float(result)
 
-        # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/pattern/%sOC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                           self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder if there are defects on it
+        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
+            cv2.imwrite(
+                '%s/defects/%s/pattern/%sOC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                       self.layer), image_defects)
 
     def compare_histogram(self, image_current, image_previous):
         """Compares the histogram of each method and calculates the difference result"""
@@ -526,34 +537,38 @@ class DefectDetector:
         image_blank = np.zeros(image_defects.shape, np.uint8)
         size, coordinates, occurrences = self.find_coordinates(image_defects, image_blank, COLOUR_BLACK, defect_colour)
 
+        # Convert the pixel size data into a percentage based on the total number of pixels in the image
+        if 'SP' in defect_type or 'CO' in defect_type:
+            size = round(size / self.total_pixels * 100, 4)
+
         # Save the results to the defect dictionary
         if size > 0:
             self.defects['combined'][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
         else:
             self.defects['combined'][self.layer][self.phase][defect_type] = [0, 0]
 
-        # Only report defects that intersect the part contours if the image exists
-        if os.path.isfile(self.build['DefectDetector']['Contours']):
-            image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
-
-            for part_name, part_colour in self.part_colours.items():
-                # Skip the combined key as it has already been processed
-                if 'combined' in part_name:
-                    continue
-
-                # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
-                size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
-                                                                       tuple(part_colour), defect_colour)
-
-                # Convert the pixel size data into a percentage based on the total number of pixels in the image
-                if 'SP' in defect_type or 'CO' in defect_type:
-                    size = round(size / self.total_pixels * 100, 4)
-
-                if size > 0:
-                    # Add these to the defect dictionary for the current part, and the combined dictionary
-                    self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
-                else:
-                    self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
+        # # Only report defects that intersect the part contours if the image exists
+        # if os.path.isfile(self.build['DefectDetector']['Contours']):
+        #     image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
+        #
+        #     for part_name, part_colour in self.part_colours.items():
+        #         # Skip the combined key as it has already been processed
+        #         if 'combined' in part_name:
+        #             continue
+        #
+        #         # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
+        #         size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
+        #                                                                tuple(part_colour), defect_colour)
+        #
+        #         # Convert the pixel size data into a percentage based on the total number of pixels in the image
+        #         if 'SP' in defect_type or 'CO' in defect_type:
+        #             size = round(size / self.total_pixels * 100, 4)
+        #
+        #         if size > 0:
+        #             # Add these to the defect dictionary for the current part, and the combined dictionary
+        #             self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
+        #         else:
+        #             self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
 
     def compare_threshold(self):
         """Compares the results to the threshold values to check if a notification needs to be raised or not"""

@@ -1173,7 +1173,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                 # COAT DATA
                 # Grab the Coat data in a try loop in case the index doesn't exist in the dictionary
                 try:
-                    data = report[str(row + 1).zfill(4)]['Coat']
+                    data = report[str(row + 1).zfill(4)]['coat']
                 except (IndexError, KeyError):
                     data = {}
 
@@ -1225,7 +1225,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                 # SCAN DATA
                 # Grab the Scan data in a try loop in case the index doesn't exist in the dictionary
                 try:
-                    data = report[str(row + 1).zfill(4)]['Scan']
+                    data = report[str(row + 1).zfill(4)]['scan']
                 except (IndexError, KeyError):
                     data = {}
 

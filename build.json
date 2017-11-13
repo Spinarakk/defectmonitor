@@ -351,7 +351,7 @@
         "Draw": false,
         "EmailAddress": "nicholascklee@gmail.com",
         "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Demo 2",
+        "Name": "Demo 3",
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
@@ -431,23 +431,23 @@
         "Username": "Nicholas Lee"
     },
     "DefectDetector": {
-        "Contours": "D:/Documents/MCAM/Builds/2017-11-10 [14''57'37] Demo 2/contours/contours_0013.png",
-        "Image": "D:/Documents/MCAM/Builds/2017-11-10 [14''57'37] Demo 2/fixed/coat/coatP_0013.png",
-        "ImagePrevious": "",
-        "Layer": 13,
+        "Contours": "D:/Documents/MCAM/Builds/2017-11-13 [14''56'12] Demo 3/contours/contours_0059.png",
+        "Image": "D:/Documents/MCAM/Builds/2017-11-13 [14''56'12] Demo 3/fixed/scan/scanF_0059.png",
+        "ImagePrevious": "D:/Documents/MCAM/Builds/2017-11-13 [14''56'12] Demo 3/fixed/scan/scanF_0058.png",
+        "Layer": 59,
         "Mode": "single",
-        "Phase": "coat"
+        "Phase": "scan"
     },
     "ImageCapture": {
-        "Folder": "D:/Documents/MCAM/Builds/2017-11-10 [14''57'37] Demo 2",
+        "Folder": "D:/Documents/MCAM/Builds/2017-11-13 [14''56'12] Demo 3",
         "Layer": 0.5,
         "Phase": 1,
         "Single": 1
     },
     "Notifications": {
         "Attachment": "",
-        "Major": true,
-        "Minor": true,
+        "Major": false,
+        "Minor": false,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
