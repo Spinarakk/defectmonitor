@@ -205,7 +205,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         'LabelNames': [self.labelCE, self.labelSE, self.labelPC, self.labelIC],
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
                         'DisplayImage': [0, 0, 0, 0],
-                        'CheckboxNames': [self.checkStreak, self.checkChatter, self.checkPatch, self.checkOutlier, self.checkPattern]}
+                        'CheckboxNames': [self.checkStreak, self.checkChatter, self.checkPatch, self.checkOutlier,
+                                          self.checkPattern]}
 
         # Create a QThreadPool which contains an amount of threads that can be used to simultaneously run functions
         self.threadpool = QThreadPool()
@@ -1204,7 +1205,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                 # Overlay the defects in the order they were selected
                 for defect in self.defect_checkboxes:
-                    mask = cv2.inRange(cv2.imread(defects[defect]), self.defect_colours[defect], self.defect_colours[defect])
+                    mask = cv2.inRange(cv2.imread(defects[defect]), self.defect_colours[defect],
+                                       self.defect_colours[defect])
                     image[np.nonzero(mask)] = self.defect_colours[defect]
 
             # The following conditionals are to check whether to overlay the corresponding images on the current image
@@ -1243,15 +1245,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.toggle_display_control(1)
             self.toggle_display_checkboxes(4)
 
-        # # Check if the following images exist and enable/disable the corresponding checkbox
-        # # Exclude the Image Capture tab from the following conditions, whereby all the checkboxes will be disabled
-        # if index < 3:
-        #     # Part Names
-        #     if os.path.isfile('%s/part_names.png' % image_folder):
-        #         self.checkNames.setEnabled(True)
-        #     else:
-        #         self.checkNames.setEnabled(False)
-        #         self.checkNames.setChecked(False)
+            # # Check if the following images exist and enable/disable the corresponding checkbox
+            # # Exclude the Image Capture tab from the following conditions, whereby all the checkboxes will be disabled
+            # if index < 3:
+            #     # Part Names
+            #     if os.path.isfile('%s/part_names.png' % image_folder):
+            #         self.checkNames.setEnabled(True)
+            #     else:
+            #         self.checkNames.setEnabled(False)
+            #         self.checkNames.setChecked(False)
 
     def update_image(self, image):
         """These functions were moved to a separate method as they are called multiple times"""
@@ -1586,7 +1588,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Used for when an image has been captured and focus is to be given to the new image
         Also can be used for when an image has just finished processing for defects
         """
-        #TODO FIX UP THE CLICKING OF THE REPORT TAB FOCUS
+        # TODO FIX UP THE CLICKING OF THE REPORT TAB FOCUS
         # Double check if the received value is within the layer's range in the first place
         if value > self.display['MaxLayers']:
             self.update_status('Layer %s outside of the available layer range.' % str(value).zfill(4), 3000)
