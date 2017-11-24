@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>367</width>
+    <width>345</width>
     <height>324</height>
    </rect>
   </property>
@@ -41,19 +41,25 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="leftMargin">
-       <number>10</number>
+       <number>9</number>
       </property>
       <property name="topMargin">
-       <number>7</number>
+       <number>3</number>
       </property>
       <property name="rightMargin">
-       <number>10</number>
+       <number>9</number>
       </property>
       <property name="bottomMargin">
-       <number>7</number>
+       <number>6</number>
       </property>
       <item>
        <widget class="QCheckBox" name="checkMinor">
+        <property name="font">
+         <font>
+          <weight>50</weight>
+          <bold>false</bold>
+         </font>
+        </property>
         <property name="focusPolicy">
          <enum>Qt::ClickFocus</enum>
         </property>
@@ -64,6 +70,12 @@
       </item>
       <item>
        <widget class="QCheckBox" name="checkMajor">
+        <property name="font">
+         <font>
+          <weight>50</weight>
+          <bold>false</bold>
+         </font>
+        </property>
         <property name="focusPolicy">
          <enum>Qt::ClickFocus</enum>
         </property>
@@ -176,8 +188,6 @@
         <property name="font">
          <font>
           <pointsize>10</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
          </font>
         </property>
         <property name="text">
@@ -203,8 +213,6 @@
         <property name="font">
          <font>
           <pointsize>10</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
          </font>
         </property>
         <property name="text">
@@ -224,17 +232,7 @@
      </property>
      <item>
       <property name="text">
-       <string>Concept X1000R (636 x 406 mm)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Concept X2000R (800 x 400 mm)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>EOS M280/M290 (250 x 250 mm)</string>
+       <string>Concept Laser Xline 1000R</string>
       </property>
      </item>
     </widget>
@@ -283,8 +281,6 @@
      <property name="font">
       <font>
        <pointsize>10</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="text">
@@ -400,8 +396,6 @@
      <property name="font">
       <font>
        <pointsize>10</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="text">
@@ -429,8 +423,6 @@
      <property name="font">
       <font>
        <pointsize>10</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="text">
@@ -446,8 +438,6 @@
      <property name="font">
       <font>
        <pointsize>10</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="text">

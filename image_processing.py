@@ -66,7 +66,7 @@ class ImageTransform:
         """Fixes the perspective warp due to the off-centre position of the camera"""
 
         return cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']),
-                                   tuple(self.parameters['Resolution']))
+                                   tuple(self.parameters['HomographyResolution']))
 
     def crop(self, image):
         """Crops the image to a more desirable region of interest"""
@@ -550,30 +550,30 @@ class DefectDetector:
         # TODO Remove timers when not needed
         t0 = time.time()
 
-        # Only report defects that intersect the part contours if the image exists
-        if os.path.isfile(self.build['DefectDetector']['Contours']):
-            image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
-
-            for part_name, part_colour in self.part_colours.items():
-                # Skip the combined key as it has already been processed
-                if 'combined' in part_name:
-                    continue
-
-                # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
-                size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
-                                                                       tuple(part_colour), defect_colour)
-
-                # Convert the pixel size data into a percentage based on the total number of pixels in the image
-                if 'SP' in defect_type or 'CO' in defect_type:
-                    size = round(size / self.total_pixels * 100, 4)
-
-                if size > 0:
-                    # Add these to the defect dictionary for the current part, and the combined dictionary
-                    self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
-                else:
-                    self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
-
-                print('Report %s\n%s\n' % (part_name, (time.time() - t0)))
+        # # Only report defects that intersect the part contours if the image exists
+        # if os.path.isfile(self.build['DefectDetector']['Contours']):
+        #     image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
+        #
+        #     for part_name, part_colour in self.part_colours.items():
+        #         # Skip the combined key as it has already been processed
+        #         if 'combined' in part_name:
+        #             continue
+        #
+        #         # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
+        #         size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
+        #                                                                tuple(part_colour), defect_colour)
+        #
+        #         # Convert the pixel size data into a percentage based on the total number of pixels in the image
+        #         if 'SP' in defect_type or 'CO' in defect_type:
+        #             size = round(size / self.total_pixels * 100, 4)
+        #
+        #         if size > 0:
+        #             # Add these to the defect dictionary for the current part, and the combined dictionary
+        #             self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
+        #         else:
+        #             self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
+        #
+        #         print('Report %s\n%s\n' % (part_name, (time.time() - t0)))
 
     def compare_threshold(self):
         """Compares the results to the threshold values to check if a notification needs to be raised or not"""

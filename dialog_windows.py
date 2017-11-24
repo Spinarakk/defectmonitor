@@ -1,5 +1,6 @@
 # Import libraries and modules
 import os
+import cv2
 import numpy as np
 import json
 from datetime import datetime
@@ -17,7 +18,7 @@ import camera_calibration
 import qt_multithreading
 
 # Import PyQt GUIs
-from gui import dialogNewBuild, dialogCameraCalibration, dialogCalibrationResults, \
+from gui import dialogNewBuild, dialogInterfacePreferences, dialogCameraCalibration, dialogCalibrationResults, \
     dialogSliceConverter, dialogCameraSettings, dialogOverlayAdjustment, dialogDefectReports
 
 
@@ -214,11 +215,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
             # Save the selected platform dimensions to the config.json file
             if self.comboPlatform.currentIndex() == 0:
-                self.build['BuildInfo']['PlatformDimensions'] = [636.0, 406.0]
-            elif self.comboPlatform.currentIndex() == 1:
-                self.build['BuildInfo']['PlatformDimensions'] = [800.0, 400.0]
-            elif self.comboPlatform.currentIndex() == 2:
-                self.build['BuildInfo']['PlatformDimensions'] = [250.0, 250.0]
+                self.build['BuildInfo']['PlatformDimensions'] = [636, 406]
 
             # If a New Build is being created (rather than Open Build), create some folders to store images
             if not self.open_flag:
@@ -293,6 +290,84 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.done(1)
 
 
+class InterfacePreferences(QDialog, dialogInterfacePreferences.Ui_dialogInterfacePreferences):
+    """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
+    Allows the user to change any settings in regard to the main interface"""
+
+    def __init__(self, parent=None):
+
+        # Setup Dialog UI with MainWindow as parent and restore the previous window state
+        super(InterfacePreferences, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+        self.window_settings = QSettings('MCAM', 'Defect Monitor')
+        try:
+            self.restoreGeometry(self.window_settings.value('Interface Preferences Geometry', ''))
+        except TypeError:
+            pass
+
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.pushModify.clicked.connect(self.modify_gridlines)
+
+        # Set the combo box and settings to previously saved values
+        self.spinSize.setValue(self.config['Gridlines']['Size'])
+        self.spinThickness.setValue(self.config['Gridlines']['Thickness'])
+
+        # Set the maximum range of the grid size spinbox
+        self.spinSize.setMaximum(int(self.config['ImageCorrection']['ImageResolution'][0] / 2))
+        self.spinSize.setToolTip('5 - %s' % int(self.config['ImageCorrection']['ImageResolution'][0] / 2))
+
+    def modify_gridlines(self):
+        """Redraws the gridlines .png image with a new gridlines image using the updated settings"""
+        
+        # Grab the image resolution to be used for the gridlines
+        width = self.config['ImageCorrection']['ImageResolution'][1]
+        height = self.config['ImageCorrection']['ImageResolution'][0]
+        
+        size = self.spinSize.value()
+        thickness = self.spinThickness.value()
+        
+        # Create a black image to draw the gridlines on
+        image = np.zeros((height, width, 3), np.uint8)
+
+        # Draw all the horizontal Lines
+        for index in range(int(np.ceil(height / 2 / size))):
+            cv2.line(image, (0, height // 2 + index * size), (width, height // 2 + index * size),
+                     (255, 255, 255), thickness)
+            cv2.line(image, (0, height // 2 - index * size), (width, height // 2 - index * size),
+                     (255, 255, 255), thickness)
+
+        # Draw all the vertical lines
+        for index in range(int(np.ceil(width / 2 / size))):
+            cv2.line(image, (width // 2 + index * size, 0), (width // 2 + index * size, height),
+                     (255, 255, 255), thickness)
+            cv2.line(image, (width // 2 - index * size, 0), (width // 2 - index * size, height),
+                     (255, 255, 255), thickness)
+
+        cv2.imwrite('gridlines.png', image)
+
+        self.config['Gridlines']['Size'] = size
+        self.config['Gridlines']['Thickness'] = thickness
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
+
+        # Open a confirmation message box to notify the user that the image has been modified
+        modify_confirmation = QMessageBox(self)
+        modify_confirmation.setWindowTitle('Modify Gridlines')
+        modify_confirmation.setIcon(QMessageBox.Information)
+        modify_confirmation.setText('Gridlines has been successfully modified to a grid size of <b>%s</b> pixels and a'
+                                    ' line thickness of <b>%s</b>.' % (size, thickness))
+        modify_confirmation.exec_()
+
+    def closeEvent(self, event):
+        """Executes when the window is closed"""
+        self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
+
+
 class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
     """Opens a Modeless Dialog Window when the Camera Calibration button is clicked
     Or when Tools -> Camera -> Calibration is clicked
@@ -314,7 +389,6 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         except TypeError:
             pass
 
-        # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
 
@@ -1062,24 +1136,35 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         distortion_coefficients = np.array(results['DistortionCoefficients'])
         homography_matrix = np.array(results['HomographyMatrix'])
 
+        # Sets the tables' columns and rows to automatically resize appropriately
+        self.tableCM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableDC.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableHM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableCM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableDC.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableHM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
         # Nested for loops to access each of the table boxes in order
         for row in range(3):
             for column in range(3):
-
                 # Setting the item using the corresponding index of the matrix arrays
-                self.tableCameraMatrix.setItem(row, column, QTableWidgetItem(
-                    format(camera_matrix[row][column], '.10g')))
-                self.tableHomographyMatrix.setItem(row, column, QTableWidgetItem(
-                    format(homography_matrix[row][column], '.10g')))
+                self.tableCM.setItem(row, column, QTableWidgetItem(format(camera_matrix[row][column], '.10g')))
+                self.tableHM.setItem(row, column, QTableWidgetItem(format(homography_matrix[row][column], '.10g')))
 
                 # Because the distortion coefficients matrix is a 1x5, a slight modification needs to be made
                 # Exception used to ignore the 2x3 box and 3rd row of the matrix
-                if row >= 1: column += 3
+                if row >= 1:
+                    column += 3
                 try:
-                    self.tableDistortionCoefficients.setItem(row, column % 3, QTableWidgetItem(
+                    self.tableDC.setItem(row, column % 3, QTableWidgetItem(
                         format(distortion_coefficients[0][column], '.10g')))
                 except (ValueError, IndexError):
                     pass
+
+        # Sets the row height to as small as possible to fit the text height
+        self.tableCM.resizeRowsToContents()
+        self.tableDC.resizeRowsToContents()
+        self.tableHM.resizeRowsToContents()
 
         # Displaying the re-projection error on the appropriate text label
         self.labelRMS.setText('Re-Projection Error: ' + format(results['RMS'], '.10g'))

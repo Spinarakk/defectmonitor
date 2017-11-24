@@ -21,6 +21,10 @@
         "PixelFormat": 0,
         "TriggerTimeout": 3
     },
+    "Gridlines": {
+        "Size": 99,
+        "Thickness": 2
+    },
     "ImageCorrection": {
         "CameraMatrix": [
             [
@@ -71,15 +75,19 @@
                 1.0
             ]
         ],
+        "HomographyResolution": [
+            5605,
+            5235
+        ],
+        "ImageResolution": [
+            2410,
+            3470
+        ],
         "Offset": [
             39,
             122
         ],
         "RMS": 1.6641703202,
-        "Resolution": [
-            5605,
-            5235
-        ],
         "ScaleFactor": 5.3333333333,
         "TransformContours": [
             20,

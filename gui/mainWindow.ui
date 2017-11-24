@@ -725,7 +725,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>114</width>
+            <width>136</width>
             <height>91</height>
            </rect>
           </property>
@@ -776,7 +776,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>98</width>
+            <width>136</width>
             <height>91</height>
            </rect>
           </property>
@@ -1334,9 +1334,9 @@
            <widget class="QLabel" name="labelLayerNumberTitle">
             <property name="font">
              <font>
-              <pointsize>10</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
+              <pointsize>11</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
              </font>
             </property>
             <property name="text">
@@ -1357,6 +1357,7 @@
          </property>
          <property name="font">
           <font>
+           <pointsize>9</pointsize>
            <weight>75</weight>
            <bold>true</bold>
           </font>
@@ -1366,50 +1367,22 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="leftMargin">
-           <number>10</number>
+           <number>9</number>
           </property>
           <property name="topMargin">
-           <number>7</number>
+           <number>6</number>
           </property>
           <property name="rightMargin">
-           <number>10</number>
+           <number>9</number>
           </property>
           <property name="bottomMargin">
-           <number>7</number>
+           <number>6</number>
           </property>
           <item>
-           <widget class="QRadioButton" name="radioRaw">
+           <widget class="QCheckBox" name="checkEqualization">
             <property name="font">
              <font>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Raw</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioFixed">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Fixed</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkCLAHE">
-            <property name="font">
-             <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1420,9 +1393,24 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkGridlines">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Gridlines</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="checkContours">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1436,6 +1424,7 @@
            <widget class="QCheckBox" name="checkNames">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1455,6 +1444,7 @@
          </property>
          <property name="font">
           <font>
+           <pointsize>9</pointsize>
            <weight>75</weight>
            <bold>true</bold>
           </font>
@@ -1464,21 +1454,36 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="leftMargin">
-           <number>10</number>
+           <number>9</number>
           </property>
           <property name="topMargin">
-           <number>7</number>
+           <number>6</number>
           </property>
           <property name="rightMargin">
-           <number>10</number>
+           <number>9</number>
           </property>
           <property name="bottomMargin">
-           <number>7</number>
+           <number>6</number>
           </property>
+          <item>
+           <widget class="QCheckBox" name="checkSelectAll">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Select All Available</string>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="QCheckBox" name="checkStreak">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1492,6 +1497,7 @@
            <widget class="QCheckBox" name="checkChatter">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1505,6 +1511,7 @@
            <widget class="QCheckBox" name="checkPatch">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1518,6 +1525,7 @@
            <widget class="QCheckBox" name="checkOutlier">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1531,6 +1539,7 @@
            <widget class="QCheckBox" name="checkPattern">
             <property name="font">
              <font>
+              <pointsize>8</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1624,7 +1633,7 @@
     <addaction name="actionCameraSettings"/>
     <addaction name="actionBuildSettings"/>
     <addaction name="separator"/>
-    <addaction name="actionAdvancedMode"/>
+    <addaction name="actionPreferences"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -1858,6 +1867,11 @@
     <string>Defect Graphs</string>
    </property>
   </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Preferences</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1873,7 +1887,6 @@
   <tabstop>pushDisplayUp</tabstop>
   <tabstop>sliderDisplay</tabstop>
   <tabstop>pushDisplayDown</tabstop>
-  <tabstop>radioFixed</tabstop>
   <tabstop>spinLayer</tabstop>
   <tabstop>pushGo</tabstop>
   <tabstop>pushAcquireCT</tabstop>

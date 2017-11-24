@@ -6,21 +6,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>319</width>
-    <height>362</height>
+    <width>284</width>
+    <height>332</height>
    </rect>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>319</width>
-    <height>362</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>319</width>
-    <height>362</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>Calibration Results</string>
@@ -31,8 +19,6 @@
      <property name="font">
       <font>
        <pointsize>9</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="toolTip">
@@ -51,8 +37,6 @@
      <property name="font">
       <font>
        <pointsize>9</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="toolTip">
@@ -71,8 +55,6 @@
      <property name="font">
       <font>
        <pointsize>9</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="toolTip">
@@ -91,8 +73,6 @@
      <property name="font">
       <font>
        <pointsize>9</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="toolTip">
@@ -114,7 +94,7 @@
     </widget>
    </item>
    <item row="1" column="0" colspan="2">
-    <widget class="QTableWidget" name="tableCameraMatrix">
+    <widget class="QTableWidget" name="tableCM">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -124,20 +104,8 @@
      <property name="horizontalScrollBarPolicy">
       <enum>Qt::ScrollBarAlwaysOff</enum>
      </property>
-     <property name="autoScroll">
-      <bool>false</bool>
-     </property>
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
-     </property>
-     <property name="showGrid">
-      <bool>true</bool>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-     <property name="cornerButtonEnabled">
-      <bool>true</bool>
      </property>
      <property name="rowCount">
       <number>3</number>
@@ -151,36 +119,16 @@
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
      </attribute>
-     <attribute name="verticalHeaderDefaultSectionSize">
-      <number>30</number>
-     </attribute>
      <row/>
      <row/>
      <row/>
-     <column>
-      <property name="text">
-       <string>1</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>2</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>3</string>
-      </property>
-     </column>
-     <item row="0" column="0">
-      <property name="text">
-       <string/>
-      </property>
-     </item>
+     <column/>
+     <column/>
+     <column/>
     </widget>
    </item>
    <item row="5" column="0" colspan="2">
-    <widget class="QTableWidget" name="tableHomographyMatrix">
+    <widget class="QTableWidget" name="tableHM">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -190,20 +138,8 @@
      <property name="horizontalScrollBarPolicy">
       <enum>Qt::ScrollBarAlwaysOff</enum>
      </property>
-     <property name="autoScroll">
-      <bool>false</bool>
-     </property>
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
-     </property>
-     <property name="showGrid">
-      <bool>true</bool>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-     <property name="cornerButtonEnabled">
-      <bool>true</bool>
      </property>
      <property name="rowCount">
       <number>3</number>
@@ -217,44 +153,18 @@
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
      </attribute>
-     <attribute name="verticalHeaderDefaultSectionSize">
-      <number>30</number>
-     </attribute>
      <row/>
      <row/>
      <row/>
-     <column>
-      <property name="text">
-       <string>1</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>2</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>3</string>
-      </property>
-     </column>
-     <item row="0" column="0">
-      <property name="text">
-       <string/>
-      </property>
-     </item>
+     <column/>
+     <column/>
+     <column/>
     </widget>
    </item>
    <item row="3" column="0" colspan="2">
-    <widget class="QTableWidget" name="tableDistortionCoefficients">
+    <widget class="QTableWidget" name="tableDC">
      <property name="enabled">
       <bool>true</bool>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>61</height>
-      </size>
      </property>
      <property name="verticalScrollBarPolicy">
       <enum>Qt::ScrollBarAlwaysOff</enum>
@@ -262,20 +172,8 @@
      <property name="horizontalScrollBarPolicy">
       <enum>Qt::ScrollBarAlwaysOff</enum>
      </property>
-     <property name="autoScroll">
-      <bool>false</bool>
-     </property>
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
-     </property>
-     <property name="showGrid">
-      <bool>true</bool>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-     <property name="cornerButtonEnabled">
-      <bool>true</bool>
      </property>
      <property name="rowCount">
       <number>2</number>
@@ -289,31 +187,11 @@
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
      </attribute>
-     <attribute name="verticalHeaderDefaultSectionSize">
-      <number>30</number>
-     </attribute>
      <row/>
      <row/>
-     <column>
-      <property name="text">
-       <string>1</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>2</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>3</string>
-      </property>
-     </column>
-     <item row="0" column="0">
-      <property name="text">
-       <string/>
-      </property>
-     </item>
+     <column/>
+     <column/>
+     <column/>
     </widget>
    </item>
   </layout>

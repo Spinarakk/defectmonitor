@@ -30,8 +30,7 @@ class SliceConverter:
 
         # Save respective values to be used to draw contours and polygons
         # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
-        crop_boundary = self.config['ImageCorrection']['CropBoundary']
-        self.image_resolution = ((crop_boundary[1] - crop_boundary[0]), (crop_boundary[3] - crop_boundary[2]), 3)
+        self.image_resolution = tuple(self.config['ImageCorrection']['ImageResolution'], 3)
         self.offset = tuple(self.config['ImageCorrection']['Offset'])
         self.scale_factor = self.config['ImageCorrection']['ScaleFactor']
 

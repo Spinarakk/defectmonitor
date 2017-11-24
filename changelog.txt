@@ -1,3 +1,19 @@
+November 24
+- Removed the Raw radio button (and thusly the Fixed button) as viewing the raw image was deemed unnecessary to the program
+- Adjusted all the button states accordingly
+- Removed all the advanced mode functionality as it was deemed unnecessary
+- Added a gridlines checkbox that overlays a set size grid over the display image
+- Created a preliminary Interface Preferences dialog window that will be used to change any settings pertaining to the main window interface
+- For now only allows the user to change the gridline size and line thickness by redrawing the gridline image
+- Can be further expanded down the line for madded functionality
+- Adjusted the Calibration Results tables to be similar to the Defect Reports table
+
+November 20
+- Created a preliminary roadmap of major updates to the program
+
+November 17
+- Cleaned up some old code
+
 November 13
 - Fixed the states of all the buttons depending on what is being displayed and what is running in the background
 - Implemented the Overlay Defects functionality that adds the corresponding defect layer over the displayed fixed image in the order that they were clicked in

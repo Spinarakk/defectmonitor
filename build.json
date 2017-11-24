@@ -355,8 +355,8 @@
         "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
-            636.0,
-            406.0
+            636,
+            406
         ],
         "Run": false,
         "SliceFiles": [

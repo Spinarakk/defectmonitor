@@ -68,7 +68,7 @@ class Ui_dialogOverlayAdjustment(object):
         self.groupValues.setFont(font)
         self.groupValues.setObjectName("groupValues")
         self.gridLayout = QtWidgets.QGridLayout(self.groupValues)
-        self.gridLayout.setContentsMargins(10, 7, 10, 7)
+        self.gridLayout.setContentsMargins(9, 3, 9, 6)
         self.gridLayout.setObjectName("gridLayout")
         self.labelPixels = QtWidgets.QLabel(self.groupValues)
         self.labelPixels.setObjectName("labelPixels")

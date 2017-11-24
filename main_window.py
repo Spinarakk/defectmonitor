@@ -47,6 +47,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Set the window icon
         self.setWindowIcon(QIcon('gui/logo.ico'))
 
+        # Set the version number here
+        self.version = '0.7.9'
+
         # Load default working build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
             self.build = json.load(build)
@@ -95,20 +98,20 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Menubar -> Settings
         self.actionCameraSettings.triggered.connect(self.camera_settings)
         self.actionBuildSettings.triggered.connect(self.build_settings)
-        self.actionAdvancedMode.triggered.connect(self.advanced_mode)
+        self.actionPreferences.triggered.connect(self.interface_preferences)
 
         # Menubar -> Help
         self.actionViewHelp.triggered.connect(self.view_help)
         self.actionAbout.triggered.connect(self.view_about)
 
         # Display Options Group Box
-        self.radioRaw.clicked.connect(self.update_display)
-        self.radioFixed.clicked.connect(self.update_display)
-        self.checkCLAHE.toggled.connect(self.update_display)
-        self.checkContours.toggled.connect(self.toggle_part_contours)
+        self.checkEqualization.toggled.connect(self.update_display)
+        self.checkGridlines.toggled.connect(self.update_display)
+        self.checkContours.toggled.connect(self.update_display)
         self.checkNames.toggled.connect(self.update_display)
 
         # Overlay Defects Group Box
+        self.checkSelectAll.toggled.connect(self.toggle_all)
         self.checkStreak.toggled.connect(self.toggle_streak)
         self.checkChatter.toggled.connect(self.toggle_chatter)
         self.checkPatch.toggled.connect(self.toggle_patch)
@@ -170,6 +173,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.OA_dialog = None  # Overlay Adjustment
         self.SC_dialog = None  # Slice Converter
         self.CS_dialog = None  # Camera Settings
+        self.IP_dialog = None  # Interface Preferences
 
         # Initiate an empty config file name to be used for saving purposes
         self.build_name = None
@@ -818,30 +822,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if BS_dialog.exec_():
             self.setup_build(True)
 
-    def advanced_mode(self):
-        """Allows the user to toggle between basic mode or advanced mode which in essence enables or disables buttons
-        These buttons have to do with features or functions which could negatively impact the program if mishandled
-        """
+    def interface_preferences(self):
+        """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
+        Allows the user to change certain settings pertaining to the functionality of the program itself"""
 
-        # Grab the bool value of the Advanced Mode 'checkbox' (for clearer code purposes)
-        flag = self.actionAdvancedMode.isChecked()
+        if self.IP_dialog is None:
+            self.IP_dialog = dialog_windows.InterfacePreferences(self)
+            self.IP_dialog.destroyed.connect(self.interface_preferences_closed)
+            self.IP_dialog.show()
+        else:
+            self.IP_dialog.activateWindow()
 
-        self.actionCameraCalibration.setEnabled(flag)
-        self.pushCameraCalibration.setEnabled(flag)
-        self.actionSliceConverter.setEnabled(flag)
-        self.pushSliceConverter.setEnabled(flag)
-        self.pushOverlayAdjustment.setEnabled(flag)
-        self.actionOverlayAdjustment.setEnabled(flag)
-
-        if self.actionAdvancedMode.isChecked():
-            self.pushOverlayAdjustment.setEnabled(self.checkContours.isChecked())
-            self.actionOverlayAdjustment.setEnabled(self.checkContours.isChecked())
-
-        self.update_display()
-
-        # Only disable the following button if it is enabled in the first place
-        if self.pushCapture.isEnabled():
-            self.pushCapture.setEnabled(False)
+    def interface_preferences_closed(self):
+        self.IP_dialog = None
 
     # MENUBAR -> HELP
 
@@ -852,9 +845,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Opens a Modal About QMessageBox displaying some pertinent information about the application"""
 
         QMessageBox.about(self, 'About Defect Monitor',
-                          '<b>Defect Monitor</b><br><br>Version 0.7.3<br> Defect Monitor is a monitoring application '
+                          '<b>Defect Monitor</b><br><br>Version %s<br> Defect Monitor is a monitoring application '
                           'used to detect defects within the scan and coat layers of a 3D metal printing build.'
-                          '<br><br>Copyright (C) 2017 MCAM.')
+                          '<br><br>Copyright (C) 2017 MCAM.' % self.version)
 
     # LAYER SELECTION
 
@@ -932,8 +925,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushAcquireCT.setEnabled(False)
         self.pushCapture.setEnabled(False)
         self.checkResume.setEnabled(False)
-        if self.actionAdvancedMode.isChecked():
-            self.pushFauxTrigger.setEnabled(True)
+        self.pushFauxTrigger.setEnabled(True)
 
         # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
         # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
@@ -1002,10 +994,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.stopwatch_idle = 0
         self.pushPauseResume.setEnabled(True)
         self.pushStop.setEnabled(True)
-
-        # Enables the Faux Trigger button if advanced mode is on
-        if self.actionAdvancedMode.isChecked():
-            self.pushFauxTrigger.setEnabled(True)
+        self.pushFauxTrigger.setEnabled(True)
 
         # Autosave the build to retain capture numbering
         self.save_build()
@@ -1030,8 +1019,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.timer_stopwatch.start(1000)
             self.capture_run_finished()
             self.update_status('Current build resumed.')
-            if self.actionAdvancedMode.isChecked():
-                self.pushFauxTrigger.setEnabled(True)
+            self.pushFauxTrigger.setEnabled(True)
 
     def stop_build(self):
         """Executes when the Stop button is clicked"""
@@ -1046,8 +1034,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushAcquireCT.setEnabled(True)
         self.checkResume.setEnabled(True)
         self.pushFauxTrigger.setEnabled(False)
-        if self.actionAdvancedMode.isChecked():
-            self.pushCapture.setEnabled(True)
+        self.pushCapture.setEnabled(True)
 
         # Reset the Pause/Resume button back to its default state (including the text colour)
         self.pushPauseResume.setText('PAUSE')
@@ -1146,45 +1133,28 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Initially assume an image is being displayed
             self.toggle_display_checkboxes(index)
 
-            # Check if the Raw or Fixed radio button is checked to see whether to display the raw or fixed image
-            if self.radioRaw.isChecked():
-                # Check if the corresponding raw image exists in the raw folder
-                filename_raw = filename.replace('fixed', 'raw').replace('F_', 'R_')
-                self.toggle_display_checkboxes(5)
-                if os.path.isfile(filename_raw):
-                    self.uncheck_defects()
-                    self.update_image(cv2.imread(filename_raw))
-                    return
-                else:
-                    # Set the stack tab to the information label and display an 'error' message
-                    label.setText('%s Layer %s Raw Image does not exist.' % (phase.capitalize(), layer))
-                    stack.setCurrentIndex(0)
-                    self.toggle_display_control(2)
-                    return
-            # Otherwise load and display the fixed image
+            # Check if the image exists in the first place (in case it gets deleted between folder checks)
+            if os.path.isfile(filename):
+                image = cv2.imread(filename)
+
+                # Enable the Defect Processor toolbar and actions
+                if not self.processing_flag and index < 2:
+                    self.toggle_processing_buttons(2)
             else:
-                # Check if the image exists in the first place (in case it gets deleted beteween folder checks)
-                if os.path.isfile(filename):
-                    image = cv2.imread(filename)
-
-                    # Enable the Defect Processor toolbar and actions
-                    if not self.processing_flag and index < 2:
-                        self.toggle_processing_buttons(2)
+                # Set the stack tab to the information label and display the missing layer information
+                if index == 2:
+                    # The part contours tab displays a slightly different message
+                    label.setText('Contour Layer %s Image does not exist.' % layer)
                 else:
-                    # Set the stack tab to the information label and display the missing layer information
-                    if index == 2:
-                        # The part contours tab displays a slightly different message
-                        label.setText('Contour Layer %s Image does not exist.' % layer)
-                    else:
-                        label.setText('%s Layer %s Fixed Image does not exist.' % (phase.capitalize(), layer))
-                    stack.setCurrentIndex(0)
-                    self.toggle_display_control(2)
-                    self.toggle_display_checkboxes(4)
+                    label.setText('%s Layer %s Fixed Image does not exist.' % (phase.capitalize(), layer))
+                stack.setCurrentIndex(0)
+                self.toggle_display_control(2)
+                self.toggle_display_checkboxes(4)
 
-                    # Enable the Defect Processor toolbar and actions
-                    if not self.processing_flag and index != 2:
-                        self.toggle_processing_buttons(5)
-                    return
+                # Enable the Defect Processor toolbar and actions
+                if not self.processing_flag and index != 2:
+                    self.toggle_processing_buttons(5)
+                return
 
             # Check if the following defect images exist, and enable or disable the corresponding checkboxes
             # Only do this for the coat and scan images
@@ -1208,6 +1178,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                     mask = cv2.inRange(cv2.imread(defects[defect]), self.defect_colours[defect],
                                        self.defect_colours[defect])
                     image[np.nonzero(mask)] = self.defect_colours[defect]
+            else:
+                self.uncheck_defects()
+                self.groupOverlayDefects.setEnabled(False)
 
             # The following conditionals are to check whether to overlay the corresponding images on the current image
             # Overlay the part contours
@@ -1236,7 +1209,29 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                 image = cv2.add(image, image_names)
 
-            self.update_image(image)
+            # Overlay the gridlines
+            if self.checkGridlines.isChecked():
+                image_gridlines = cv2.imread('gridlines.png')
+
+                if image_gridlines.shape[:2] != image.shape[:2]:
+                    image_gridlines = cv2.resize(image_names)
+
+                image = cv2.add(image, image_gridlines)
+
+            # Applies CLAHE to the display image
+            if self.checkEqualization.isChecked():
+                image = image_processing.ImageTransform.clahe(image)
+
+            # Convert from OpenCV's BGR format to RGB so that colours are displayed correctly
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            # Display the image on the current GraphicsView
+            self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].set_image(image)
+
+            # Save the current (modified) image so that it can be exported if need be
+            self.display['DisplayImage'][self.widgetDisplay.currentIndex()] = image
+
+            self.toggle_display_control(3)
         else:
             # If the entire folder is empty, change the stacked widget to the one with the information label
             label.setText('%s folder empty. Nothing to display.' % phase.capitalize())
@@ -1244,34 +1239,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             self.toggle_display_control(1)
             self.toggle_display_checkboxes(4)
-
-            # # Check if the following images exist and enable/disable the corresponding checkbox
-            # # Exclude the Image Capture tab from the following conditions, whereby all the checkboxes will be disabled
-            # if index < 3:
-            #     # Part Names
-            #     if os.path.isfile('%s/part_names.png' % image_folder):
-            #         self.checkNames.setEnabled(True)
-            #     else:
-            #         self.checkNames.setEnabled(False)
-            #         self.checkNames.setChecked(False)
-
-    def update_image(self, image):
-        """These functions were moved to a separate method as they are called multiple times"""
-
-        # Applies CLAHE to the display image
-        if self.checkCLAHE.isChecked():
-            image = image_processing.ImageTransform.clahe(image)
-
-        # Convert from OpenCV's BGR format to RGB so that colours are displayed correctly
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Display the image on the current GraphicsView
-        self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].set_image(image)
-
-        # Save the current (modified) image so that it can be exported if need be
-        self.display['DisplayImage'][self.widgetDisplay.currentIndex()] = image
-
-        self.toggle_display_control(3)
 
     def update_table(self):
         """Updates the Defect Data table with the current layer's defect data if available"""
@@ -1410,7 +1377,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         elif state == 0 or state == 1:
             self.groupDisplayOptions.setEnabled(True)
             self.groupOverlayDefects.setEnabled(True)
-            self.radioRaw.setEnabled(True)
 
             if os.path.isfile(self.display['ImageList'][2][value - 1]):
                 self.checkContours.setEnabled(True)
@@ -1428,9 +1394,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Because the above changes are common to both states 3 and 4
             if state == 2:
-                self.radioRaw.setEnabled(False)
+                pass
             else:
-                self.radioRaw.setEnabled(True)
+
 
                 if os.path.isfile(self.display['ImageList'][2][value - 1]):
                     self.checkContours.setEnabled(True)
@@ -1455,7 +1421,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkNames.setChecked(False)
 
     def uncheck_defects(self):
-        """Uncheck all the Overlay Defects checkboxes when changing tabs or images"""
+        """Uncheck all the Overlay Defects checkboxes"""
 
         for checkbox in self.display['CheckboxNames']:
             checkbox.blockSignals(True)
@@ -1464,16 +1430,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.defect_checkboxes = list()
 
-    def toggle_part_contours(self):
-        """Overlays or hides the part contours on top of the display image (if it exists)"""
-
-        if self.actionAdvancedMode.isChecked():
-            self.pushOverlayAdjustment.setEnabled(self.checkContours.isChecked())
-            self.actionOverlayAdjustment.setEnabled(self.checkContours.isChecked())
-
-        self.update_display()
+    def toggle_all(self):
+        pass
 
     def toggle_streak(self):
+        """Appends or removes the toggled defect from the checkbox list"""
+
         if self.checkStreak.isChecked():
             self.defect_checkboxes.append('Streaks')
         else:
@@ -1482,6 +1444,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_display()
 
     def toggle_chatter(self):
+        """Appends or removes the toggled defect from the checkbox list"""
+
         if self.checkChatter.isChecked():
             self.defect_checkboxes.append('Chatter')
         else:
@@ -1490,6 +1454,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_display()
 
     def toggle_patch(self):
+        """Appends or removes the toggled defect from the checkbox list"""
+
         if self.checkPatch.isChecked():
             self.defect_checkboxes.append('Patches')
         else:
@@ -1498,6 +1464,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_display()
 
     def toggle_outlier(self):
+        """Appends or removes the toggled defect from the checkbox list"""
+
         if self.checkOutlier.isChecked():
             self.defect_checkboxes.append('Outliers')
         else:
@@ -1506,6 +1474,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_display()
 
     def toggle_pattern(self):
+        """Appends or removes the toggled defect from the checkbox list"""
+
         if self.checkPattern.isChecked():
             self.defect_checkboxes.append('Pattern')
         else:
@@ -1531,12 +1501,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Check which action has been clicked and execute the respective methods
         if action:
             # Grab the name of the image using the slider value (subtract 1 due to code starting from 0)
-            # Also check if the displayed image is the Defect Analysis one, then a different list will need to be used
-            if self.radioRaw.isChecked():
-                step = 4
-            else:
-                step = 0
-            name = self.display['ImageList'][self.widgetDisplay.currentIndex() + step][self.sliderDisplay.value() - 1]
+            name = self.display['ImageList'][self.widgetDisplay.currentIndex()][self.sliderDisplay.value() - 1]
 
             if action == action_show_image:
                 # Need to turn the forward slashes into backslash due to windows explorer only working with backslashes
@@ -1562,13 +1527,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.labelLayerNumber.setText('%s / %s' % (str(self.display['CurrentLayer'][index]).zfill(4),
                                                        str(self.display['MaxLayers']).zfill(4)))
 
-            # Set the radio button to Original as contours have no defect images
-            if index == 2:
-                self.radioFixed.setChecked(True)
-
-            # Unchecks all the Overlay Defects checkboxes
-            self.uncheck_defects()
-
             # Update the image on the graphics display with the new image (in case image has been deleted)
             self.update_display()
 
@@ -1593,10 +1551,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if value > self.display['MaxLayers']:
             self.update_status('Layer %s outside of the available layer range.' % str(value).zfill(4), 3000)
         else:
-            # Set the display image to be the defect analyzed image
-            if defect_flag:
-                self.radioRaw.setChecked(True)
-
             self.widgetDisplay.setCurrentIndex(index)
             self.sliderDisplay.setValue(value)
 
@@ -1612,9 +1566,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Save the current slider value to the current tab's layer dictionary key for tab changes
         self.display['CurrentLayer'][self.widgetDisplay.currentIndex()] = value
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
-
-        # Unchecks all the Overlay Defects checkboxes
-        self.uncheck_defects()
 
         # Update the image on the graphics display with the new image
         self.update_display()
@@ -1744,8 +1695,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Camera status
         if bool(status[0]):
             self.update_status_ct(['Found', ''])
-            if self.actionAdvancedMode.isChecked():
-                self.pushCapture.setEnabled(True)
+            self.pushCapture.setEnabled(True)
             if bool(status[1]):
                 self.pushRun.setEnabled(True)
         else:

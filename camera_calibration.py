@@ -261,7 +261,7 @@ class Calibration:
             # Figure out the final resolution to crop the image to
             width_output = int(points_transform[:, 0][:, 0].max() - points_transform[:, 0][:, 0].min())
             height_output = int(points_transform[:, 0][:, 1].max() - points_transform[:, 0][:, 1].min())
-            self.results['ImageCorrection']['Resolution'] = (width_output, height_output)
+            self.results['ImageCorrection']['HomographyResolution'] = (width_output, height_output)
 
             self.status.emit('Homography matrix found.')
             return 1
