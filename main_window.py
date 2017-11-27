@@ -107,16 +107,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Display Options Group Box
         self.checkEqualization.toggled.connect(self.update_display)
         self.checkGridlines.toggled.connect(self.update_display)
-        self.checkContours.toggled.connect(self.update_display)
+        self.checkContours.toggled.connect(self.toggle_contours)
         self.checkNames.toggled.connect(self.update_display)
 
         # Overlay Defects Group Box
-        self.checkSelectAll.toggled.connect(self.toggle_all)
-        self.checkStreak.toggled.connect(self.toggle_streak)
-        self.checkChatter.toggled.connect(self.toggle_chatter)
-        self.checkPatch.toggled.connect(self.toggle_patch)
-        self.checkOutlier.toggled.connect(self.toggle_outlier)
-        self.checkPattern.toggled.connect(self.toggle_pattern)
+        self.checkToggleAll.toggled.connect(self.toggle_all)
+        self.checkStreak.toggled.connect(self.toggle_defect)
+        self.checkChatter.toggled.connect(self.toggle_defect)
+        self.checkPatch.toggled.connect(self.toggle_defect)
+        self.checkOutlier.toggled.connect(self.toggle_defect)
+        self.checkPattern.toggled.connect(self.toggle_defect)
 
         # Sidebar Toolbox Assorted Tools
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
@@ -182,7 +182,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.defect_counter = 0
 
         # These two lists are used to store the order in which the defect checkboxes were checked and the defect colours
-        self.defect_checkboxes = list()
+        self.defect_checkbox = list()
         self.defect_colours = {'Streaks': (0, 0, 255), 'Chatter': (255, 0, 0), 'Patches': (0, 255, 0),
                                'Outliers': (0, 255, 255), 'Pattern': (255, 0, 255)}
 
@@ -210,7 +210,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         'GraphicsNames': [self.graphicsCE, self.graphicsSE, self.graphicsPC, self.graphicsIC],
                         'DisplayImage': [0, 0, 0, 0],
                         'CheckboxNames': [self.checkStreak, self.checkChatter, self.checkPatch, self.checkOutlier,
-                                          self.checkPattern]}
+                                          self.checkPattern],
+                        'DefectNames': ['Streaks', 'Chatter', 'Patches', 'Outliers', 'Pattern']}
 
         # Create a QThreadPool which contains an amount of threads that can be used to simultaneously run functions
         self.threadpool = QThreadPool()
@@ -661,7 +662,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # The widgetDisplay's tab is saved at this instance so that changing the tab doesn't affect the process
         self.tab_index = self.widgetDisplay.currentIndex()
-        self.toggle_processing_buttons(3)
+        self.toggle_processing_buttons(1)
         self.process_settings(self.sliderDisplay.value())
 
     def process_all(self):
@@ -695,7 +696,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessAll.setStyleSheet('')
             self.pushProcessAll.setText('Process All')
             self.actionProcessAll.setText('Process All')
-            self.toggle_processing_buttons(3)
+            self.toggle_processing_buttons(1)
 
     def process_settings(self, layer):
         """Saves the settings to be used to process an image for defects to the build.json file
@@ -725,7 +726,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
-            self.toggle_processing_buttons(4)
+            self.toggle_processing_buttons(3)
             self.defect_counter += 1
             self.update_status('Running %s layer %s through the Defect Detector...' % (phase, str(layer).zfill(4)))
         else:
@@ -742,7 +743,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Otherwise the window is set to its processing finished state"""
 
         self.processing_flag = False
-        self.update_table()
         self.update_folders()
 
         if self.all_flag and not self.defect_counter == len(self.layer_numbers):
@@ -764,7 +764,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def toggle_processing_buttons(self, state):
         """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
 
-        # State 1 is when the current tab of images CANNOT be processed
+        # State 1 is when the current tab of images CANNOT be processed, or when a Process Current is running
         if state == 1:
             self.pushProcessCurrent.setEnabled(False)
             self.actionProcessCurrent.setEnabled(False)
@@ -776,20 +776,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessCurrent.setEnabled(True)
             self.pushProcessAll.setEnabled(True)
             self.actionProcessAll.setEnabled(True)
-        # State 3 is when a Process Current or Process Selected process is running
+        # State 3 is when a Process All is running
+        # Or when the current image CANNOT be processed but the tab still has other images that CAN
         elif state == 3:
-            self.pushProcessCurrent.setEnabled(False)
-            self.actionProcessCurrent.setEnabled(False)
-            self.pushProcessAll.setEnabled(False)
-            self.actionProcessAll.setEnabled(False)
-        # State 4 is when a Process All is running
-        elif state == 4:
-            self.pushProcessCurrent.setEnabled(False)
-            self.actionProcessCurrent.setEnabled(False)
-            self.pushProcessAll.setEnabled(True)
-            self.actionProcessAll.setEnabled(True)
-        # State 5 is when the current image CANNOT be processed but the tab still has other images that CAN
-        elif state == 5:
             self.pushProcessCurrent.setEnabled(False)
             self.actionProcessCurrent.setEnabled(False)
             self.pushProcessAll.setEnabled(True)
@@ -983,7 +972,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.threadpool.start(worker)
 
     def poll_trigger(self):
-        """Function that will be passed to the QThreadPool to be executed"""
+        """Function that will be passed to the QThreadPool to be executed, put into a thread as it takes a bit of time
+        Basically just checks the serial trigger for a TRIG output"""
 
         return str(self.serial_trigger.readline())
 
@@ -996,7 +986,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushStop.setEnabled(True)
         self.pushFauxTrigger.setEnabled(True)
 
-        # Autosave the build to retain capture numbering
+        # Automatically save the build to retain capture numbering
         self.save_build()
         self.capture_run('')
 
@@ -1110,7 +1100,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_display(self):
         """Updates the MainWindow widgetDisplay to show an image on the currently displayed tab as per toggles
-        Also responsible for enabling or disabling UI elements if there is or isn't an image to be displayed"""
+        Also responsible for enabling or disabling display checkbox elements"""
 
         # Grab the names of certain elements (for clearer code purposes)
         index = self.widgetDisplay.currentIndex()
@@ -1130,34 +1120,53 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Grab the filename of the main fixed image from the fixed image list
             filename = image_list[value - 1]
 
-            # Initially assume an image is being displayed
-            self.toggle_display_checkboxes(index)
+            # Initially assume an image is being displayed and enable both display groupboxes
+            self.groupDisplayOptions.setEnabled(True)
 
             # Check if the image exists in the first place (in case it gets deleted between folder checks)
             if os.path.isfile(filename):
                 image = cv2.imread(filename)
 
-                # Enable the Defect Processor toolbar and actions
+                # Enable the Defect Processor toolbar and actions if on coat or scan tab
                 if not self.processing_flag and index < 2:
                     self.toggle_processing_buttons(2)
             else:
                 # Set the stack tab to the information label and display the missing layer information
-                if index == 2:
-                    # The part contours tab displays a slightly different message
-                    label.setText('Contour Layer %s Image does not exist.' % layer)
-                else:
-                    label.setText('%s Layer %s Fixed Image does not exist.' % (phase.capitalize(), layer))
+                label.setText('%s Layer %s Image does not exist.' % (phase.capitalize(), layer))
                 stack.setCurrentIndex(0)
-                self.toggle_display_control(2)
-                self.toggle_display_checkboxes(4)
+
+                # Set all the UI elements accordingly
+                self.toggle_display_control(1)
+                self.groupDisplayOptions.setEnabled(False)
+                self.groupOverlayDefects.setEnabled(False)
 
                 # Enable the Defect Processor toolbar and actions
-                if not self.processing_flag and index != 2:
-                    self.toggle_processing_buttons(5)
+                if not self.processing_flag and index < 2:
+                    self.toggle_processing_buttons(3)
                 return
 
+            # Check if the Part Contours, Part Names and Gridlines images exist, otherwise disable their checkboxes
+            if os.path.isfile(self.display['ImageList'][2][value - 1]) and index != 2:
+                self.checkContours.setEnabled(True)
+            else:
+                self.checkContours.setEnabled(False)
+                self.checkContours.setChecked(False)
+
+            if os.path.isfile('%s/part_names.png' % self.build['ImageCapture']['Folder']):
+                self.checkNames.setEnabled(True)
+            else:
+                self.checkNames.setEnabled(False)
+                self.checkNames.setChecked(False)
+
+            if os.path.isfile('gridlines.png'):
+                self.checkGridlines.setEnabled(True)
+            else:
+                self.checkGridlines.setEnabled(False)
+                self.checkGridlines.setChecked(False)
+
             # Check if the following defect images exist, and enable or disable the corresponding checkboxes
-            # Only do this for the coat and scan images
+            # Subsequently overlay the defects in the order they were selected
+            # Only do this for the coat and scan images, otherwise uncheck all checked defects and disable the groupbox
             if index < 2:
                 base = os.path.basename(filename)
                 defects = dict()
@@ -1167,19 +1176,29 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 defects['Outliers'] = '%s/defects/%s/outliers/%s' % (image_folder, phase, base.replace('F_', 'CO_'))
                 defects['Pattern'] = '%s/defects/%s/pattern/%s' % (image_folder, phase, base.replace('F_', 'OC_'))
 
-                self.checkStreak.setEnabled(os.path.isfile(defects['Streaks']))
-                self.checkChatter.setEnabled(os.path.isfile(defects['Chatter']))
-                self.checkPatch.setEnabled(os.path.isfile(defects['Patches']))
-                self.checkOutlier.setEnabled(os.path.isfile(defects['Outliers']))
-                self.checkPattern.setEnabled(os.path.isfile(defects['Pattern']))
+                # Because coats and scans have different combinations of defects, each tab has its own checkbox config
+                self.checkPatch.setEnabled(index == 0)
+                self.checkOutlier.setEnabled(index == 0)
+                self.checkPattern.setEnabled(index == 1)
 
                 # Overlay the defects in the order they were selected
-                for defect in self.defect_checkboxes:
-                    mask = cv2.inRange(cv2.imread(defects[defect]), self.defect_colours[defect],
-                                       self.defect_colours[defect])
-                    image[np.nonzero(mask)] = self.defect_colours[defect]
+                for defect in self.defect_checkbox:
+                    # Check if the image exists in the first place, otherwise display an error message box
+                    if os.path.isfile(defects[defect]):
+                        mask = cv2.inRange(cv2.imread(defects[defect]), self.defect_colours[defect],
+                                           self.defect_colours[defect])
+                        image[np.nonzero(mask)] = self.defect_colours[defect]
+                    else:
+                        missing_file_error = QMessageBox(self)
+                        missing_file_error.setWindowTitle('Error')
+                        missing_file_error.setIcon(QMessageBox.Critical)
+                        missing_file_error.setText('The %s defect image could not be found.' % defect.lower())
+                        missing_file_error.exec_()
+
+                        # Uncheck the checkbox in question
+                        self.display['CheckboxNames'][self.display['DefectNames'].index(defect)].setChecked(False)
             else:
-                self.uncheck_defects()
+                self.checkToggleAll.setChecked(False)
                 self.groupOverlayDefects.setEnabled(False)
 
             # The following conditionals are to check whether to overlay the corresponding images on the current image
@@ -1214,7 +1233,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 image_gridlines = cv2.imread('gridlines.png')
 
                 if image_gridlines.shape[:2] != image.shape[:2]:
-                    image_gridlines = cv2.resize(image_names)
+                    image_gridlines = cv2.resize(image_gridlines, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
                 image = cv2.add(image, image_gridlines)
 
@@ -1231,14 +1250,82 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Save the current (modified) image so that it can be exported if need be
             self.display['DisplayImage'][self.widgetDisplay.currentIndex()] = image
 
-            self.toggle_display_control(3)
+            # Enable all display control elements
+            self.toggle_display_control(2)
         else:
             # If the entire folder is empty, change the stacked widget to the one with the information label
             label.setText('%s folder empty. Nothing to display.' % phase.capitalize())
             stack.setCurrentIndex(0)
 
-            self.toggle_display_control(1)
-            self.toggle_display_checkboxes(4)
+            # Disable all display control elements and checkboxes
+            self.toggle_display_control(0)
+            self.groupDisplayOptions.setEnabled(False)
+            self.groupOverlayDefects.setEnabled(False)
+
+    def toggle_display_control(self, state):
+        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
+
+        # State 0 - No images in folder
+        if state < 2:
+            self.actionZoomIn.setEnabled(False)
+            self.actionZoomIn.setChecked(False)
+            self.actionZoomOut.setEnabled(False)
+            self.actionExportImage.setEnabled(False)
+            self.frameSlider.setEnabled(False)
+            self.pushGo.setEnabled(False)
+
+            # State 1 - Image not found, have images in folder
+            if state == 1:
+                self.frameSlider.setEnabled(True)
+                self.pushDisplayUpSeek.setEnabled(True)
+                self.pushDisplayDownSeek.setEnabled(True)
+                self.pushGo.setEnabled(True)
+
+        # State 2 - Image found
+        elif state == 2:
+            self.actionZoomIn.setEnabled(True)
+            self.actionZoomOut.setEnabled(True)
+            self.actionExportImage.setEnabled(True)
+            self.frameSlider.setEnabled(True)
+            self.pushGo.setEnabled(True)
+            self.pushDisplayUpSeek.setEnabled(False)
+            self.pushDisplayDownSeek.setEnabled(False)
+
+    def toggle_contours(self):
+        """Enable or disable the Overlay Adjustment buttons if the corresponding checkbox is checked"""
+
+        self.pushOverlayAdjustment.setEnabled(self.checkContours.isChecked())
+        self.actionOverlayAdjustment.setEnabled(self.checkContours.isChecked())
+
+        self.update_display()
+
+    def toggle_all(self):
+        """Checks or unchecks all the available (enabled) defect checkboxes"""
+
+        self.defect_checkbox = list()
+
+        # Signals for each checkbox is blocked while checking so that the below method doesn't get called
+        for index, checkbox in enumerate(self.display['CheckboxNames']):
+            checkbox.blockSignals(True)
+            if checkbox.isEnabled():
+                checkbox.setChecked(self.checkToggleAll.isChecked())
+                if self.checkToggleAll.isChecked():
+                    self.defect_checkbox.append(self.display['DefectNames'][index])
+            checkbox.blockSignals(False)
+
+        self.update_display()
+
+    def toggle_defect(self):
+        """Appends or removes the toggled defect from the checkbox list and subsequently updates the display"""
+
+        # Grab the index of the checkbox that sent this function call to append or remove the corresponding
+        # Use it to append or remove the corresponding defect name from the defect list
+        if self.sender().isChecked():
+            self.defect_checkbox.append(self.display['DefectNames'][self.display['CheckboxNames'].index(self.sender())])
+        else:
+            self.defect_checkbox.remove(self.display['DefectNames'][self.display['CheckboxNames'].index(self.sender())])
+
+        self.update_display()
 
     def update_table(self):
         """Updates the Defect Data table with the current layer's defect data if available"""
@@ -1253,7 +1340,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Process to fill the table is very similar to the display_report method within the DefectReports class
         # Therefore this section will not be commented at all
-        if report:
+        if report and index < 2:
+
+            self.groupOverlayDefects.setEnabled(True)
+
             if index == 0:
                 thresholds = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
                               self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
@@ -1275,7 +1365,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                     for index, value in enumerate(data_sorted):
                         if thresholds[index] is None:
-                            colours.append(QColor(255, 255, 255))
+                            colours.append(QColor(255, 255, 0))
                         elif value < thresholds[index]:
                             colours.append(QColor(0, 255, 0))
                         else:
@@ -1310,7 +1400,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                     for index, value in enumerate(data_sorted):
                         if thresholds[index] is None:
-                            colours.append(QColor(255, 255, 255))
+                            colours.append(QColor(255, 255, 0))
                         elif value < thresholds[index] and index < 5:
                             colours.append(QColor(0, 255, 0))
                         elif value > thresholds[index] and index == 5:
@@ -1330,158 +1420,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_table_empty(self):
         """Updates the Defect Data table with empty 0 values with a white background if the data isn't available
-        Or if the current tab isn't either the coat or scan tabs"""
+        Or if the current tab isn't either the coat or scan tabs
+        Also enables or disables the Overlay Defects groupbox"""
 
         for row in range(6):
             self.tableDefects.setItem(row, 0, QTableWidgetItem('0'))
-            self.tableDefects.item(row, 0).setBackground(QColor(255, 255, 255))
+            self.tableDefects.item(row, 0).setBackground(QColor(255, 255, 0))
 
-    def toggle_display_control(self, state):
-        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
-
-        # State 1 - No images in folder
-        if state == 1 or state == 2:
-            self.actionZoomIn.setEnabled(False)
-            self.actionZoomIn.setChecked(False)
-            self.actionZoomOut.setEnabled(False)
-            self.actionExportImage.setEnabled(False)
-            self.frameSlider.setEnabled(False)
-            self.pushGo.setEnabled(False)
-
-            # State 2 - Image not found, have images in folder
-            if state == 2:
-                self.frameSlider.setEnabled(True)
-                self.pushDisplayUpSeek.setEnabled(True)
-                self.pushDisplayDownSeek.setEnabled(True)
-                self.pushGo.setEnabled(True)
-        # State 3 - Image found
-        elif state == 3:
-            self.actionZoomIn.setEnabled(True)
-            self.actionZoomOut.setEnabled(True)
-            self.actionExportImage.setEnabled(True)
-            self.frameSlider.setEnabled(True)
-            self.pushDisplayUpSeek.setEnabled(False)
-            self.pushDisplayDownSeek.setEnabled(False)
-            self.pushGo.setEnabled(True)
-
-    def toggle_display_checkboxes(self, state):
-
-        value = self.sliderDisplay.value()
-
-        # State 4 - No image being displayed at all
-        if state == 4:
-            self.groupDisplayOptions.setEnabled(False)
-            self.groupOverlayDefects.setEnabled(False)
-
-        # State 0 or 1 - Coat or Scan tab clicked
-        elif state == 0 or state == 1:
-            self.groupDisplayOptions.setEnabled(True)
-            self.groupOverlayDefects.setEnabled(True)
-
-            if os.path.isfile(self.display['ImageList'][2][value - 1]):
-                self.checkContours.setEnabled(True)
-            else:
-                self.checkContours.setEnabled(False)
-                self.checkContours.setChecked(False)
-
-        # State 2 - Part Contours tab clicked
-        # State 3 - Image Capture tab clicked
-        elif state == 2 or state == 3:
-            self.groupDisplayOptions.setEnabled(True)
-            self.groupOverlayDefects.setEnabled(False)
-            self.checkContours.setEnabled(False)
-            self.checkContours.setChecked(False)
-
-            # Because the above changes are common to both states 3 and 4
-            if state == 2:
-                pass
-            else:
-
-
-                if os.path.isfile(self.display['ImageList'][2][value - 1]):
-                    self.checkContours.setEnabled(True)
-                else:
-                    self.checkContours.setEnabled(False)
-                    self.checkContours.setChecked(False)
-
-        # State 5 - Raw image being displayed
-        elif state == 5:
-            self.groupOverlayDefects.setEnabled(False)
-            self.checkContours.setEnabled(False)
-            self.checkContours.setChecked(False)
-            self.checkNames.setEnabled(False)
-            self.checkNames.setChecked(False)
-
-        # This state applies for all four tabs if an image is being displayed
-        if state is not 4:
-            if os.path.isfile('%s/part_names.png' % self.build['ImageCapture']['Folder']):
-                self.checkNames.setEnabled(True)
-            else:
-                self.checkNames.setEnabled(False)
-                self.checkNames.setChecked(False)
-
-    def uncheck_defects(self):
-        """Uncheck all the Overlay Defects checkboxes"""
-
-        for checkbox in self.display['CheckboxNames']:
-            checkbox.blockSignals(True)
-            checkbox.setChecked(False)
-            checkbox.blockSignals(False)
-
-        self.defect_checkboxes = list()
-
-    def toggle_all(self):
-        pass
-
-    def toggle_streak(self):
-        """Appends or removes the toggled defect from the checkbox list"""
-
-        if self.checkStreak.isChecked():
-            self.defect_checkboxes.append('Streaks')
-        else:
-            self.defect_checkboxes.remove('Streaks')
-
-        self.update_display()
-
-    def toggle_chatter(self):
-        """Appends or removes the toggled defect from the checkbox list"""
-
-        if self.checkChatter.isChecked():
-            self.defect_checkboxes.append('Chatter')
-        else:
-            self.defect_checkboxes.remove('Chatter')
-
-        self.update_display()
-
-    def toggle_patch(self):
-        """Appends or removes the toggled defect from the checkbox list"""
-
-        if self.checkPatch.isChecked():
-            self.defect_checkboxes.append('Patches')
-        else:
-            self.defect_checkboxes.remove('Patches')
-
-        self.update_display()
-
-    def toggle_outlier(self):
-        """Appends or removes the toggled defect from the checkbox list"""
-
-        if self.checkOutlier.isChecked():
-            self.defect_checkboxes.append('Outliers')
-        else:
-            self.defect_checkboxes.remove('Outliers')
-
-        self.update_display()
-
-    def toggle_pattern(self):
-        """Appends or removes the toggled defect from the checkbox list"""
-
-        if self.checkPattern.isChecked():
-            self.defect_checkboxes.append('Pattern')
-        else:
-            self.defect_checkboxes.remove('Pattern')
-
-        self.update_display()
+        self.checkToggleAll.setChecked(False)
+        self.groupOverlayDefects.setEnabled(False)
 
     def context_menu_display(self, position):
         """Opens a context menu at the right-clicked position of any of the display labels
@@ -1520,39 +1467,45 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderDisplay.blockSignals(True)
 
         if self.display_flag:
+            # Uncheck all the defect checkboxes
+            self.checkToggleAll.setChecked(False)
+
+            # Update the max layers
+            self.update_max_layers()
+
             # Set the slider's value to the saved layer value of the current tab
             self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
 
-            # Set the current layer number depending on the currently displayed tab
-            self.labelLayerNumber.setText('%s / %s' % (str(self.display['CurrentLayer'][index]).zfill(4),
-                                                       str(self.display['MaxLayers']).zfill(4)))
+            # Update the Defect Data table if the coat or scan tabs are being displayed
+            self.update_table()
 
             # Update the image on the graphics display with the new image (in case image has been deleted)
             self.update_display()
-
-            # Update the Defect Data table if the coat or scan tabs are being displayed, otherwise set to 0
-            if index < 2:
-                self.update_table()
-            else:
-                self.update_table_empty()
 
             # Zoom out and reset the image
             self.display['GraphicsNames'][index].reset_image()
 
         self.sliderDisplay.blockSignals(False)
 
-    def tab_focus(self, index, value, defect_flag=False):
+    def tab_focus(self, index, layer, defect_flag=False, defect = 0):
         """Changes the tab focus to the received index's tab and sets the slider value to the received value
         Used for when an image has been captured and focus is to be given to the new image
         Also can be used for when an image has just finished processing for defects
         """
-        # TODO FIX UP THE CLICKING OF THE REPORT TAB FOCUS
+
         # Double check if the received value is within the layer's range in the first place
-        if value > self.display['MaxLayers']:
-            self.update_status('Layer %s outside of the available layer range.' % str(value).zfill(4), 3000)
+        if layer > self.display['MaxLayers']:
+            self.update_status('Layer %s outside of the available layer range.' % str(layer).zfill(4), 3000)
         else:
             self.widgetDisplay.setCurrentIndex(index)
-            self.sliderDisplay.setValue(value)
+            self.sliderDisplay.setValue(layer)
+
+            if defect_flag and self.groupOverlayDefects.isEnabled():
+                self.checkToggleAll.setChecked(defect < 0)
+                self.toggle_all()
+
+                if self.display['CheckboxNames'][defect].isEnabled():
+                    self.display['CheckboxNames'][defect].setChecked(True)
 
     def slider_change(self, value):
         """Executes when the value of the scrollbar changes to then update the tooltip with the new value
@@ -1568,11 +1521,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
         # Update the image on the graphics display with the new image
+        self.update_table()
         self.update_display()
-
-        # Update the Defect Data table if the coat or scan tabs are being displayed
-        if self.widgetDisplay.currentIndex() < 2:
-            self.update_table()
 
     def slider_up(self):
         """Increments the slider by 1"""
@@ -1662,10 +1612,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         self.display['ImageList'][index][number - 1] = '%s/%s' % (folder_name, filename)
 
         # Create a list of image names for the Single folder as well
-        self.display['ImageList'][-1][:] = list()
-        for filename in os.listdir(self.display['ImageFolder'][-1]):
+        self.display['ImageList'][3][:] = list()
+        for filename in os.listdir(self.display['ImageFolder'][3]):
             if '.png' in filename:
-                self.display['ImageList'][-1].append('%s/%s' % (self.display['ImageFolder'][-1], filename))
+                self.display['ImageList'][3].append('%s/%s' % (self.display['ImageFolder'][3], filename))
 
         # Update the max layer range
         self.update_max_layers()
@@ -1673,20 +1623,27 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.display_flag:
             # Reload any images in the current tab
             self.update_display()
+            self.update_table()
 
     def update_max_layers(self):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
 
-        self.spinLayer.setMaximum(self.display['MaxLayers'])
-        self.spinLayer.setToolTip('1 - %s' % self.display['MaxLayers'])
-        self.sliderDisplay.setMaximum(self.display['MaxLayers'])
+        # The Image Capture tab has different ranges and values
+        if self.widgetDisplay.currentIndex() < 3:
+            max_layers = self.display['MaxLayers']
+        else:
+            max_layers = len(self.display['ImageList'][3])
 
+        self.spinLayer.setMaximum(max_layers)
+        self.spinLayer.setToolTip('1 - %s' % max_layers)
+        self.sliderDisplay.setMaximum(max_layers)
+        self.labelLayerNumber.setText('%s / %s' %
+                                      (str(self.display['CurrentLayer'][self.widgetDisplay.currentIndex()]).zfill(4),
+                                       str(max_layers).zfill(4)))
+        
         # Also updates the slider's pageStep and tickInterval depending on the max number of layers
-        self.sliderDisplay.setPageStep(math.ceil(self.display['MaxLayers'] // 50))
-        self.sliderDisplay.setTickInterval(math.ceil(self.display['MaxLayers'] // 50))
-
-        self.labelLayerNumber.setText('%s / %s' % (str(self.sliderDisplay.value()).zfill(4),
-                                                   str(self.display['MaxLayers']).zfill(4)))
+        self.sliderDisplay.setPageStep(math.ceil(max_layers // 50))
+        self.sliderDisplay.setTickInterval(math.ceil(max_layers // 50))
 
     def update_ct(self, status):
         """Updates the status boxes for the acquisition of the camera and trigger with the received status details

@@ -1179,7 +1179,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
     Allows user to look at the defect reports in a nice visual way
     """
 
-    tab_focus = pyqtSignal(int, int, bool)
+    tab_focus = pyqtSignal(int, int, bool, int)
 
     def __init__(self, parent=None):
 
@@ -1389,7 +1389,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         # Reload the data and colour code based on the new threshold values
         self.display_report(self.comboParts.currentIndex())
 
-    def cell_click(self, row):
+    def cell_click(self, row, column):
         """Send a signal back to the Main Window to display the corresponding defect image
         When a cell in the report table is clicked"""
 
@@ -1399,9 +1399,11 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
             layer = int(self.tableCoat.item(row, 0).text())
         else:
             layer = int(self.tableScan.item(row, 0).text())
+            if column == 4:
+                column += 1
 
         # Emit a signal to change focus to the selected defect layer
-        self.tab_focus.emit(self.widgetReports.currentIndex(), layer, True)
+        self.tab_focus.emit(self.widgetReports.currentIndex(), layer, True, column - 1)
 
     def closeEvent(self, event):
         """Executes when the Done button is clicked or when the window is closed"""

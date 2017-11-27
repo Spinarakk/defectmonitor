@@ -1,3 +1,14 @@
+November 27
+- Fixed up the button states properly
+- Implemented functionality for the Toggle All Available defects checkbox
+- Simplified the 5 toggle defect checkboxes into one all-encompassing function instead
+- Reconsidered whether the defects were drawn and converted the Toggle All Available checkbox into just a Toggle All checkbox, allowing the user to show all defects as he/she scrolls through images regardless if the defect exists or not
+- Also means that a defect image will be drawn for all defects regardless if there is a defect or not, will not affect anything
+- But will allow a potential 3D image of the defect to be created
+- Coded it so that in case one of the defect images doesn't exist (which shouldn't happen so long as the user doesn't touch the builds folder), an error message box is shown and the defect isn't overlayed
+- Fixed the Defect Report cell clicking to now jump to the clicked layer and display just the clicked defect on the image
+- Program at a base level appears to be functioning as intended in terms of UI element configurations
+
 November 24
 - Removed the Raw radio button (and thusly the Fixed button) as viewing the raw image was deemed unnecessary to the program
 - Adjusted all the button states accordingly

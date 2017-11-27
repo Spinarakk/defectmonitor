@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_dialogInterfacePreferences(object):
     def setupUi(self, dialogInterfacePreferences):
         dialogInterfacePreferences.setObjectName("dialogInterfacePreferences")
-        dialogInterfacePreferences.resize(211, 146)
+        dialogInterfacePreferences.resize(203, 146)
         self.gridLayout = QtWidgets.QGridLayout(dialogInterfacePreferences)
         self.gridLayout.setObjectName("gridLayout")
         self.groupBox = QtWidgets.QGroupBox(dialogInterfacePreferences)
@@ -27,9 +27,12 @@ class Ui_dialogInterfacePreferences(object):
         self.labelThickness.setObjectName("labelThickness")
         self.gridLayout_2.addWidget(self.labelThickness, 1, 0, 1, 1)
         self.spinSize = QtWidgets.QSpinBox(self.groupBox)
+        self.spinSize.setMinimum(5)
         self.spinSize.setObjectName("spinSize")
         self.gridLayout_2.addWidget(self.spinSize, 0, 1, 1, 1)
         self.spinThickness = QtWidgets.QSpinBox(self.groupBox)
+        self.spinThickness.setMinimum(1)
+        self.spinThickness.setMaximum(10)
         self.spinThickness.setObjectName("spinThickness")
         self.gridLayout_2.addWidget(self.spinThickness, 1, 1, 1, 1)
         self.labelSize = QtWidgets.QLabel(self.groupBox)
@@ -50,12 +53,16 @@ class Ui_dialogInterfacePreferences(object):
         self.retranslateUi(dialogInterfacePreferences)
         self.pushDone.clicked.connect(dialogInterfacePreferences.close)
         QtCore.QMetaObject.connectSlotsByName(dialogInterfacePreferences)
+        dialogInterfacePreferences.setTabOrder(self.spinSize, self.spinThickness)
+        dialogInterfacePreferences.setTabOrder(self.spinThickness, self.pushModify)
+        dialogInterfacePreferences.setTabOrder(self.pushModify, self.pushDone)
 
     def retranslateUi(self, dialogInterfacePreferences):
         _translate = QtCore.QCoreApplication.translate
         dialogInterfacePreferences.setWindowTitle(_translate("dialogInterfacePreferences", "Interface Prefernces"))
         self.groupBox.setTitle(_translate("dialogInterfacePreferences", "Gridline Settings"))
         self.labelThickness.setText(_translate("dialogInterfacePreferences", "Gridline Thickness"))
+        self.spinThickness.setToolTip(_translate("dialogInterfacePreferences", "1 - 10"))
         self.labelSize.setText(_translate("dialogInterfacePreferences", "Grid Size (Pixels)"))
         self.pushModify.setText(_translate("dialogInterfacePreferences", "Modify"))
         self.pushDone.setText(_translate("dialogInterfacePreferences", "Done"))

@@ -342,11 +342,9 @@ class DefectDetector:
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_RED, 'BS')
 
-        # Save the image with the defects on it to the corresponding folder if there are defects on it
-        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
-            cv2.imwrite(
-                '%s/defects/%s/streaks/%sBS_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                       self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder
+        cv2.imwrite('%s/defects/%s/streaks/%sBS_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                           self.layer), image_defects)
 
     def detect_blade_chatter(self, image, image_defects):
         """Detects any vertical lines on the image that are caused as a result of blade chatter
@@ -381,11 +379,9 @@ class DefectDetector:
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_BLUE, 'BC')
 
-        # Save the image with the defects on it to the corresponding folder if there are defects on it
-        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
-            cv2.imwrite(
-                '%s/defects/%s/chatter/%sBC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                       self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder
+        cv2.imwrite('%s/defects/%s/chatter/%sBC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                           self.layer), image_defects)
 
     def detect_shiny_patch(self, image, image_defects):
         """Detects any patches in the image that are above a certain contrast threshold, aka are too shiny"""
@@ -402,11 +398,9 @@ class DefectDetector:
 
         self.report_defects(image_defects, COLOUR_GREEN, 'SP')
 
-        # Save the image with the defects on it to the corresponding folder if there are defects on it
-        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
-            cv2.imwrite(
-                '%s/defects/%s/patches/%sSP_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                       self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder
+        cv2.imwrite('%s/defects/%s/patches/%sSP_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                           self.layer), image_defects)
 
     def detect_contrast_outlier(self, image, image_defects):
         """Detects any areas of the image that are too bright or dark compared to the average contrast
@@ -455,11 +449,10 @@ class DefectDetector:
 
         self.report_defects(image_defects, COLOUR_YELLOW, 'CO')
 
-        # Save the image with the defects on it to the corresponding folder if there are defects on it
-        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
-            cv2.imwrite(
-                '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                        self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder
+        cv2.imwrite(
+            '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                    self.layer), image_defects)
 
     def scan_detection(self, image, image_defects):
         """Detects any scan patterns on the image and draws them as filled contours"""
@@ -502,11 +495,9 @@ class DefectDetector:
             result = cv2.matchTemplate(image_defects, image_contours, cv2.TM_CCOEFF_NORMED)[0][0]
             self.defects['combined'][self.layer][self.phase]['OC'] = float(result)
 
-        # Save the image with the defects on it to the corresponding folder if there are defects on it
-        if cv2.countNonZero(cv2.cvtColor(image_defects, cv2.COLOR_BGR2GRAY)):
-            cv2.imwrite(
-                '%s/defects/%s/pattern/%sOC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
-                                                       self.layer), image_defects)
+        # Save the image with the defects on it to the corresponding folder
+        cv2.imwrite('%s/defects/%s/pattern/%sOC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+                                                           self.layer), image_defects)
 
     def compare_histogram(self, image_current, image_previous):
         """Compares the histogram of each method and calculates the difference result"""

@@ -715,7 +715,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>0</number>
          </property>
          <property name="tabSpacing">
           <number>3</number>
@@ -758,7 +758,7 @@
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Overlay Adjustment</string>
+              <string>Part Adjustment</string>
              </property>
             </widget>
            </item>
@@ -1393,20 +1393,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkGridlines">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Gridlines</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QCheckBox" name="checkContours">
             <property name="font">
              <font>
@@ -1431,6 +1417,20 @@
             </property>
             <property name="text">
              <string>Part Names</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkGridlines">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Gridlines</string>
             </property>
            </widget>
           </item>
@@ -1466,7 +1466,7 @@
            <number>6</number>
           </property>
           <item>
-           <widget class="QCheckBox" name="checkSelectAll">
+           <widget class="QCheckBox" name="checkToggleAll">
             <property name="font">
              <font>
               <pointsize>8</pointsize>
@@ -1475,7 +1475,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Select All Available</string>
+             <string>Toggle All Defects</string>
             </property>
            </widget>
           </item>
