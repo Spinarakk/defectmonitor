@@ -1,3 +1,9 @@
+November 28
+- Renamed Overlay Adjustment to Part Adjustment as it only modifies the part contours
+- Fixed up the proper functionally of the Part Adjustment tool
+- Solved the issue of the slow loading of individual defect reports
+- Turns out straight replacing data entries is a lot slower than adding new ones, so the table is cleared first before repopulating
+
 November 27
 - Fixed up the button states properly
 - Implemented functionality for the Toggle All Available defects checkbox

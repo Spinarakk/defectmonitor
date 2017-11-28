@@ -753,7 +753,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushOverlayAdjustment">
+            <widget class="QPushButton" name="pushPartAdjustment">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -1610,7 +1610,7 @@
      <addaction name="actionProcessAll"/>
     </widget>
     <addaction name="actionCameraCalibration"/>
-    <addaction name="actionOverlayAdjustment"/>
+    <addaction name="actionPartAdjustment"/>
     <addaction name="separator"/>
     <addaction name="actionSliceConverter"/>
     <addaction name="actionImageConverter"/>
@@ -1661,7 +1661,7 @@
    <addaction name="actionZoomOut"/>
    <addaction name="separator"/>
    <addaction name="actionCameraCalibration"/>
-   <addaction name="actionOverlayAdjustment"/>
+   <addaction name="actionPartAdjustment"/>
    <addaction name="actionSliceConverter"/>
    <addaction name="actionImageConverter"/>
    <addaction name="separator"/>
@@ -1734,12 +1734,12 @@
     <string>Slice Converter</string>
    </property>
   </action>
-  <action name="actionOverlayAdjustment">
+  <action name="actionPartAdjustment">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Overlay Adjustment</string>
+    <string>Part Adjustment</string>
    </property>
   </action>
   <action name="actionViewHelp">

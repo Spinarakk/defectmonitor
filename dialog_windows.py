@@ -19,7 +19,7 @@ import qt_multithreading
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogInterfacePreferences, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogCameraSettings, dialogOverlayAdjustment, dialogDefectReports
+    dialogSliceConverter, dialogCameraSettings, dialogPartAdjustment, dialogDefectReports
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -893,25 +893,25 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
 
 
-class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustment):
-    """Opens a Modeless Dialog Window when the Overlay Adjustment button is clicked
-    Or when Tools -> Overlay Adjustment is clicked
-    Allows the user to adjust and transform the overlay image in a variety of ways
+class PartAdjustment(QDialog, dialogPartAdjustment.Ui_dialogPartAdjustment):
+    """Opens a Modeless Dialog Window when the Part Adjustment button is clicked
+    Or when Tools -> Part Adjustment is clicked
+    Allows the user to adjust and transform the part contour overlay image in a variety of ways
     """
 
     # Signal that will be emitted anytime one of the transformation buttons is pressed
-    update_overlay = pyqtSignal(bool)
+    update_part = pyqtSignal(bool)
 
     def __init__(self, parent=None):
 
         # Setup Dialog UI with MainWindow as parent and restore the previous window state
-        super(OverlayAdjustment, self).__init__(parent)
+        super(PartAdjustment, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
-            self.restoreGeometry(self.window_settings.value('Overlay Adjustment Geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Part Adjustment Geometry', ''))
         except TypeError:
             pass
 
@@ -1091,7 +1091,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
-        self.update_overlay.emit(False)
+        self.update_part.emit(False)
 
     def save(self):
         """Adds the current display transform parameters to the current contour transform parameters"""
@@ -1109,7 +1109,7 @@ class OverlayAdjustment(QDialog, dialogOverlayAdjustment.Ui_dialogOverlayAdjustm
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
-        self.window_settings.setValue('Overlay Adjustment Geometry', self.saveGeometry())
+        self.window_settings.setValue('Part Adjustment Geometry', self.saveGeometry())
 
 
 class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
@@ -1203,7 +1203,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
             self.config = json.load(config)
 
         # Setup event listeners for all relevant UI components, and connect them to specific functions
-        self.comboParts.currentIndexChanged.connect(self.display_report)
+        self.comboParts.currentIndexChanged.connect(self.populate_tables)
         self.pushSet.clicked.connect(self.set_thresholds)
         self.tableCoat.cellDoubleClicked.connect(self.cell_click)
         self.tableScan.cellDoubleClicked.connect(self.cell_click)
@@ -1228,32 +1228,39 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.spinHistogramCoat.setValue(self.config['Threshold']['HistogramCoat'])
         self.spinHistogramScan.setValue(self.config['Threshold']['HistogramScan'])
 
-    def display_report(self, part):
+    def populate_tables(self, part):
+        """Populates both tables with the data from the selected defect report"""
+
+
 
         # Read the appropriate report into memory
         with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'],
                                                  self.part_names[part])) as report:
             report = json.load(report)
 
-        # Disable sorting while populating the table so things don't get messed up
+        # Completely remove all the data from both tables
+        self.tableCoat.setRowCount(0)
+        self.tableScan.setRowCount(0)
+
+        # Disable sorting while populating the table so the data order doesn't get messed up
         self.tableCoat.setSortingEnabled(False)
         self.tableScan.setSortingEnabled(False)
 
-        # First of all, check if the report dictionary has anything at all
+        # Check if the report dictionary has anything at all
         if report:
-            # Find out the maximum number of layers to set the number of table rows
+            # Calculate the maximum number of layers to set the number of table rows
             max_layer = max([int(number) for number in list(report)])
             self.tableCoat.setRowCount(max_layer)
             self.tableScan.setRowCount(max_layer)
 
-            # Grab the threshold values for the coat and the scan in separate lists
+            # Grab the threshold values for both the coat and the scan defects in separate lists
             threshold_coat = [0, self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
                               self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
                               self.config['Threshold']['HistogramCoat']]
             threshold_scan = [0, self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
                               self.config['Threshold']['HistogramScan'], self.config['Threshold']['Overlay']]
 
-            # Display all the relevant data in the table, while also filling out the 'missing' rows with blanks
+            # Display all the relevant data in the table, while also filling out the 'missing' rows with zeroes
             for row in range(max_layer):
                 # COAT DATA
                 # Grab the Coat data in a try loop in case the index doesn't exist in the dictionary
@@ -1279,9 +1286,9 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                             data_coat.append(0)
 
                     # Set colours for if the data is over/under the threshold, or there is no data at all
-                    # Green for value is GOOD
-                    # Red for value is BAD
-                    # Yellow for value is NONE
+                    # Green is GOOD
+                    # Red is BAD
+                    # Yellow is NONE
                     # NOTE: Different results have different conditions (over/under) for a good/bad result
                     for index, value in enumerate(data_coat):
                         if value < threshold_coat[index]:
@@ -1387,10 +1394,10 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
             json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Reload the data and colour code based on the new threshold values
-        self.display_report(self.comboParts.currentIndex())
+        self.populate_tables(self.comboParts.currentIndex())
 
     def cell_click(self, row, column):
-        """Send a signal back to the Main Window to display the corresponding defect image
+        """Send a signal back to the MainWindow to display the corresponding defect image
         When a cell in the report table is clicked"""
 
         # Grab the layer number from the table as it won't correlate with the row number if the table is sorted

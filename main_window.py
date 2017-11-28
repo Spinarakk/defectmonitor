@@ -87,7 +87,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Menubar -> Tools
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
-        self.actionOverlayAdjustment.triggered.connect(self.overlay_adjustment)
+        self.actionPartAdjustment.triggered.connect(self.part_adjustment)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
         self.actionUpdateFolders.triggered.connect(self.update_folders)
@@ -120,7 +120,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Sidebar Toolbox Assorted Tools
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
-        self.pushOverlayAdjustment.clicked.connect(self.overlay_adjustment)
+        self.pushPartAdjustment.clicked.connect(self.part_adjustment)
         self.pushImageConverter.clicked.connect(self.image_converter)
 
         # Sidebar Toolbox Slice Conversion
@@ -170,7 +170,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
         self.DR_dialog = None  # Defect Reports
         self.CC_dialog = None  # Camera Calibration
-        self.OA_dialog = None  # Overlay Adjustment
+        self.PA_dialog = None  # Part Adjustment
         self.SC_dialog = None  # Slice Converter
         self.CS_dialog = None  # Camera Settings
         self.IP_dialog = None  # Interface Preferences
@@ -565,22 +565,22 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
         self.CC_dialog = None
 
-    def overlay_adjustment(self):
+    def part_adjustment(self):
         """Opens a Modeless Dialog Window when the Overlay Adjustment button is clicked
         Or when Tools -> Overlay Adjustment is clicked
         Allows the user to adjust and transform the overlay image in a variety of ways
         """
 
-        if self.OA_dialog is None:
-            self.OA_dialog = dialog_windows.OverlayAdjustment(self)
-            self.OA_dialog.update_overlay.connect(self.update_display)
-            self.OA_dialog.destroyed.connect(self.overlay_adjustment_closed)
-            self.OA_dialog.show()
+        if self.PA_dialog is None:
+            self.PA_dialog = dialog_windows.PartAdjustment(self)
+            self.PA_dialog.update_part.connect(self.update_display)
+            self.PA_dialog.destroyed.connect(self.part_adjustment_closed)
+            self.PA_dialog.show()
         else:
-            self.OA_dialog.activateWindow()
+            self.PA_dialog.activateWindow()
 
-    def overlay_adjustment_closed(self):
-        self.OA_dialog = None
+    def part_adjustment_closed(self):
+        self.PA_dialog = None
 
     def slice_converter(self):
         """Opens a Modeless Dialog Window when the Slice Converter button is clicked
@@ -1294,8 +1294,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def toggle_contours(self):
         """Enable or disable the Overlay Adjustment buttons if the corresponding checkbox is checked"""
 
-        self.pushOverlayAdjustment.setEnabled(self.checkContours.isChecked())
-        self.actionOverlayAdjustment.setEnabled(self.checkContours.isChecked())
+        self.pushPartAdjustment.setEnabled(self.checkContours.isChecked())
+        self.actionPartAdjustment.setEnabled(self.checkContours.isChecked())
 
         self.update_display()
 
