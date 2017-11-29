@@ -1,3 +1,10 @@
+November 29
+- Disallowed overlaying the part contours on the single image as this caused issues with the image lists
+- Deemed unncessary as the Image Capture tab is mostly for taking one off images for various debugging purposes, not for actual coat or scan images
+- Fixed an issue where an empty Image Capture folder will cause the slider to have a set minimum of zero, causing issues with wrong image numbering
+- Changed behaviour where clicking on the Part Contours or Image Capture tab now unchecks all the defect checkboxes
+- The interface now appears to work correctly as intended
+
 November 28
 - Renamed Overlay Adjustment to Part Adjustment as it only modifies the part contours
 - Fixed up the proper functionally of the Part Adjustment tool

@@ -48,7 +48,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.setWindowIcon(QIcon('gui/logo.ico'))
 
         # Set the version number here
-        self.version = '0.7.9'
+        self.version = '0.8.2'
 
         # Load default working build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
@@ -313,12 +313,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                                            '%s/contours' % self.build['ImageCapture']['Folder'],
                                            '%s/fixed/single' % self.build['ImageCapture']['Folder']]
 
-            # Update the list of images for all four image folders
+            # Update the list of images for all four image folders which in turn updates the display with an image
             self.update_folders()
 
-            # Set the display flag to true to allow tab changes to update images and update the display with an image
+            # Set the display flag to true to allow tab changes to update images
             self.display_flag = True
-            self.update_display()
 
         # Converts and draws the contours if set to do so in the build settings
         if self.build['BuildInfo']['Convert']:
@@ -1146,13 +1145,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 return
 
             # Check if the Part Contours, Part Names and Gridlines images exist, otherwise disable their checkboxes
-            if os.path.isfile(self.display['ImageList'][2][value - 1]) and index != 2:
-                self.checkContours.setEnabled(True)
+            # Part Contours only toggleable on the Coat and Scan tabs
+            if index < 2:
+                if os.path.isfile(self.display['ImageList'][2][value - 1]):
+                    self.checkContours.setEnabled(True)
+                else:
+                    self.checkContours.setEnabled(False)
+                    self.checkContours.setChecked(False)
             else:
                 self.checkContours.setEnabled(False)
                 self.checkContours.setChecked(False)
 
-            if os.path.isfile('%s/part_names.png' % self.build['ImageCapture']['Folder']):
+            # Part Names only toggleable on the Coat, Scan and Part Contour tabs
+            if os.path.isfile('%s/part_names.png' % self.build['ImageCapture']['Folder']) and index < 3:
                 self.checkNames.setEnabled(True)
             else:
                 self.checkNames.setEnabled(False)
@@ -1198,7 +1203,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         # Uncheck the checkbox in question
                         self.display['CheckboxNames'][self.display['DefectNames'].index(defect)].setChecked(False)
             else:
-                self.checkToggleAll.setChecked(False)
+                for checkbox in self.groupOverlayDefects.findChildren(QCheckBox):
+                    checkbox.blockSignals(True)
+                    checkbox.setChecked(False)
+                    checkbox.blockSignals(False)
+
+                self.defect_checkbox = list()
                 self.groupOverlayDefects.setEnabled(False)
 
             # The following conditionals are to check whether to overlay the corresponding images on the current image
@@ -1471,19 +1481,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.checkToggleAll.setChecked(False)
 
             # Update the max layers
-            self.update_max_layers()
+            self.update_layer_values()
 
-            # Set the slider's value to the saved layer value of the current tab
+            # Set the slider's value to the saved layer value of the current tab and reset the image zoom
             self.sliderDisplay.setValue(self.display['CurrentLayer'][index])
-
-            # Update the Defect Data table if the coat or scan tabs are being displayed
-            self.update_table()
-
-            # Update the image on the graphics display with the new image (in case image has been deleted)
-            self.update_display()
-
-            # Zoom out and reset the image
             self.display['GraphicsNames'][index].reset_image()
+
+            # Update the defect data table and the image on the graphics display with the new image
+            self.update_table()
+            self.update_display()
 
         self.sliderDisplay.blockSignals(False)
 
@@ -1520,7 +1526,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display['CurrentLayer'][self.widgetDisplay.currentIndex()] = value
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
-        # Update the image on the graphics display with the new image
+        # Update layer ranges in the corresponding UI elements
+        self.update_layer_values()
+
+        # Update the defect data table and the image on the graphics display with the new image
         self.update_table()
         self.update_display()
 
@@ -1617,15 +1626,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             if '.png' in filename:
                 self.display['ImageList'][3].append('%s/%s' % (self.display['ImageFolder'][3], filename))
 
-        # Update the max layer range
-        self.update_max_layers()
+        # Update the layer ranges in the corresponding UI elements
+        self.update_layer_values()
 
-        if self.display_flag:
-            # Reload any images in the current tab
-            self.update_display()
-            self.update_table()
+        self.update_table()
+        self.update_display()
 
-    def update_max_layers(self):
+    def update_layer_values(self):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""
 
         # The Image Capture tab has different ranges and values
@@ -1634,14 +1641,20 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             max_layers = len(self.display['ImageList'][3])
 
+        # Addresses the issue of the empty Single image list causing the slider minimum to be set to 0
+        if max_layers == 0:
+            max_layers += 1
+
+        # Layer Number
         self.spinLayer.setMaximum(max_layers)
         self.spinLayer.setToolTip('1 - %s' % max_layers)
-        self.sliderDisplay.setMaximum(max_layers)
         self.labelLayerNumber.setText('%s / %s' %
                                       (str(self.display['CurrentLayer'][self.widgetDisplay.currentIndex()]).zfill(4),
                                        str(max_layers).zfill(4)))
-        
-        # Also updates the slider's pageStep and tickInterval depending on the max number of layers
+
+        # Display Slider
+        self.sliderDisplay.setMaximum(max_layers)
+        self.sliderDisplay.setToolTip(str(self.display['CurrentLayer'][self.widgetDisplay.currentIndex()]))
         self.sliderDisplay.setPageStep(math.ceil(max_layers // 50))
         self.sliderDisplay.setTickInterval(math.ceil(max_layers // 50))
 
