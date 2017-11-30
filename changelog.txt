@@ -1,3 +1,9 @@
+November 30
+- Fixed an issue with the slice converter and tuple values
+- Fixed an issue with tab focus not working for the Image Viewer single image
+- Fixed an issue with display messages for single images
+- Fixed an issue where the save build wasn't saving the actual current working build.json file
+
 November 29
 - Disallowed overlaying the part contours on the single image as this caused issues with the image lists
 - Deemed unncessary as the Image Capture tab is mostly for taking one off images for various debugging purposes, not for actual coat or scan images

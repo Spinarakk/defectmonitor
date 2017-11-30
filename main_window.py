@@ -446,7 +446,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         if self.build_name:
-            # Save the current build as the given filename in the given location
+            # Save the current build as the given filename in the given location after reloading it for any changes
+            with open('build.json') as build:
+                self.build = json.load(build)
+
             with open(self.build_name, 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -1073,11 +1076,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         cv2.imwrite(image_name, image)
 
     def fix_image_finished(self):
+        """Executes when the fix image function method is finished"""
 
-        self.update_status('Image fix successfully applied. Currently detecting defects...')
+        self.update_status('Image fix successfully applied.', 3000)
 
-        # Update the image dictionaries and most importantly, the image ranges
-        self.update_folders()
+        # Update the image dictionaries and layer ranges
+        self.update_folders(False)
 
         # Acquire the layer and phase (tab index) from the image name
         layer = int(os.path.splitext(os.path.basename(self.image_name))[0][-4:])
@@ -1093,6 +1097,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Process only the coat or scan image for defects, the image being the one the above method set focus to
         if index < 2:
+            self.update_status('Image fix successfully applied. Currently detecting defects...')
             self.process_current()
 
     # DISPLAY
@@ -1493,14 +1498,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.sliderDisplay.blockSignals(False)
 
-    def tab_focus(self, index, layer, defect_flag=False, defect = 0):
+    def tab_focus(self, index, layer, defect_flag=False, defect=0):
         """Changes the tab focus to the received index's tab and sets the slider value to the received value
         Used for when an image has been captured and focus is to be given to the new image
         Also can be used for when an image has just finished processing for defects
         """
 
         # Double check if the received value is within the layer's range in the first place
-        if layer > self.display['MaxLayers']:
+        if layer > self.display['MaxLayers'] and index < 3:
             self.update_status('Layer %s outside of the available layer range.' % str(layer).zfill(4), 3000)
         else:
             self.widgetDisplay.setCurrentIndex(index)
@@ -1578,7 +1583,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.sliderDisplay.setValue(number_list[position - 1])
 
-    def update_folders(self):
+    def update_folders(self, update_flag=True):
         """Updates the display dictionary with the updated list of images in all four image folders"""
 
         # Iterate through all but the last folder in the list (the single folder) and create a list of layer numbers
@@ -1629,8 +1634,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Update the layer ranges in the corresponding UI elements
         self.update_layer_values()
 
-        self.update_table()
-        self.update_display()
+        # If this method was called just to update the lists and not the displays
+        if update_flag:
+            self.update_table()
+            self.update_display()
 
     def update_layer_values(self):
         """Updates the layer spinbox's maximum acceptable range, tooltip, and the slider's maximum range"""

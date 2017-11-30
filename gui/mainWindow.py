@@ -548,6 +548,7 @@ class Ui_mainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(9)
         self.spinLayer.setFont(font)
+        self.spinLayer.setWrapping(True)
         self.spinLayer.setAlignment(QtCore.Qt.AlignCenter)
         self.spinLayer.setMinimum(1)
         self.spinLayer.setObjectName("spinLayer")

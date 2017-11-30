@@ -30,7 +30,7 @@ class SliceConverter:
 
         # Save respective values to be used to draw contours and polygons
         # Get the resolution of the cropped images using the crop boundaries, 3 at the end indicates an RGB image
-        self.image_resolution = tuple(self.config['ImageCorrection']['ImageResolution'], 3)
+        self.image_resolution = tuple(self.config['ImageCorrection']['ImageResolution'] + [3])
         self.offset = tuple(self.config['ImageCorrection']['Offset'])
         self.scale_factor = self.config['ImageCorrection']['ScaleFactor']
 
@@ -76,7 +76,7 @@ class SliceConverter:
         # UI Progress and Status Messages
         progress_previous = None
         part_name = os.path.splitext(os.path.basename(filename))[0]
-        self.status.emit('Current Part: %s | Reading CLI file...' % part_name)
+        self.status.emit('Current Part: %s | Converting CLI file...' % part_name)
         self.progress.emit(0)
 
         # Set up counters
@@ -155,7 +155,7 @@ class SliceConverter:
                         self.draw_flag = False
                         return False
 
-                    self.status.emit('Current Part: %s | Reading CLI file...' % part_name)
+                    self.status.emit('Current Part: %s | Converting CLI file...' % part_name)
 
         self.progress.emit(100)
 

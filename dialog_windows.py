@@ -791,7 +791,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             part_colours = dict()
             for index, part_name in enumerate(self.slice_list):
                 part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
-                    ((100 + 2 * index) % 255, (100 + 2 * index) % 255, 0)
+                    ((100 + index) % 255, (100 + index) % 255, 0)
 
             # Save the slice file list and the draw state to the config.json file
             self.build['SliceConverter']['Draw'] = self.checkDraw.isChecked()

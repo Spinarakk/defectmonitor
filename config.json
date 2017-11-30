@@ -12,7 +12,7 @@
     },
     "CameraSettings": {
         "BlackLevel": 500,
-        "ExposureTime": 20000,
+        "ExposureTime": 10000,
         "FrameDelay": 0,
         "FrameTransmissionDelay": 0,
         "Gain": 51,
