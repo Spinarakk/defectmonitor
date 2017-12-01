@@ -84,20 +84,22 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
+        self.actionUpdateFolders.triggered.connect(self.update_folders)
+        self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
 
         # Menubar -> Tools
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
         self.actionPartAdjustment.triggered.connect(self.part_adjustment)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
-        self.actionUpdateFolders.triggered.connect(self.update_folders)
-        self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
         self.actionProcessCurrent.triggered.connect(self.process_current)
         self.actionProcessAll.triggered.connect(self.process_all)
 
         # Menubar -> Settings
         self.actionCameraSettings.triggered.connect(self.camera_settings)
         self.actionBuildSettings.triggered.connect(self.build_settings)
+        self.actionAcquireCamera.triggered.connect(self.acquire_camera)
+        self.actionAcquireTrigger.triggered.connect(self.acquire_trigger)
         self.actionPreferences.triggered.connect(self.interface_preferences)
 
         # Menubar -> Help
@@ -121,12 +123,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Sidebar Toolbox Assorted Tools
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
         self.pushPartAdjustment.clicked.connect(self.part_adjustment)
-        self.pushImageConverter.clicked.connect(self.image_converter)
-
-        # Sidebar Toolbox Slice Conversion
-        self.pushPauseConversion.clicked.connect(self.pause_conversion)
-        self.pushStopConversion.clicked.connect(self.setup_build_finished)
         self.pushSliceConverter.clicked.connect(self.slice_converter)
+        self.pushImageConverter.clicked.connect(self.image_converter)
 
         # Sidebar Toolbox Defect Processor
         self.pushProcessCurrent.clicked.connect(self.process_current)
@@ -137,19 +135,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushGo.clicked.connect(self.set_layer)
 
         # Image Capture
-        self.pushAcquireCT.clicked.connect(self.acquire_ct)
-        self.pushCapture.clicked.connect(self.capture_single)
+        self.pushCaptureSingle.clicked.connect(self.capture_single)
+        self.pushRunPauseResume.clicked.connect(self.run_build)
         self.pushFauxTrigger.clicked.connect(lambda: self.capture_run('TRIG'))
-        self.pushRun.clicked.connect(self.run_build)
-        self.pushPauseResume.clicked.connect(self.pause_build)
         self.pushStop.clicked.connect(self.stop_build)
 
         # Display Widget
         self.widgetDisplay.currentChanged.connect(self.tab_change)
-        self.graphicsCE.zoom_done.connect(self.zoom_in_reset)
-        self.graphicsSE.zoom_done.connect(self.zoom_in_reset)
-        self.graphicsPC.zoom_done.connect(self.zoom_in_reset)
-        self.graphicsIC.zoom_done.connect(self.zoom_in_reset)
+        self.graphicsCE.zoom_done.connect(self.zoom_in_finished)
+        self.graphicsSE.zoom_done.connect(self.zoom_in_finished)
+        self.graphicsPC.zoom_done.connect(self.zoom_in_finished)
+        self.graphicsIC.zoom_done.connect(self.zoom_in_finished)
         self.graphicsCE.customContextMenuRequested.connect(self.context_menu_display)
         self.graphicsSE.customContextMenuRequested.connect(self.context_menu_display)
         self.graphicsPC.customContextMenuRequested.connect(self.context_menu_display)
@@ -177,6 +173,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Initiate an empty config file name to be used for saving purposes
         self.build_name = None
+        self.trigger_port = False
 
         # Initialize the counter for the defect processing method
         self.defect_counter = 0
@@ -190,11 +187,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.menu_display = QMenu()
 
         # Fill the Recent Builds drop-down menu with the recent builds
-        self.add_recent_builds('')
+        self.add_recent_build('')
 
         # Set the data table's columns and rows to automatically resize appropriately to make it as small as possible
-        # self.tableDefects.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableDefects.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tableDefects.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.update_table_empty()
 
@@ -256,7 +251,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                     missing_file_error.exec_()
 
                     # Reset the Recent Builds menu to account for the missing files
-                    self.add_recent_builds('')
+                    self.add_recent_build('')
                     return
                 break
 
@@ -280,7 +275,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             if OB_dialog.exec_():
                 # Add the opened build name to the Recent Builds drop-down menu
-                self.add_recent_builds(self.build_name)
+                self.add_recent_build(self.build_name)
 
                 self.setup_build()
 
@@ -300,7 +295,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionSave.setEnabled(True)
             self.actionSaveAs.setEnabled(True)
             self.actionBuildSettings.setEnabled(True)
-            self.pushAcquireCT.setEnabled(True)
+            self.actionAcquireCamera.setEnabled(True)
+            self.actionAcquireTrigger.setEnabled(True)
             self.pushDefectReports.setEnabled(True)
             self.actionDefectReports.setEnabled(True)
             self.actionUpdateFolders.setEnabled(True)
@@ -329,10 +325,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             with open('build.json', 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
-            self.pushPauseConversion.setEnabled(True)
-            self.pushStopConversion.setEnabled(True)
-            self.toolSidebar.setCurrentIndex(1)
-
             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
             worker.signals.status.connect(self.update_status)
             worker.signals.progress.connect(self.update_progress)
@@ -340,22 +332,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.threadpool.start(worker)
         else:
             self.setup_build_finished(settings_flag)
-
-    def pause_conversion(self):
-        """Executes when the Pause/Resume button in the Slice Conversion group box is clicked"""
-
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        if 'Pause' in self.pushPauseConversion.text():
-            self.build['BuildInfo']['Pause'] = True
-            self.pushPauseConversion.setText('Resume')
-        elif 'Resume' in self.pushPauseConversion.text():
-            self.build['BuildInfo']['Pause'] = False
-            self.pushPauseConversion.setText('Pause')
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
 
     def setup_build_finished(self, settings_flag):
         """Executes when the slice conversion process is finished, or the Stop button is pressed"""
@@ -371,10 +347,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Check for and acquire an attached camera and trigger
         # This method is here so that the image capture cannot be run unless the slice conversion has stopped
-        self.acquire_ct()
-
-        self.pushPauseConversion.setEnabled(False)
-        self.pushStopConversion.setEnabled(False)
+        self.acquire_camera()
+        self.acquire_trigger()
 
         if not settings_flag:
             self.update_folders()
@@ -383,7 +357,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.update_status('Build %s settings changed' % self.build['BuildInfo']['Name'], 5000)
 
-    def add_recent_builds(self, build_name):
+    def add_recent_build(self, build_name):
         """Adds a new or opened build to the top of the Recent Builds drop-down menu"""
 
         with open('config.json') as config:
@@ -471,7 +445,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.build_name = filename
 
             # Add the opened build name to the Recent Builds drop-down menu
-            self.add_recent_builds(self.build_name)
+            self.add_recent_build(self.build_name)
 
             self.save_build()
 
@@ -502,16 +476,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     # MENUBAR -> VIEW
 
     def zoom_in(self):
-        if self.actionZoomIn.isChecked():
-            self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = True
-        else:
-            self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = False
+        """Sets the currently displayed Graphics Viewer's zoom function on"""
+        self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = self.actionZoomIn.isChecked()
 
-    def zoom_in_reset(self):
+    def zoom_in_finished(self):
+        """Disables the checked status of the Zoom In action after successfully performing a zoom action"""
         self.actionZoomIn.setChecked(False)
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = False
 
     def zoom_out(self):
+        """Resets the zoom state of the currently displayed Graphics Viewer"""
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].reset_image()
 
     def calibration_results(self):
@@ -524,7 +498,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         try:
             self.calibration_results_dialog.close()
-        except:
+        except AttributeError:
             pass
 
         self.calibration_results_dialog = dialog_windows.CalibrationResults(self, results['ImageCorrection'])
@@ -813,6 +787,38 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if BS_dialog.exec_():
             self.setup_build(True)
 
+    def acquire_camera(self):
+        """Executes after setting up a new build or loading a build, or when Settings -> Acquire Camera is clicked
+        Checks for a valid attached camera and enables/disables the Run and Capture buttons accordingly"""
+
+        self.update_status_camera('Acquiring...')
+
+        if bool(image_capture.ImageCapture().acquire_camera()):
+            self.update_status_camera('Found')
+            self.pushCaptureSingle.setEnabled(True)
+            if bool(self.trigger_port):
+                self.pushRunPauseResume.setEnabled(True)
+        else:
+            self.update_status_camera('Not Found')
+            self.pushCaptureSingle.setEnabled(False)
+            self.pushRunPauseResume.setEnabled(False)
+
+    def acquire_trigger(self):
+        """Executes after setting up a new build or loading a build, or when Settings -> Acquire Camera is clicked
+        Checks for a valid attached trigger and enables/disables the Run and Capture buttons accordingly"""
+
+        self.update_status_trigger('Acquiring...')
+
+        self.trigger_port = image_capture.ImageCapture().acquire_trigger()
+
+        if bool(self.trigger_port):
+            self.update_status_trigger(self.trigger_port)
+            if 'Found' in self.labelCameraStatus.text():
+                self.pushRunPauseResume.setEnabled(True)
+        else:
+            self.update_status_trigger('Not Found')
+            self.pushRunPauseResume.setEnabled(False)
+
     def interface_preferences(self):
         """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
         Allows the user to change certain settings pertaining to the functionality of the program itself"""
@@ -848,104 +854,124 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     # IMAGE CAPTURE
 
-    def acquire_ct(self):
-        """Executes after setting up a new or loading a build, or when the Acquire Camera / Trigger button is clicked
-        Checks for a valid attached camera and trigger and enables/disables the Run button accordingly"""
-
-        self.update_status_ct(['Acquiring...', 'Acquiring...'])
-
-        # Checks for a valid attached camera and trigger using the threadpool by passing the function to a worker
-        worker = qt_multithreading.Worker(self.acquire_ct_function)
-        worker.signals.result.connect(self.update_ct)
-        self.threadpool.start(worker)
-
-    @staticmethod
-    def acquire_ct_function():
-        """Function that will be passed to the QThreadPool to be executed"""
-        camera = image_capture.ImageCapture().acquire_camera()
-        trigger = image_capture.ImageCapture().acquire_trigger()
-
-        # Functions can only return one object, so the two results are combined into a list and returned
-        return [camera, trigger]
+    # def acquire_ct(self):
+    #     """Executes after setting up a new or loading a build, or when the Acquire Camera / Trigger button is clicked
+    #     Checks for a valid attached camera and trigger and enables/disables the Run button accordingly"""
+    #
+    #     # Checks for a valid attached camera and trigger using the threadpool by passing the function to a worker
+    #     worker = qt_multithreading.Worker(self.acquire_ct_function)
+    #     worker.signals.result.connect(self.update_ct)
+    #     self.threadpool.start(worker)
+    #
+    # @staticmethod
+    # def acquire_ct_function():
+    #     """Function that will be passed to the QThreadPool to be executed"""
+    #     camera = image_capture.ImageCapture().acquire_camera()
+    #     trigger = image_capture.ImageCapture().acquire_trigger()
+    #
+    #     # Functions can only return one object, so the two results are combined into a list and returned
+    #     return [camera, trigger]
 
     def capture_single(self):
         """Executes when the Capture Single Image button is clicked
         Captures and saves a single image by using a worker thread to perform the capture function"""
-        self.pushCapture.setEnabled(False)
+        self.pushCaptureSingle.setEnabled(False)
 
         # Takes a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_single)
-        worker.signals.status.connect(self.update_status_ct)
+        worker.signals.statusC.connect(self.update_status_camera)
         worker.signals.name.connect(self.fix_image)
         worker.signals.finished.connect(self.capture_single_finished)
         self.threadpool.start(worker)
 
     def capture_single_finished(self):
-        self.pushCapture.setEnabled(True)
+        self.pushCaptureSingle.setEnabled(True)
 
     def run_build(self):
         """Executes when the Run button is clicked
         Polls the trigger device for a trigger, subsequently capturing and saving an image if triggered
         """
 
-        # Check whether the build has been saved before running anything
-        if self.build_name is None:
-            # Open a message box with a save confirmation message so that the user can save the build before running
-            save_confirmation = QMessageBox(self)
-            save_confirmation.setWindowTitle('Run')
-            save_confirmation.setIcon(QMessageBox.Information)
-            save_confirmation.setText('The current build needs to be saved before it can be run.\n\n'
-                                      'Save the current build?')
-            save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-            retval = save_confirmation.exec_()
+        if 'RUN' in self.pushRunPauseResume.text():
+            # Check whether the build has been saved before running anything
+            if self.build_name is None:
+                # Open a message box with a save confirmation message so that the user can save the build before running
+                save_confirmation = QMessageBox(self)
+                save_confirmation.setWindowTitle('Run')
+                save_confirmation.setIcon(QMessageBox.Information)
+                save_confirmation.setText('The current build needs to be saved before it can be run.\n\n'
+                                          'Save the current build?')
+                save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                retval = save_confirmation.exec_()
 
-            # Save the build if prompted, otherwise exit the method
-            if retval == 2048:
-                self.save_as_build()
-            else:
-                return
+                # Save the build if prompted, otherwise exit the method
+                if retval == 2048:
+                    self.save_as_build()
+                else:
+                    return
 
-        with open('build.json') as build:
-            self.build = json.load(build)
+            with open('build.json') as build:
+                self.build = json.load(build)
 
-        # Enable / disable certain UI elements to prevent concurrent processes
-        self.update_status('Running build.')
-        self.pushRun.setEnabled(False)
-        self.pushPauseResume.setEnabled(True)
-        self.pushStop.setEnabled(True)
-        self.pushAcquireCT.setEnabled(False)
-        self.pushCapture.setEnabled(False)
-        self.checkResume.setEnabled(False)
-        self.pushFauxTrigger.setEnabled(True)
+            # Enable / disable certain UI elements to prevent concurrent processes
+            self.update_status('Running build.')
+            self.pushCaptureSingle.setEnabled(False)
+            self.pushFauxTrigger.setEnabled(True)
+            self.pushStop.setEnabled(True)
+            self.actionAcquireCamera.setEnabled(False)
+            self.actionAcquireTrigger.setEnabled(False)
+            self.checkResume.setEnabled(False)
 
-        # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
-        # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
-        if self.checkResume.isChecked():
-            self.spinStartingLayer.setEnabled(False)
-            self.build['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
-            self.build['ImageCapture']['Phase'] = 1
+            # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
+            # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
+            if self.checkResume.isChecked():
+                self.spinStartingLayer.setEnabled(False)
+                self.build['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
+                self.build['ImageCapture']['Phase'] = 1
 
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
+                with open('build.json', 'w+') as build:
+                    json.dump(self.build, build, indent=4, sort_keys=True)
 
-        # Open the COM port associated with the attached trigger device
-        self.serial_trigger = serial.Serial(self.trigger_port, 9600, timeout=1)
+            # Open the COM port associated with the attached trigger device
+            self.serial_trigger = serial.Serial(self.trigger_port, 9600, timeout=1)
 
-        # Reset the elapsed time and idle time counters and initialize the display time to 0
-        self.stopwatch_elapsed = 0
-        self.stopwatch_idle = 0
-        self.update_time()
+            # Reset the elapsed time and idle time counters and initialize the display time to 0
+            self.stopwatch_elapsed = 0
+            self.stopwatch_idle = 0
+            self.update_time()
 
-        # Create a QTimer that will increment the two running timers
-        self.timer_stopwatch = QTimer()
+            # Create a QTimer that will increment the two running timers
+            self.timer_stopwatch = QTimer()
 
-        # Connect the timeout of the QTimer to the corresponding function
-        self.timer_stopwatch.timeout.connect(self.update_time)
+            # Connect the timeout of the QTimer to the corresponding function
+            self.timer_stopwatch.timeout.connect(self.update_time)
 
-        # Start the QTimer which will timeout and execute the above connected slot method every given milliseconds
-        self.timer_stopwatch.start(1000)
+            # Start the QTimer which will timeout and execute the above connected slot method every given milliseconds
+            self.timer_stopwatch.start(1000)
 
-        self.capture_run('')
+            # Change the RUN button into a PAUSE/RESUME button
+            self.pushRunPauseResume.setStyleSheet('QPushButton {color: #ffaa00;}')
+            self.pushRunPauseResume.setText('PAUSE')
+
+            # Start the capture run process
+            self.capture_run('')
+
+        elif 'PAUSE' in self.pushRunPauseResume.text():
+            self.pushRunPauseResume.setStyleSheet('QPushButton {color: $00aa00;}')
+            self.pushRunPauseResume.setText('RESUME')
+            self.timer_stopwatch.stop()
+            self.update_status('Current build paused.')
+            self.update_status_camera('Paused')
+            self.update_status_trigger('Paused')
+            self.pushFauxTrigger.setEnabled(False)
+
+        elif 'RESUME' in self.pushRunPauseResume.text():
+            self.pushRunPauseResume.setStyleSheet('QPushButton {color: #ffaa00;}')
+            self.pushRunPauseResume.setText('PAUSE')
+            self.timer_stopwatch.start(1000)
+            self.capture_run_finished()
+            self.update_status('Current build resumed.')
+            self.pushFauxTrigger.setEnabled(True)
 
     def capture_run(self, result):
         """Because reading from the serial trigger takes a little bit of time, it temporarily freezes the main UI
@@ -957,18 +983,23 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Check if the build is still 'running'
-        if 'PAUSE' in self.pushPauseResume.text() and self.pushPauseResume.isEnabled():
+        if 'PAUSE' in self.pushRunPauseResume.text():
             if 'TRIG' in result:
-                self.pushPauseResume.setEnabled(False)
-                self.pushStop.setEnabled(False)
+                # Disable all the image capture buttons
+                self.pushRunPauseResume.setEnabled(False)
                 self.pushFauxTrigger.setEnabled(False)
+                self.pushStop.setEnabled(False)
+
+                # Capture an image
                 worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_run)
-                worker.signals.status.connect(self.update_status_ct)
+                worker.signals.statusC.connect(self.update_status_camera)
+                worker.signals.statusT.connect(self.update_status_trigger)
                 worker.signals.name.connect(self.fix_image)
                 worker.signals.finished.connect(self.capture_run_finished)
                 self.threadpool.start(worker)
             else:
-                self.update_status_ct(['Waiting...', 'Waiting...'])
+                self.update_status_camera('Waiting...')
+                self.update_status_trigger('Waiting...')
                 worker = qt_multithreading.Worker(self.poll_trigger)
                 worker.signals.result.connect(self.capture_run)
                 self.threadpool.start(worker)
@@ -976,7 +1007,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def poll_trigger(self):
         """Function that will be passed to the QThreadPool to be executed, put into a thread as it takes a bit of time
         Basically just checks the serial trigger for a TRIG output"""
-
         return str(self.serial_trigger.readline())
 
     def capture_run_finished(self):
@@ -984,53 +1014,35 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.serial_trigger.reset_input_buffer()
         self.stopwatch_idle = 0
-        self.pushPauseResume.setEnabled(True)
-        self.pushStop.setEnabled(True)
+        self.pushRunPauseResume.setEnabled(True)
         self.pushFauxTrigger.setEnabled(True)
+        self.pushStop.setEnabled(True)
 
         # Automatically save the build to retain capture numbering
         self.save_build()
+
+        # Go back into the trigger polling loop
         self.capture_run('')
-
-    def pause_build(self):
-        """Executes when the Pause/Resume button is clicked"""
-
-        # Pause function, stop the timer and the trigger polling loop
-        if 'PAUSE' in self.pushPauseResume.text():
-            self.pushPauseResume.setStyleSheet('QPushButton {color: #00aa00;}')
-            self.pushPauseResume.setText('RESUME')
-            self.timer_stopwatch.stop()
-            self.update_status('Current build paused.')
-            self.update_status_ct(['Paused', 'Paused'])
-            self.pushFauxTrigger.setEnabled(False)
-
-        # Resume function, start the timer and restart the trigger polling loop
-        elif 'RESUME' in self.pushPauseResume.text():
-            self.pushPauseResume.setStyleSheet('QPushButton {color: #ffaa00;}')
-            self.pushPauseResume.setText('PAUSE')
-            self.timer_stopwatch.start(1000)
-            self.capture_run_finished()
-            self.update_status('Current build resumed.')
-            self.pushFauxTrigger.setEnabled(True)
 
     def stop_build(self):
         """Executes when the Stop button is clicked"""
 
         # Enable / disable certain UI elements
         # Disabling the Pause button stops the trigger polling loop
-        self.update_status('Build stopped.', 10000)
-        self.update_status_ct(['Found', self.trigger_port])
-        self.pushRun.setEnabled(True)
-        self.pushPauseResume.setEnabled(False)
+        self.update_status('Build stopped.', 3000)
+        self.update_status_camera('Found')
+        self.update_status_trigger(self.trigger_port)
+        self.pushRunPauseResume.setEnabled(True)
         self.pushStop.setEnabled(False)
-        self.pushAcquireCT.setEnabled(True)
+        self.actionAcquireCamera(True)
+        self.actionAcquireTrigger(True)
         self.checkResume.setEnabled(True)
         self.pushFauxTrigger.setEnabled(False)
-        self.pushCapture.setEnabled(True)
+        self.pushCaptureSingle.setEnabled(True)
 
-        # Reset the Pause/Resume button back to its default state (including the text colour)
-        self.pushPauseResume.setText('PAUSE')
-        self.pushPauseResume.setStyleSheet('')
+        # Reset the Pause/Resume button back to its default RUN state (including the text colour)
+        self.pushRunPauseResume.setStyleSheet('QPushButton {color: #008080;}')
+        self.pushRunPauseResume.setText('RUN')
 
         # Stop the stopwatch timer and close the serial port
         self.timer_stopwatch.stop()
@@ -1665,29 +1677,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderDisplay.setPageStep(math.ceil(max_layers // 50))
         self.sliderDisplay.setTickInterval(math.ceil(max_layers // 50))
 
-    def update_ct(self, status):
-        """Updates the status boxes for the acquisition of the camera and trigger with the received status details
-        Also enables or disables the Run and Capture Single Image buttons depending on the result"""
-
-        # Camera status
-        if bool(status[0]):
-            self.update_status_ct(['Found', ''])
-            self.pushCapture.setEnabled(True)
-            if bool(status[1]):
-                self.pushRun.setEnabled(True)
-        else:
-            self.update_status_ct(['Not Found', ''])
-            self.pushRun.setEnabled(False)
-            self.pushCapture.setEnabled(False)
-
-        # Trigger status
-        if bool(status[1]):
-            self.trigger_port = status[1]
-            self.update_status_ct(['', self.trigger_port])
-        else:
-            self.update_status_ct(['', 'Not Found'])
-            self.pushRun.setEnabled(False)
-
     def update_time(self):
         """Updates the timers at the bottom right of the Main Window with an incremented formatted timestamp"""
 
@@ -1707,13 +1696,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         return '%s:%s:%s' % (hours, minutes, seconds)
 
-    def update_status_ct(self, status):
-        """Updates both the camera and trigger status bars with the received string arguments (if they exist)"""
+    def update_status_camera(self, status):
+        """Updates the camera status bar with the received string argument"""
+        self.labelCameraStatus.setText(status)
 
-        if status[0]:
-            self.labelCameraStatus.setText(status[0])
-        if status[1]:
-            self.labelTriggerStatus.setText(status[1])
+    def update_status_trigger(self, status):
+        """Updates the trigger status bar with the received string argument"""
+        self.labelTriggerStatus.setText(status)
 
     def update_status(self, string, duration=0):
         """Updates the default status bar at the bottom of the Main Window with the received string argument"""

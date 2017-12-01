@@ -314,6 +314,9 @@
        <pointsize>10</pointsize>
       </font>
      </property>
+     <property name="text">
+      <string>Nicholas Lee</string>
+     </property>
      <property name="maxLength">
       <number>99</number>
      </property>
@@ -412,6 +415,9 @@
       <font>
        <pointsize>10</pointsize>
       </font>
+     </property>
+     <property name="text">
+      <string>nicholascklee@gmail.com</string>
      </property>
      <property name="maxLength">
       <number>99</number>

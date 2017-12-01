@@ -93,10 +93,10 @@ class ImageCapture:
         self.camera.properties['AcquisitionFrameRateEnable'] = 'False'
         self.camera.properties['AcquisitionFrameCount'] = 1
 
-    def acquire_image_single(self, status, name):
+    def acquire_image_single(self, statusC, name):
         """Acquire a single image from the camera"""
 
-        status.emit(['Capturing...', ''])
+        statusC.emit('Capturing')
 
         # Acquire and open the camera and apply the entered settings to it
         self.acquire_camera()
@@ -107,7 +107,7 @@ class ImageCapture:
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            status.emit(['Error', ''])
+            statusC.emit('Error')
         else:
             # Construct the image name using the current layer
             image_name = '%s/raw/single/singleR_%s.png' % (self.build['ImageCapture']['Folder'],
@@ -120,17 +120,18 @@ class ImageCapture:
             self.single_layer += 1
 
             # Emit a status message and the image name to the Main Window, which will continue to process the image
-            status.emit(['Image Saved', ''])
+            statusC.emit('Image Saved')
             name.emit(image_name)
         finally:
             # Close the camera and save any changed counters to the build.json file
             self.camera.close()
             self.save_settings()
 
-    def acquire_image_run(self, status, name):
-        """Acquire an images from the camera when trigger is detected, and sleep for a certain amount of time"""
+    def acquire_image_run(self, statusC, statusT, name):
+        """Acquire an image from the camera when trigger is detected, and sleep for a certain amount of time"""
 
-        status.emit(['Capturing...', 'Detected'])
+        statusC.emit('Capturing...')
+        statusT.emit('Detected')
 
         # Acquire and open the camera and apply the entered settings to it
         self.acquire_camera()
@@ -152,7 +153,7 @@ class ImageCapture:
         cv2.imwrite(image_name, image)
 
         # Emit a status message and the image name to the Main Window, which will continue to process the image
-        status.emit(['Image Saved', ''])
+        statusC.emit('Image Saved')
 
         # Do not process the first scan image however
         if self.current_layer >= 1:
@@ -161,7 +162,7 @@ class ImageCapture:
         # Loop used to delay triggering for additional images for however many seconds
         # Also displays remaining timeout on the status bar
         for seconds in range(self.config['CameraSettings']['TriggerTimeout'], 0, -1):
-            status.emit(['', 'Timeout: %ss' % seconds])
+            statusT.emit('Timeout: %ss' % seconds)
             time.sleep(1)
 
         # Increment the layer (by 1) every second image, and toggle the phase
@@ -173,6 +174,7 @@ class ImageCapture:
         self.save_settings()
 
     def save_settings(self):
+        """Save the current build's layer numbers to the build.json file"""
 
         self.build['ImageCapture']['Layer'] = self.current_layer
         self.build['ImageCapture']['Phase'] = self.current_phase

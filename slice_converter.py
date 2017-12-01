@@ -231,12 +231,11 @@ class SliceConverter:
             # Create a blank black RGB image to draw contours on
             image_contours = np.zeros(self.image_resolution, np.uint8)
 
+            # Clear the contours list
+            contours = list()
+
             # Iterate through all the parts
             for filename in filenames:
-
-                # Clear the contours list
-                contours = list()
-
                 # Try accessing the current layer index of the corresponding part contours list
                 try:
                     contour_string = contour_dict[os.path.basename(filename)][layer]
@@ -251,13 +250,8 @@ class SliceConverter:
                 for string in contour_string:
                     # Convert the string of numbers into a list of vectors using the comma delimiter
                     vectors = string.split(',')[:-1]
-                    # Convert the above list of vectors into a numpy array of vectors
+                    # Convert the above list of vectors into a numpy array of vectors and append it to the contours list
                     contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
-
-                # Draw the contours onto the image_contours canvas
-                cv2.drawContours(image_contours, contours, -1,
-                                 part_colours[os.path.splitext(os.path.basename(filename))[0]],
-                                 offset=self.offset, thickness=cv2.FILLED)
 
                 # For the first layer, find the centre of the contours and put the part names on a blank image
                 if layer == 1:
@@ -267,6 +261,11 @@ class SliceConverter:
                     centre_y = abs(self.image_resolution[0] - int(moments['m01'] / moments['m00']))
                     cv2.putText(image_names, os.path.splitext(os.path.basename(filename))[0], (centre_x, centre_y),
                                 cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
+
+            # Draw all the contours onto the image_contours canvas at once
+            cv2.drawContours(image_contours, contours, -1,
+                             part_colours[os.path.splitext(os.path.basename(filename))[0]],
+                             offset=self.offset, thickness=cv2.FILLED)
 
             # Flip the image vertically to account for the fact that OpenCV's origin is the top left corner
             image_contours = cv2.flip(image_contours, 0)

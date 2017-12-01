@@ -231,10 +231,12 @@ class Ui_dialogNewBuild(object):
         self.labelUsername.setText(_translate("dialogNewBuild", "Username"))
         self.pushBrowseBF.setToolTip(_translate("dialogNewBuild", "Select where the captured images for the current build will be stored."))
         self.pushBrowseBF.setText(_translate("dialogNewBuild", "Browse"))
+        self.lineUsername.setText(_translate("dialogNewBuild", "Nicholas Lee"))
         self.pushCreate.setText(_translate("dialogNewBuild", "Create"))
         self.pushSendTestEmail.setText(_translate("dialogNewBuild", "Send Test Email"))
         self.lineBuildName.setText(_translate("dialogNewBuild", "Default"))
         self.labelBuildName.setText(_translate("dialogNewBuild", "Build Name"))
+        self.lineEmailAddress.setText(_translate("dialogNewBuild", "nicholascklee@gmail.com"))
         self.labelEmailAddress.setText(_translate("dialogNewBuild", "Email Address"))
         self.labelBuildPlatform.setText(_translate("dialogNewBuild", "Build Platform"))
 

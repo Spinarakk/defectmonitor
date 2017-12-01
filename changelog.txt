@@ -1,3 +1,10 @@
+December 1
+- Rewrote some lines of code to be 'smarter'
+- Split the Acquire Camera / Trigger button into individual Find Camera and Find Trigger actions found in the menu bar
+- Removed the push button to make some space
+- Removed the Slice Converter tab from the toolSidebar and moved the Slice Converter to the Assorted Tools tab
+- Removed the Pause and Stop buttons
+
 November 30
 - Fixed an issue with the slice converter and tuple values
 - Fixed an issue with tab focus not working for the Image Viewer single image

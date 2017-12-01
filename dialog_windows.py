@@ -187,7 +187,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         if not self.lineBuildName.text():
             error_message += 'Build Name not entered.\n'
         if not self.slice_list:
-            error_message += 'Slice files not selected.\n'
+            error_message += 'Slice File(s) not selected.\n'
         if not self.lineUsername.text():
             error_message += 'Username not entered.\n'
         if not validate_email(self.lineEmailAddress.text()):
@@ -262,7 +262,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
                 for index, part_name in enumerate(report_list):
                     part_name = os.path.splitext(os.path.basename(part_name))[0]
-                    part_colours[part_name] = ((100 + 2 * index) % 255, (100 + 2 * index) % 255, 0)
+                    part_colours[part_name] = ((100 + index) % 255, (100 + index) % 255, 0)
 
                     with open('%s/reports/%s_report.json' % (image_folder, part_name), 'w+') as report:
                         json.dump(dict_blank, report)

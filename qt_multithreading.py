@@ -6,10 +6,15 @@ from PyQt5.QtCore import *
 
 class WorkerSignals(QObject):
     """Signals available from a running worker thread are defined here"""
+
     finished = pyqtSignal()
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
-    status = pyqtSignal(object)
+
+    status = pyqtSignal(str)
+    statusC = pyqtSignal(str)   # Camera Status
+    statusT = pyqtSignal(str)   # Trigger Status
+
     name = pyqtSignal(str)
     progress = pyqtSignal(int)
     colour = pyqtSignal(int, bool)
@@ -30,18 +35,20 @@ class Worker(QRunnable):
 
         # Add any signal keywords to the kwargs here depending on the sent function
         if 'acquire_image' in str(self.function):
-            kwargs['status'] = self.signals.status
+            kwargs['statusC'] = self.signals.statusC
             kwargs['name'] = self.signals.name
+            if 'run' in str(self.function):
+                kwargs['statusT'] = self.signals.statusT
 
         if 'convert' in str(self.function) or 'detector' in str(self.function) or 'calibrate' in str(self.function):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
 
-        if 'run_detector' in str(self.function):
-            kwargs['notification'] = self.signals.notification
-
         if 'calibrate' in str(self.function):
             kwargs['colour'] = self.signals.colour
+
+        if 'run_detector' in str(self.function):
+            kwargs['notification'] = self.signals.notification
 
     @pyqtSlot()
     def run(self):
