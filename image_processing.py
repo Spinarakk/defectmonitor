@@ -222,7 +222,7 @@ class DefectDetector:
         # Create a blank black RGB image the same size as the raw image to draw the defects on
         image_blank = np.zeros(image.shape, np.uint8)
 
-        # Different detection methods will be applied depending on the marked phase (coat, scan or single)
+        # Different detection methods will be applied to the coat or scan image
         if 'coat' in self.phase:
             self.analyze_coat(image, image_blank)
         elif 'scan' in self.phase:

@@ -70,7 +70,7 @@ class ImageCapture:
         # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
         self.current_layer = self.build['ImageCapture']['Layer']
         self.current_phase = self.build['ImageCapture']['Phase']
-        self.single_layer = self.build['ImageCapture']['Single']
+        self.snapshot_layer = self.build['ImageCapture']['Snapshot']
         self.phases = ['coat', 'scan']
 
         # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
@@ -93,10 +93,10 @@ class ImageCapture:
         self.camera.properties['AcquisitionFrameRateEnable'] = 'False'
         self.camera.properties['AcquisitionFrameCount'] = 1
 
-    def acquire_image_single(self, statusC, name):
-        """Acquire a single image from the camera"""
+    def acquire_image_snapshot(self, status_camera, name):
+        """Acquire a snapshot image from the camera"""
 
-        statusC.emit('Capturing')
+        status_camera.emit('Capturing')
 
         # Acquire and open the camera and apply the entered settings to it
         self.acquire_camera()
@@ -107,31 +107,31 @@ class ImageCapture:
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            statusC.emit('Error')
+            status_camera.emit('Error')
         else:
             # Construct the image name using the current layer
-            image_name = '%s/raw/single/singleR_%s.png' % (self.build['ImageCapture']['Folder'],
-                                                           str(self.single_layer).zfill(4))
+            image_name = '%s/raw/snapshot/snapshotR_%s.png' % (self.build['ImageCapture']['Folder'],
+                                                           str(self.snapshot_layer).zfill(4))
 
-            # Save the raw image to the single folder
+            # Save the raw image to the snapshot folder
             cv2.imwrite(image_name, image)
 
             # Increment the capture counter
-            self.single_layer += 1
+            self.snapshot_layer += 1
 
             # Emit a status message and the image name to the Main Window, which will continue to process the image
-            statusC.emit('Image Saved')
+            status_camera.emit('Image Saved')
             name.emit(image_name)
         finally:
             # Close the camera and save any changed counters to the build.json file
             self.camera.close()
             self.save_settings()
 
-    def acquire_image_run(self, statusC, statusT, name):
+    def acquire_image_run(self, status_camera, status_trigger, name):
         """Acquire an image from the camera when trigger is detected, and sleep for a certain amount of time"""
 
-        statusC.emit('Capturing...')
-        statusT.emit('Detected')
+        status_camera.emit('Capturing...')
+        status_trigger.emit('Detected')
 
         # Acquire and open the camera and apply the entered settings to it
         self.acquire_camera()
@@ -149,11 +149,11 @@ class ImageCapture:
         image_name = '%s/raw/%s/%sR_%s.png' % (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
                                                self.phases[self.current_phase], str(int(self.current_layer)).zfill(4))
 
-        # Save the raw image to the single folder
+        # Save the raw image to the appropriate folder
         cv2.imwrite(image_name, image)
 
         # Emit a status message and the image name to the Main Window, which will continue to process the image
-        statusC.emit('Image Saved')
+        status_camera.emit('Image Saved')
 
         # Do not process the first scan image however
         if self.current_layer >= 1:
@@ -162,7 +162,7 @@ class ImageCapture:
         # Loop used to delay triggering for additional images for however many seconds
         # Also displays remaining timeout on the status bar
         for seconds in range(self.config['CameraSettings']['TriggerTimeout'], 0, -1):
-            statusT.emit('Timeout: %ss' % seconds)
+            status_trigger.emit('Timeout: %ss' % seconds)
             time.sleep(1)
 
         # Increment the layer (by 1) every second image, and toggle the phase
@@ -178,7 +178,7 @@ class ImageCapture:
 
         self.build['ImageCapture']['Layer'] = self.current_layer
         self.build['ImageCapture']['Phase'] = self.current_phase
-        self.build['ImageCapture']['Single'] = self.single_layer
+        self.build['ImageCapture']['Snapshot'] = self.snapshot_layer
 
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)

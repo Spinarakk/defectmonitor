@@ -12,8 +12,8 @@ class WorkerSignals(QObject):
     result = pyqtSignal(object)
 
     status = pyqtSignal(str)
-    statusC = pyqtSignal(str)   # Camera Status
-    statusT = pyqtSignal(str)   # Trigger Status
+    status_camera = pyqtSignal(str)
+    status_trigger = pyqtSignal(str)
 
     name = pyqtSignal(str)
     progress = pyqtSignal(int)
@@ -35,10 +35,10 @@ class Worker(QRunnable):
 
         # Add any signal keywords to the kwargs here depending on the sent function
         if 'acquire_image' in str(self.function):
-            kwargs['statusC'] = self.signals.statusC
+            kwargs['status_camera'] = self.signals.status_camera
             kwargs['name'] = self.signals.name
             if 'run' in str(self.function):
-                kwargs['statusT'] = self.signals.statusT
+                kwargs['status_trigger'] = self.signals.status_trigger
 
         if 'convert' in str(self.function) or 'detector' in str(self.function) or 'calibrate' in str(self.function):
             kwargs['status'] = self.signals.status

@@ -21,14 +21,14 @@
         "Image": "",
         "ImagePrevious": "",
         "Layer": 0,
-        "Mode": "single",
+        "Mode": "snapshot",
         "Phase": "coat"
     },
     "ImageCapture": {
         "Folder": "",
         "Layer": 0.5,
         "Phase": 1,
-        "Single": 1
+        "Snapshot": 1
     },
     "Notifications": {
 	"Attachment": "",

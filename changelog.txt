@@ -1,9 +1,16 @@
+December 4
+- Changed up the main interface a bit again, moved Trigger button to the menu bar and renamed a few functions
+- Fixed a few message errors that happen while running a build
+- Looked into possible replacements for the hall effect trigger
+
 December 1
 - Rewrote some lines of code to be 'smarter'
 - Split the Acquire Camera / Trigger button into individual Find Camera and Find Trigger actions found in the menu bar
 - Removed the push button to make some space
 - Removed the Slice Converter tab from the toolSidebar and moved the Slice Converter to the Assorted Tools tab
-- Removed the Pause and Stop buttons
+- Removed the Pause and Stop buttons for the Slice Converter
+- Rewrote a lot of the code to make up for the removed / moved functionality
+- Slightly redesigned the MainWindow to allow a bigger image space
 
 November 30
 - Fixed an issue with the slice converter and tuple values

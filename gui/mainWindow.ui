@@ -195,7 +195,7 @@
          <number>6</number>
         </property>
         <property name="bottomMargin">
-         <number>4</number>
+         <number>6</number>
         </property>
         <item row="0" column="0">
          <widget class="QStackedWidget" name="stackedCE">
@@ -366,9 +366,9 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tabImageCapture">
+      <widget class="QWidget" name="tabImageSnapshot">
        <attribute name="title">
-        <string>Image Capture</string>
+        <string>Image Snapshot</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_9">
         <property name="leftMargin">
@@ -384,14 +384,14 @@
          <number>6</number>
         </property>
         <item row="0" column="0">
-         <widget class="QStackedWidget" name="stackedIC">
+         <widget class="QStackedWidget" name="stackedIS">
           <property name="currentIndex">
            <number>0</number>
           </property>
-          <widget class="QWidget" name="pageIC1">
+          <widget class="QWidget" name="pageIS1">
            <layout class="QGridLayout" name="gridLayout_12">
             <item row="0" column="0">
-             <widget class="QLabel" name="labelIC">
+             <widget class="QLabel" name="labelIS">
               <property name="font">
                <font>
                 <pointsize>20</pointsize>
@@ -409,10 +409,10 @@
             </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="pageIC">
+          <widget class="QWidget" name="pageIS2">
            <layout class="QGridLayout" name="gridLayout_15">
             <item row="0" column="0">
-             <widget class="ImageViewer" name="graphicsIC">
+             <widget class="ImageViewer" name="graphicsIS">
               <property name="contextMenuPolicy">
                <enum>Qt::CustomContextMenu</enum>
               </property>
@@ -1184,19 +1184,19 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="pushSliceConverter">
+             <property name="text">
+              <string>Slice Converter</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="pushPartAdjustment">
              <property name="enabled">
               <bool>false</bool>
              </property>
              <property name="text">
               <string>Part Adjustment</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushSliceConverter">
-             <property name="text">
-              <string>Slice Converter</string>
              </property>
             </widget>
            </item>
@@ -1235,12 +1235,69 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QPushButton" name="pushCaptureSingle">
+            <widget class="QPushButton" name="pushAcquireCT">
              <property name="enabled">
               <bool>false</bool>
              </property>
+             <property name="toolTip">
+              <string>Simulates the trigger being triggered.</string>
+             </property>
              <property name="text">
-              <string>Capture</string>
+              <string>Acquire CT</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushSnapshot">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="palette">
+              <palette>
+               <active>
+                <colorrole role="ButtonText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>0</red>
+                   <green>0</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </active>
+               <inactive>
+                <colorrole role="ButtonText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>0</red>
+                   <green>0</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </inactive>
+               <disabled>
+                <colorrole role="ButtonText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>120</red>
+                   <green>120</green>
+                   <blue>120</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </disabled>
+              </palette>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>9</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>SNAPSHOT</string>
              </property>
             </widget>
            </item>
@@ -1256,8 +1313,8 @@
                  <brush brushstyle="SolidPattern">
                   <color alpha="255">
                    <red>0</red>
-                   <green>128</green>
-                   <blue>128</blue>
+                   <green>170</green>
+                   <blue>0</blue>
                   </color>
                  </brush>
                 </colorrole>
@@ -1267,8 +1324,8 @@
                  <brush brushstyle="SolidPattern">
                   <color alpha="255">
                    <red>0</red>
-                   <green>128</green>
-                   <blue>128</blue>
+                   <green>170</green>
+                   <blue>0</blue>
                   </color>
                  </brush>
                 </colorrole>
@@ -1295,56 +1352,6 @@
              </property>
              <property name="text">
               <string>RUN</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushFauxTrigger">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="palette">
-              <palette>
-               <active>
-                <colorrole role="ButtonText">
-                 <brush brushstyle="SolidPattern">
-                  <color alpha="255">
-                   <red>45</red>
-                   <green>3</green>
-                   <blue>255</blue>
-                  </color>
-                 </brush>
-                </colorrole>
-               </active>
-               <inactive>
-                <colorrole role="ButtonText">
-                 <brush brushstyle="SolidPattern">
-                  <color alpha="255">
-                   <red>45</red>
-                   <green>3</green>
-                   <blue>255</blue>
-                  </color>
-                 </brush>
-                </colorrole>
-               </inactive>
-               <disabled>
-                <colorrole role="ButtonText">
-                 <brush brushstyle="SolidPattern">
-                  <color alpha="255">
-                   <red>120</red>
-                   <green>120</green>
-                   <blue>120</blue>
-                  </color>
-                 </brush>
-                </colorrole>
-               </disabled>
-              </palette>
-             </property>
-             <property name="toolTip">
-              <string>Simulates the trigger being triggered.</string>
-             </property>
-             <property name="text">
-              <string>Trigger</string>
              </property>
             </widget>
            </item>
@@ -1404,9 +1411,9 @@
            </item>
           </layout>
           <zorder>pushRunPauseResume</zorder>
-          <zorder>pushFauxTrigger</zorder>
           <zorder>pushStop</zorder>
-          <zorder>pushCaptureSingle</zorder>
+          <zorder>pushSnapshot</zorder>
+          <zorder>pushAcquireCT</zorder>
          </widget>
          <widget class="QWidget" name="pageDefectProcessor">
           <property name="geometry">
@@ -1536,12 +1543,23 @@
      <addaction name="actionProcessCurrent"/>
      <addaction name="actionProcessAll"/>
     </widget>
+    <widget class="QMenu" name="menuImageCapture">
+     <property name="title">
+      <string>Image Capture</string>
+     </property>
+     <addaction name="actionSnapshot"/>
+     <addaction name="actionRunPauseResume"/>
+     <addaction name="actionStop"/>
+     <addaction name="separator"/>
+     <addaction name="actionFauxTrigger"/>
+    </widget>
     <addaction name="actionCameraCalibration"/>
     <addaction name="actionPartAdjustment"/>
     <addaction name="separator"/>
     <addaction name="actionSliceConverter"/>
     <addaction name="actionImageConverter"/>
     <addaction name="separator"/>
+    <addaction name="menuImageCapture"/>
     <addaction name="menuDefectProcessor"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -1596,6 +1614,9 @@
    <addaction name="separator"/>
    <addaction name="actionAcquireCamera"/>
    <addaction name="actionAcquireTrigger"/>
+   <addaction name="separator"/>
+   <addaction name="actionSnapshot"/>
+   <addaction name="actionFauxTrigger"/>
    <addaction name="separator"/>
    <addaction name="actionUpdateFolders"/>
   </widget>
@@ -1820,6 +1841,38 @@
     <string>Acquire Trigger</string>
    </property>
   </action>
+  <action name="actionSnapshot">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Snapshot</string>
+   </property>
+  </action>
+  <action name="actionRunPauseResume">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Run</string>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+  </action>
+  <action name="actionFauxTrigger">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Trigger</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1840,7 +1893,7 @@
   <tabstop>graphicsCE</tabstop>
   <tabstop>graphicsSE</tabstop>
   <tabstop>graphicsPC</tabstop>
-  <tabstop>graphicsIC</tabstop>
+  <tabstop>graphicsIS</tabstop>
  </tabstops>
  <resources/>
  <connections>
