@@ -1060,7 +1060,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Toggle All Defects</string>
+             <string>Toggle All</string>
             </property>
            </widget>
           </item>
@@ -1214,7 +1214,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>98</width>
             <height>110</height>
            </rect>
           </property>
@@ -1420,7 +1420,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>106</width>
             <height>110</height>
            </rect>
           </property>
@@ -1822,7 +1822,7 @@
   </action>
   <action name="actionPreferences">
    <property name="text">
-    <string>Preferences</string>
+    <string>Preferences...</string>
    </property>
   </action>
   <action name="actionAcquireCamera">

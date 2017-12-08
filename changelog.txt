@@ -1,3 +1,16 @@
+December 8
+- Created an Image Converter dialog window in order to batch convert images (not yet finished)
+- Rewrote a few old lines of code
+- Incorporated the Part Adjustment move buttons into the Slice Converter's preview screen
+
+December 7
+- Started redesigning the Slice Converter dialog window to now include a Contour Preview image viewer which displays a preview of what the chosen slice layer's part contours will look like
+- Removed the Run and Pause functionality from the MainWindow
+- The New Build window now opens the Slice Converter window when the Convert checkbox is checked
+
+December 6
+- Cleaned up and shortened the trigger cables and put it into a small box
+
 December 4
 - Changed up the main interface a bit again, moved Trigger button to the menu bar and renamed a few functions
 - Fixed a few message errors that happen while running a build

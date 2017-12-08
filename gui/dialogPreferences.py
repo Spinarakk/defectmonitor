@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gui\dialogInterfacePreferences.ui'
+# Form implementation generated from reading ui file 'gui\dialogPreferences.ui'
 #
-# Created by: PyQt5 UI code generator 5.9
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_dialogInterfacePreferences(object):
-    def setupUi(self, dialogInterfacePreferences):
-        dialogInterfacePreferences.setObjectName("dialogInterfacePreferences")
-        dialogInterfacePreferences.resize(203, 146)
-        self.gridLayout = QtWidgets.QGridLayout(dialogInterfacePreferences)
+class Ui_dialogPreferences(object):
+    def setupUi(self, dialogPreferences):
+        dialogPreferences.setObjectName("dialogPreferences")
+        dialogPreferences.resize(203, 146)
+        self.gridLayout = QtWidgets.QGridLayout(dialogPreferences)
         self.gridLayout.setObjectName("gridLayout")
-        self.groupBox = QtWidgets.QGroupBox(dialogInterfacePreferences)
+        self.groupBox = QtWidgets.QGroupBox(dialogPreferences)
         self.groupBox.setObjectName("groupBox")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout_2.setContentsMargins(9, 3, 9, 6)
@@ -46,24 +46,24 @@ class Ui_dialogInterfacePreferences(object):
         self.pushModify.setObjectName("pushModify")
         self.gridLayout_2.addWidget(self.pushModify, 2, 1, 1, 1)
         self.gridLayout.addWidget(self.groupBox, 2, 0, 1, 2)
-        self.pushDone = QtWidgets.QPushButton(dialogInterfacePreferences)
+        self.pushDone = QtWidgets.QPushButton(dialogPreferences)
         self.pushDone.setObjectName("pushDone")
         self.gridLayout.addWidget(self.pushDone, 3, 1, 1, 1)
 
-        self.retranslateUi(dialogInterfacePreferences)
-        self.pushDone.clicked.connect(dialogInterfacePreferences.close)
-        QtCore.QMetaObject.connectSlotsByName(dialogInterfacePreferences)
-        dialogInterfacePreferences.setTabOrder(self.spinSize, self.spinThickness)
-        dialogInterfacePreferences.setTabOrder(self.spinThickness, self.pushModify)
-        dialogInterfacePreferences.setTabOrder(self.pushModify, self.pushDone)
+        self.retranslateUi(dialogPreferences)
+        self.pushDone.clicked.connect(dialogPreferences.close)
+        QtCore.QMetaObject.connectSlotsByName(dialogPreferences)
+        dialogPreferences.setTabOrder(self.spinSize, self.spinThickness)
+        dialogPreferences.setTabOrder(self.spinThickness, self.pushModify)
+        dialogPreferences.setTabOrder(self.pushModify, self.pushDone)
 
-    def retranslateUi(self, dialogInterfacePreferences):
+    def retranslateUi(self, dialogPreferences):
         _translate = QtCore.QCoreApplication.translate
-        dialogInterfacePreferences.setWindowTitle(_translate("dialogInterfacePreferences", "Interface Prefernces"))
-        self.groupBox.setTitle(_translate("dialogInterfacePreferences", "Gridline Settings"))
-        self.labelThickness.setText(_translate("dialogInterfacePreferences", "Gridline Thickness"))
-        self.spinThickness.setToolTip(_translate("dialogInterfacePreferences", "1 - 10"))
-        self.labelSize.setText(_translate("dialogInterfacePreferences", "Grid Size (Pixels)"))
-        self.pushModify.setText(_translate("dialogInterfacePreferences", "Modify"))
-        self.pushDone.setText(_translate("dialogInterfacePreferences", "Done"))
+        dialogPreferences.setWindowTitle(_translate("dialogPreferences", "Preferences"))
+        self.groupBox.setTitle(_translate("dialogPreferences", "Gridline Settings"))
+        self.labelThickness.setText(_translate("dialogPreferences", "Gridline Thickness"))
+        self.spinThickness.setToolTip(_translate("dialogPreferences", "1 - 10"))
+        self.labelSize.setText(_translate("dialogPreferences", "Grid Size (Pixels)"))
+        self.pushModify.setText(_translate("dialogPreferences", "Modify"))
+        self.pushDone.setText(_translate("dialogPreferences", "Done"))
 

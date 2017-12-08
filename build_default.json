@@ -2,17 +2,14 @@
     "BuildInfo": {
         "Colours": {},
         "Convert": false,
-        "Draw": false,
         "EmailAddress": "",
         "Folder": "",
         "Name": "Default",
-        "Pause": false,
         "Platform": 0,
         "PlatformDimensions": [
             636.0,
             406.0
         ],
-        "Run": false,
         "SliceFiles": [],
         "Username": ""
     },

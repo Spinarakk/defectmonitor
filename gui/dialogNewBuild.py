@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'gui\dialogNewBuild.ui'
 #
-# Created by: PyQt5 UI code generator 5.9
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -57,15 +57,6 @@ class Ui_dialogNewBuild(object):
         self.checkConvert.setSizePolicy(sizePolicy)
         self.checkConvert.setObjectName("checkConvert")
         self.verticalLayout_2.addWidget(self.checkConvert)
-        self.checkDraw = QtWidgets.QCheckBox(self.frame1)
-        self.checkDraw.setEnabled(False)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.checkDraw.sizePolicy().hasHeightForWidth())
-        self.checkDraw.setSizePolicy(sizePolicy)
-        self.checkDraw.setObjectName("checkDraw")
-        self.verticalLayout_2.addWidget(self.checkDraw)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem)
         self.gridLayout.addWidget(self.frame1, 3, 5, 3, 1)
@@ -198,7 +189,6 @@ class Ui_dialogNewBuild(object):
 
         self.retranslateUi(dialogNewBuild)
         self.pushCancel.clicked.connect(dialogNewBuild.reject)
-        self.checkConvert.toggled['bool'].connect(self.checkDraw.setEnabled)
         QtCore.QMetaObject.connectSlotsByName(dialogNewBuild)
         dialogNewBuild.setTabOrder(self.lineBuildName, self.comboPlatform)
         dialogNewBuild.setTabOrder(self.comboPlatform, self.listSliceFiles)
@@ -218,8 +208,6 @@ class Ui_dialogNewBuild(object):
         self.checkMajor.setText(_translate("dialogNewBuild", "Major Defects"))
         self.checkConvert.setToolTip(_translate("dialogNewBuild", "Check this box to convert the .cls or .cli slice files into contours."))
         self.checkConvert.setText(_translate("dialogNewBuild", "Convert"))
-        self.checkDraw.setToolTip(_translate("dialogNewBuild", "Check this box to draw and save the contours."))
-        self.checkDraw.setText(_translate("dialogNewBuild", "Draw"))
         self.labelSliceFile.setText(_translate("dialogNewBuild", "Slice File(s)"))
         self.labelBuildFolder.setText(_translate("dialogNewBuild", "Build Folder"))
         self.comboPlatform.setItemText(0, _translate("dialogNewBuild", "Concept Laser Xline 1000R"))

@@ -84,7 +84,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
-        self.actionUpdateFolders.triggered.connect(self.update_folders)
+        self.actionUpdateFolders.triggered.connect(lambda: self.update_folders(True))
         self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
 
         # Menubar -> Tools
@@ -104,7 +104,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionBuildSettings.triggered.connect(self.build_settings)
         self.actionAcquireCamera.triggered.connect(self.acquire_camera)
         self.actionAcquireTrigger.triggered.connect(self.acquire_trigger)
-        self.actionPreferences.triggered.connect(self.interface_preferences)
+        self.actionPreferences.triggered.connect(self.preferences)
 
         # Menubar -> Help
         self.actionViewHelp.triggered.connect(self.view_help)
@@ -170,11 +170,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
         self.DR_dialog = None  # Defect Reports
-        self.CC_dialog = None  # Camera Calibration
-        self.PA_dialog = None  # Part Adjustment
-        self.SC_dialog = None  # Slice Converter
+        self.P_dialog = None  # Preferences
         self.CS_dialog = None  # Camera Settings
-        self.IP_dialog = None  # Interface Preferences
+        self.CC_dialog = None  # Camera Calibration
+        self.SC_dialog = None  # Slice Converter
+        self.PA_dialog = None  # Part Adjustment
+        self.IC_dialog = None  # Image Converter
 
         # Initiate an empty config file name to be used for saving purposes
         self.build_name = None
@@ -315,49 +316,24 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                                            '%s/contours' % self.build['ImageCapture']['Folder'],
                                            '%s/fixed/snapshot' % self.build['ImageCapture']['Folder']]
 
-            # Update the list of images for all four image folders which in turn updates the display with an image
-            self.update_folders()
-
             # Set the display flag to true to allow tab changes to update images
             self.display_flag = True
 
+            # Check and acquire an attached camera and trigger if available
+            self.acquire_camera()
+            self.acquire_trigger()
+
         # Converts and draws the contours if set to do so in the build settings
         if self.build['BuildInfo']['Convert']:
-            # Set the appropriate flags in the config.json file to run the slice conversion
-            self.build['BuildInfo']['Pause'] = False
-            self.build['BuildInfo']['Run'] = True
-            self.build['SliceConverter']['Build'] = True
-
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
-
-            worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
-            worker.signals.status.connect(self.update_status)
-            worker.signals.progress.connect(self.update_progress)
-            worker.signals.finished.connect(lambda: self.setup_build_finished(settings_flag))
-            self.threadpool.start(worker)
+            self.slice_converter()
         else:
             self.setup_build_finished(settings_flag)
 
     def setup_build_finished(self, settings_flag):
         """Executes when the slice conversion process is finished, or the Stop button is pressed"""
 
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        self.build['BuildInfo']['Pause'] = False
-        self.build['BuildInfo']['Run'] = False
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
-
-        # Check for and acquire an attached camera and trigger
-        # This method is here so that the image capture cannot be run unless the slice conversion has stopped
-        self.acquire_camera()
-        self.acquire_trigger()
-
         if not settings_flag:
-            self.update_folders()
+            self.update_folders(True)
             self.update_progress(0)
             self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 5000)
         else:
@@ -583,56 +559,53 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.SC_dialog = None
 
     def image_converter(self):
-        """Opens a FileDialog when the Image Converter button is clicked
-        Allows the user to select an image to apply image correction on and saves the processed image in the same folder
-        """
+        """Opens a Modeless Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
+        Allows the user to batch convert a bunch of images to their fixed state"""
 
-        # Get the name of the image file to be processed
-        image_name = QFileDialog.getOpenFileName(self, 'Image Converter', '', 'Image Files (*.png)')[0]
+        if self.IC_dialog is None:
+            self.IC_dialog = dialog_windows.ImageConverter(self)
+            self.IC_dialog.destroyed.connect(self.image_converter_closed)
+            self.IC_dialog.show()
+        else:
+            self.IC_dialog.activateWindow()
 
-        # Checking if user has selected a file or clicked cancel
-        if image_name:
-            # Process and save the image using a thread by passing the function to a worker
-            worker = qt_multithreading.Worker(self.image_converter_function, image_name)
-            worker.signals.status.connect(self.update_status)
-            worker.signals.progress.connect(self.update_progress)
-            worker.signals.result.connect(self.image_converter_finished)
-            self.threadpool.start(worker)
+    def image_converter_closed(self):
+        self.IC_dialog = None
 
-    @staticmethod
-    def image_converter_function(image_name, status, progress):
-        """Applies the distortion, perspective, crop and CLAHE processes to the received image
-        Also subsequently saves the image after every process"""
-
-        image = cv2.imread('%s' % image_name)
-        image_name = os.path.splitext(image_name)[0]
-
-        # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
-        progress.emit(0)
-        status.emit('Undistorting image...')
-        image = image_processing.ImageTransform().distortion_fix(image)
-        cv2.imwrite('%s_D.png' % image_name, image)
-        progress.emit(25)
-        status.emit('Fixing perspective warp...')
-        image = image_processing.ImageTransform().perspective_fix(image)
-        cv2.imwrite('%s_DP.png' % image_name, image)
-        progress.emit(50)
-        status.emit('Cropping image to size...')
-        image = image_processing.ImageTransform().crop(image)
-        cv2.imwrite('%s_DPC.png' % image_name, image)
-        progress.emit(75)
-        status.emit('Applying CLAHE equalization...')
-        image = image_processing.ImageTransform().clahe(image)
-        cv2.imwrite('%s_DPCE.png' % image_name, image)
-        progress.emit(100)
-        status.emit('Image successfully converted and saved to same folder as input image.')
-
-        return os.path.dirname(image_name).replace('/', '\\')
-
-    @staticmethod
-    def image_converter_finished(image_folder):
-        """Open the folder containing the converted images for the user to view after conversion is finished"""
-        subprocess.Popen('explorer %s' % image_folder)
+    # @staticmethod
+    # def image_converter_function(image_name, status, progress):
+    #     """Applies the distortion, perspective, crop and CLAHE processes to the received image
+    #     Also subsequently saves the image after every process"""
+    #
+    #     image = cv2.imread('%s' % image_name)
+    #     image_name = os.path.splitext(image_name)[0]
+    #
+    #     # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
+    #     progress.emit(0)
+    #     status.emit('Undistorting image...')
+    #     image = image_processing.ImageTransform().distortion_fix(image)
+    #     cv2.imwrite('%s_D.png' % image_name, image)
+    #     progress.emit(25)
+    #     status.emit('Fixing perspective warp...')
+    #     image = image_processing.ImageTransform().perspective_fix(image)
+    #     cv2.imwrite('%s_DP.png' % image_name, image)
+    #     progress.emit(50)
+    #     status.emit('Cropping image to size...')
+    #     image = image_processing.ImageTransform().crop(image)
+    #     cv2.imwrite('%s_DPC.png' % image_name, image)
+    #     progress.emit(75)
+    #     status.emit('Applying CLAHE equalization...')
+    #     image = image_processing.ImageTransform().clahe(image)
+    #     cv2.imwrite('%s_DPCE.png' % image_name, image)
+    #     progress.emit(100)
+    #     status.emit('Image successfully converted and saved to same folder as input image.')
+    #
+    #     return os.path.dirname(image_name).replace('/', '\\')
+    #
+    # @staticmethod
+    # def image_converter_finished(image_folder):
+    #     """Open the folder containing the converted images for the user to view after conversion is finished"""
+    #     subprocess.Popen('explorer %s' % image_folder)
 
     # MENUBAR -> TOOLS -> DEFECT PROCESSOR
 
@@ -657,6 +630,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.defect_counter = 0
             self.all_flag = True
             self.tab_index = self.widgetDisplay.currentIndex()
+
+            # Change the Process All button into a Process Stop button
             self.pushProcessAll.setStyleSheet('QPushButton {color: #ff0000;}')
             self.pushProcessAll.setText('Process Stop')
             self.actionProcessAll.setText('Process Stop')
@@ -727,7 +702,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Otherwise the window is set to its processing finished state"""
 
         self.processing_flag = False
-        self.update_folders()
+        self.update_folders(True)
 
         if self.all_flag and not self.defect_counter == len(self.layer_numbers):
             self.process_settings(self.layer_numbers[self.defect_counter])
@@ -833,19 +808,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushRunPauseResume.setEnabled(False)
             self.actionRunPauseResume.setEnabled(False)
 
-    def interface_preferences(self):
+    def preferences(self):
         """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
         Allows the user to change certain settings pertaining to the functionality of the program itself"""
 
-        if self.IP_dialog is None:
-            self.IP_dialog = dialog_windows.InterfacePreferences(self)
-            self.IP_dialog.destroyed.connect(self.interface_preferences_closed)
-            self.IP_dialog.show()
+        if self.P_dialog is None:
+            self.P_dialog = dialog_windows.Preferences(self)
+            self.P_dialog.destroyed.connect(self.preferences_closed)
+            self.P_dialog.show()
         else:
-            self.IP_dialog.activateWindow()
+            self.P_dialog.activateWindow()
 
-    def interface_preferences_closed(self):
-        self.IP_dialog = None
+    def preferences_closed(self):
+        self.P_dialog = None
 
     # MENUBAR -> HELP
 
@@ -1040,8 +1015,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushRunPauseResume.setEnabled(True)
         self.actionRunPauseResume.setEnabled(True)
         self.pushStop.setEnabled(False)
-        self.actionAcquireCamera(True)
-        self.actionAcquireTrigger(True)
+        self.actionAcquireCamera.setEnabled(True)
+        self.actionAcquireTrigger.setEnabled(True)
         self.pushAcquireCT.setEnabled(True)
         self.checkResume.setEnabled(True)
         self.actionFauxTrigger.setEnabled(False)
@@ -1085,21 +1060,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         image = image_processing.ImageTransform().perspective_fix(image)
         image = image_processing.ImageTransform().crop(image)
 
-        # Modify the name of
-        if 'coat' in image_name:
-            image_name = image_name.replace('coatR', 'coatF').replace('raw', 'fixed')
-        elif 'scan' in image_name:
-            image_name = image_name.replace('scanR', 'scanF').replace('raw', 'fixed')
-        elif 'snapshot' in image_name:
-            image_name = image_name.replace('snapshotR', 'snapshotF').replace('raw', 'fixed')
-
         # Save the image using a modified image name
-        cv2.imwrite(image_name, image)
+        cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
 
     def fix_image_finished(self):
         """Executes when the fix image function method is finished"""
 
-        self.update_status('Image fix successfully applied.', 3000)
+        self.update_status('Image fix successfully applied.', 2000)
 
         # Update the image dictionaries and layer ranges
         self.update_folders(False)
@@ -1457,7 +1424,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def update_table_empty(self):
         """Updates the Defect Data table with empty 0 values with a white background if the data isn't available
         Or if the current tab isn't either the coat or scan tabs
-        Also enables or disables the Overlay Defects groupbox"""
+        Also disables the Overlay Defects groupBox as an empty table would mean there are no defects to display"""
 
         for row in range(6):
             self.tableDefects.setItem(row, 0, QTableWidgetItem('0'))

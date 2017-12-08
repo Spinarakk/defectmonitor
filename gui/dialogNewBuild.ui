@@ -128,25 +128,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkDraw">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="toolTip">
-         <string>Check this box to draw and save the contours.</string>
-        </property>
-        <property name="text">
-         <string>Draw</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer name="verticalSpacer1">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -483,22 +464,6 @@
     <hint type="destinationlabel">
      <x>205</x>
      <y>217</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>checkConvert</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>checkDraw</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>360</x>
-     <y>125</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>360</x>
-     <y>156</y>
     </hint>
    </hints>
   </connection>

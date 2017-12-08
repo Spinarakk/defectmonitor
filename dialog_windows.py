@@ -13,13 +13,14 @@ from PyQt5.QtWidgets import *
 
 # Import related modules
 import slice_converter
+import image_processing
 import extra_functions
 import camera_calibration
 import qt_multithreading
 
 # Import PyQt GUIs
-from gui import dialogNewBuild, dialogInterfacePreferences, dialogCameraCalibration, dialogCalibrationResults, \
-    dialogSliceConverter, dialogCameraSettings, dialogPartAdjustment, dialogDefectReports
+from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogCameraCalibration, \
+    dialogCalibrationResults, dialogSliceConverter,  dialogPartAdjustment, dialogImageConverter, dialogDefectReports
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -81,12 +82,12 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     def browse_slice(self):
         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
 
-        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cls *.cli)')[0]
+        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cli)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if filenames:
             self.slice_list = filenames
-            self.set_list(filenames)
+            self.set_list(self.slice_list)
 
     def browse_build_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
@@ -155,16 +156,13 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_test_confirmation.exec_()
 
     def set_list(self, file_list):
-        """Adds file names to the ListWidget and sets the background colour depending on the stated conditions"""
+        """Adds file base names to the ListWidget"""
 
         self.listSliceFiles.clear()
 
-        for index, item in enumerate(file_list):
+        # For loop required in order to use the basename of each slice file
+        for item in file_list:
             self.listSliceFiles.addItem(os.path.basename(item))
-            if '.cls' in item:
-                self.listSliceFiles.item(index).setBackground(QColor('blue'))
-            elif '.cli' in item:
-                self.listSliceFiles.item(index).setBackground(QColor('yellow'))
 
     def enable_button(self):
         """(Re-)Enables the Send Test Email button if the email address box is changed and not empty"""
@@ -206,8 +204,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.build['BuildInfo']['Username'] = str(self.lineUsername.text())
             self.build['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
             self.build['BuildInfo']['Convert'] = self.checkConvert.isChecked()
-            if self.checkConvert.isChecked():
-                self.build['BuildInfo']['Draw'] = self.checkDraw.isChecked()
             self.build['BuildInfo']['Folder'] = self.build_folder
             self.build['BuildInfo']['SliceFiles'] = self.slice_list
             self.build['Notifications']['Minor'] = self.checkMinor.isChecked()
@@ -290,19 +286,19 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.done(1)
 
 
-class InterfacePreferences(QDialog, dialogInterfacePreferences.Ui_dialogInterfacePreferences):
-    """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
+class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
+    """Opens a Modeless Dialog Window when Settings -> Preferences... is clicked
     Allows the user to change any settings in regard to the main interface"""
 
     def __init__(self, parent=None):
 
         # Setup Dialog UI with MainWindow as parent and restore the previous window state
-        super(InterfacePreferences, self).__init__(parent)
+        super(Preferences, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
         try:
-            self.restoreGeometry(self.window_settings.value('Interface Preferences Geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Preferences Geometry', ''))
         except TypeError:
             pass
 
@@ -365,7 +361,98 @@ class InterfacePreferences(QDialog, dialogInterfacePreferences.Ui_dialogInterfac
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
-        self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
+        self.window_settings.setValue('Preferences Geometry', self.saveGeometry())
+
+
+class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
+    """Opens a Modeless Dialog Window when Tools -> Camera -> Settings is clicked
+    Or when the Camera Settings button in the Image Capture Dialog Window is clicked
+    Allows the user to change camera settings which will be sent to the camera before images are taken
+    """
+
+    def __init__(self, parent=None):
+
+        # Setup Dialog UI with MainWindow as parent and restore the previous window state
+        super(CameraSettings, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+        self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
+        try:
+            self.restoreGeometry(self.window_settings.value('Camera Settings Geometry', ''))
+        except TypeError:
+            pass
+
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.pushApply.clicked.connect(self.apply)
+
+        # Setup event listeners for all the setting boxes to detect a change in an entered value
+        self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
+        self.spinGain.valueChanged.connect(self.apply_enable)
+        self.spinBlackLevel.valueChanged.connect(self.apply_enable)
+        self.spinExposureTime.valueChanged.connect(self.apply_enable)
+        self.spinPacketSize.valueChanged.connect(self.apply_enable)
+        self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
+        self.spinFrameDelay.valueChanged.connect(self.apply_enable)
+        self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
+
+        # Set the combo box and settings to the previously saved values
+        # Combo box settings are saved as their index values in the config.json file
+        self.comboPixelFormat.setCurrentIndex(int(self.config['CameraSettings']['PixelFormat']))
+        self.spinGain.setValue(self.config['CameraSettings']['Gain'])
+        self.spinBlackLevel.setValue(self.config['CameraSettings']['BlackLevel'])
+        self.spinExposureTime.setValue(int(self.config['CameraSettings']['ExposureTime']))
+        self.spinPacketSize.setValue(int(self.config['CameraSettings']['PacketSize']))
+        self.spinInterPacketDelay.setValue(int(self.config['CameraSettings']['InterPacketDelay']))
+        self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameDelay']))
+        self.spinTriggerTimeout.setValue(int(self.config['CameraSettings']['TriggerTimeout']))
+
+        self.pushApply.setEnabled(False)
+
+    def apply_enable(self):
+        """Enable the Apply button on any change of settings"""
+        self.pushApply.setEnabled(True)
+
+    def apply(self):
+        """Executes when the Apply button is clicked and saves the entered values to the config.json file"""
+
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Save the new values from the changed settings to the config dictionary
+        self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
+        self.config['CameraSettings']['Gain'] = self.spinGain.value()
+        self.config['CameraSettings']['BlackLevel'] = self.spinBlackLevel.value()
+        self.config['CameraSettings']['ExposureTime'] = self.spinExposureTime.value()
+        self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
+        self.config['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
+        self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
+        self.config['CameraSettings']['TriggerTimeout'] = self.spinTriggerTimeout.value()
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
+
+        # Disable the Apply button until another setting is changed
+        self.pushApply.setEnabled(False)
+
+    def accept(self):
+        """Executes when the OK button is pressed
+        If the settings have changed, the apply function is executed before closing the window"""
+
+        if self.pushApply.isEnabled():
+            self.apply()
+
+        self.closeEvent(self.close())
+
+    def closeEvent(self, event):
+        """Executes when the window is closed or the Cancel button is clicked
+        Doesn't save any changed settings at all"""
+
+        self.window_settings.setValue('Camera Settings Geometry', self.saveGeometry())
 
 
 class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
@@ -617,106 +704,72 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.window_settings.setValue('Camera Calibration Geometry', self.saveGeometry())
 
 
-class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
-    """Opens a Modeless Dialog Window when Tools -> Camera -> Settings is clicked
-    Or when the Camera Settings button in the Image Capture Dialog Window is clicked
-    Allows the user to change camera settings which will be sent to the camera before images are taken
+class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
+    """Opens a Modeless Dialog Window when the CameraCalibration instance has finished
+    Or when the View Results button within the Camera Calibration Dialog Window is clicked
+    Allows user to look at the pertinent calibration parameters and results
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, results=None):
 
-        # Setup Dialog UI with MainWindow as parent and restore the previous window state
-        super(CameraSettings, self).__init__(parent)
+        # Setup Dialog UI with CameraCalibration as parent and restore the previous window state
+        super(CalibrationResults, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
-            self.restoreGeometry(self.window_settings.value('Camera Settings Geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Calibration Results Geometry', ''))
         except TypeError:
             pass
 
-        # Load from the config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
+        # Split camera parameters into their own respective values to be used in OpenCV functions
+        camera_matrix = np.array(results['CameraMatrix'])
+        distortion_coefficients = np.array(results['DistortionCoefficients'])
+        homography_matrix = np.array(results['HomographyMatrix'])
 
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.pushApply.clicked.connect(self.apply)
+        # Sets the tables' columns and rows to automatically resize appropriately
+        self.tableCM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableDC.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableHM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableCM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableDC.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableHM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        # Setup event listeners for all the setting boxes to detect a change in an entered value
-        self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
-        self.spinGain.valueChanged.connect(self.apply_enable)
-        self.spinBlackLevel.valueChanged.connect(self.apply_enable)
-        self.spinExposureTime.valueChanged.connect(self.apply_enable)
-        self.spinPacketSize.valueChanged.connect(self.apply_enable)
-        self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
-        self.spinFrameDelay.valueChanged.connect(self.apply_enable)
-        self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
+        # Nested for loops to access each of the table boxes in order
+        for row in range(3):
+            for column in range(3):
+                # Setting the item using the corresponding index of the matrix arrays
+                self.tableCM.setItem(row, column, QTableWidgetItem(format(camera_matrix[row][column], '.10g')))
+                self.tableHM.setItem(row, column, QTableWidgetItem(format(homography_matrix[row][column], '.10g')))
 
-        # Set the combo box and settings to the previously saved values
-        # Combo box settings are saved as their index values in the config.json file
-        self.comboPixelFormat.setCurrentIndex(int(self.config['CameraSettings']['PixelFormat']))
-        self.spinGain.setValue(self.config['CameraSettings']['Gain'])
-        self.spinBlackLevel.setValue(self.config['CameraSettings']['BlackLevel'])
-        self.spinExposureTime.setValue(int(self.config['CameraSettings']['ExposureTime']))
-        self.spinPacketSize.setValue(int(self.config['CameraSettings']['PacketSize']))
-        self.spinInterPacketDelay.setValue(int(self.config['CameraSettings']['InterPacketDelay']))
-        self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameDelay']))
-        self.spinTriggerTimeout.setValue(int(self.config['CameraSettings']['TriggerTimeout']))
+                # Because the distortion coefficients matrix is a 1x5, a slight modification needs to be made
+                # Exception used to ignore the 2x3 box and 3rd row of the matrix
+                if row >= 1:
+                    column += 3
+                try:
+                    self.tableDC.setItem(row, column % 3, QTableWidgetItem(
+                        format(distortion_coefficients[0][column], '.10g')))
+                except (ValueError, IndexError):
+                    pass
 
-        self.pushApply.setEnabled(False)
+        # Sets the row height to as small as possible to fit the text height
+        self.tableCM.resizeRowsToContents()
+        self.tableDC.resizeRowsToContents()
+        self.tableHM.resizeRowsToContents()
 
-    def apply_enable(self):
-        """Enable the Apply button on any change of settings"""
-        self.pushApply.setEnabled(True)
-
-    def apply(self):
-        """Executes when the Apply button is clicked and saves the entered values to the config.json file"""
-
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Save the new values from the changed settings to the config dictionary
-        self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()
-        self.config['CameraSettings']['Gain'] = self.spinGain.value()
-        self.config['CameraSettings']['BlackLevel'] = self.spinBlackLevel.value()
-        self.config['CameraSettings']['ExposureTime'] = self.spinExposureTime.value()
-        self.config['CameraSettings']['PacketSize'] = self.spinPacketSize.value()
-        self.config['CameraSettings']['InterPacketDelay'] = self.spinInterPacketDelay.value()
-        self.config['CameraSettings']['FrameTransmissionDelay'] = self.spinFrameDelay.value()
-        self.config['CameraSettings']['TriggerTimeout'] = self.spinTriggerTimeout.value()
-
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
-
-        # Disable the Apply button until another setting is changed
-        self.pushApply.setEnabled(False)
-
-    def accept(self):
-        """Executes when the OK button is pressed
-        If the settings have changed, the apply function is executed before closing the window"""
-
-        if self.pushApply.isEnabled():
-            self.apply()
-
-        self.closeEvent(self.close())
+        # Displaying the re-projection error on the appropriate text label
+        self.labelRMS.setText('Re-Projection Error: ' + format(results['RMS'], '.10g'))
 
     def closeEvent(self, event):
-        """Executes when the window is closed or the Cancel button is clicked
-        Doesn't save any changed settings at all"""
-
-        self.window_settings.setValue('Camera Settings Geometry', self.saveGeometry())
+        """Executes when the window is closed"""
+        self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
 
 
 class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
-    """Opens a Modeless Dialog Window when the Slice Converter button is clicked
-    Or when Tools -> Slice Converter is clicked
-    Allows user to convert .cls or .cli files into ASCII encoded scaled contours that OpenCV can draw
-    """
 
     def __init__(self, parent=None):
 
-        # Setup Dialog UI with MainWindow as parent and restore the previous window state
         super(SliceConverter, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -730,32 +783,19 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         with open('build.json') as build:
             self.build = json.load(build)
 
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.buttonBrowseSF.clicked.connect(self.browse_slice)
-        self.buttonBrowseF.clicked.connect(self.browse_folder)
-        self.buttonStart.clicked.connect(self.start)
-        self.buttonStop.clicked.connect(self.start_finished)
-        self.checkDraw.toggled.connect(self.toggle_range)
-        self.spinRangeLow.valueChanged.connect(self.set_range)
+        self.pushPreviewLayer.clicked.connect(self.preview_layer)
 
-        # Create and display a 'default' contours folder to store the drawn part contours
-        self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
+        # Set a 'default' contours folder to store the drawn contours if no build has been started
+        # Otherwise use the contours folder in the build folder
+        if self.build['ImageCapture']['Folder']:
+            self.contours_folder = self.build['ImageCapture']['Folder'] + '/contours'
+        else:
+            self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
+
         self.lineFolder.setText(self.contours_folder)
 
-        self.threadpool = QThreadPool()
-
-    def browse_slice(self):
-        """Opens a File Dialog, allowing the user to select one or multiple slice files"""
-
-        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cli)')[0]
-
-        if filenames:
-            self.slice_list = filenames
-            self.listSliceFiles.clear()
-            self.buttonStart.setEnabled(True)
-            self.update_status('Current Part: None | Waiting to start conversion.')
-            for item in self.slice_list:
-                self.listSliceFiles.addItem(os.path.basename(item))
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.pushBrowseOF.clicked.connect(self.browse_folder)
 
     def browse_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
@@ -766,131 +806,196 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.contours_folder = folder
             self.lineFolder.setText(self.contours_folder)
 
-    def start(self):
-        """Executes when the Start/Pause/Resume button is clicked and does one of the following depending on the text"""
-
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        if 'Start' in self.buttonStart.text():
-            # Disable all buttons to prevent user from doing other tasks
-            self.buttonStop.setEnabled(True)
-            self.buttonBrowseSF.setEnabled(False)
-            self.buttonBrowseF.setEnabled(False)
-            self.buttonDone.setEnabled(False)
-            self.checkDraw.setEnabled(False)
-            self.checkRange.setEnabled(False)
-            self.spinRangeLow.setEnabled(False)
-            self.spinRangeHigh.setEnabled(False)
-            self.update_progress(0)
-
-            # Change the Start button into a Pause/Resume button
-            self.buttonStart.setText('Pause')
-
-            # Create a dictionary of colours (different shades of teal) for each part's contours and save it
-            part_colours = dict()
-            for index, part_name in enumerate(self.slice_list):
-                part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
-                    ((100 + index) % 255, (100 + index) % 255, 0)
-
-            # Save the slice file list and the draw state to the config.json file
-            self.build['SliceConverter']['Draw'] = self.checkDraw.isChecked()
-            self.build['SliceConverter']['Folder'] = self.contours_folder
-            self.build['SliceConverter']['Files'] = self.slice_list
-            self.build['SliceConverter']['Run'] = True
-            self.build['SliceConverter']['Pause'] = False
-            self.build['SliceConverter']['Build'] = False
-            self.build['SliceConverter']['Colours'] = part_colours
-            self.build['SliceConverter']['Range'] = self.checkRange.isChecked()
-            self.build['SliceConverter']['RangeLow'] = self.spinRangeLow.value()
-            self.build['SliceConverter']['RangeHigh'] = self.spinRangeHigh.value()
-
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
-
-            worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
-            worker.signals.status.connect(self.update_status)
-            worker.signals.progress.connect(self.update_progress)
-            worker.signals.finished.connect(self.start_finished)
-            self.threadpool.start(worker)
-
-        elif 'Pause' in self.buttonStart.text():
-            self.build['SliceConverter']['Pause'] = True
-            self.buttonStart.setText('Resume')
-        elif 'Resume' in self.buttonStart.text():
-            self.build['SliceConverter']['Pause'] = False
-            self.buttonStart.setText('Pause')
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
-
-    def start_finished(self):
-        """Executes when the SliceConverter instance has finished"""
-
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        # Stop the conversion thread
-        self.build['SliceConverter']['Pause'] = False
-        self.build['SliceConverter']['Run'] = False
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
-
-        # Enable/disable respective buttons
-        self.buttonStart.setText('Start')
-        self.buttonStop.setEnabled(False)
-        self.buttonBrowseSF.setEnabled(True)
-        self.buttonBrowseF.setEnabled(True)
-        self.buttonDone.setEnabled(True)
-        self.checkDraw.setEnabled(True)
-        if self.checkDraw.isChecked():
-            self.checkRange.setEnabled(True)
-            self.spinRangeLow.setEnabled(True)
-            self.spinRangeHigh.setEnabled(True)
-
-    def toggle_range(self):
-        """Toggles the state of the Draw Range checkbox if the Draw Contours checkbox is unchecked"""
-
-        if not self.checkDraw.isChecked():
-            self.checkRange.setChecked(False)
-
-    def set_range(self, value):
-        """Sets the minimum value of the high spinbox to the current value of the low spinbox"""
-
-        self.spinRangeHigh.setMinimum(value)
-
-    def update_status(self, string):
-        string = string.split(' | ')
-        self.labelStatus.setText(string[1])
-        self.labelStatusSlice.setText(string[0])
-
-    def update_progress(self, percentage):
-        self.progressBar.setValue(percentage)
+    def preview_layer(self):
+        pass
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
 
-        with open('build.json') as build:
-            self.build = json.load(build)
 
-        # Check if a conversion is in progress or paused, and block the user from closing the window until stopped
-        if not self.buttonDone.isEnabled():
-            run_error = QMessageBox(self)
-            run_error.setWindowTitle('Error')
-            run_error.setIcon(QMessageBox.Critical)
-            run_error.setText('Conversion in progress or paused.\n\n'
-                              'Please stop or wait for the conversion to finish before exiting.')
-            run_error.exec_()
-            event.ignore()
-        else:
-            self.build['SliceConverter']['Folder'] = ''
-            self.build['SliceConverter']['Files'] = []
-
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
-
-            self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
+# class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
+#     """Opens a Modeless Dialog Window when the Slice Converter button is clicked
+#     Or when Tools -> Slice Converter is clicked
+#     Allows user to convert .cls or .cli files into ASCII encoded scaled contours that OpenCV can draw
+#     """
+#
+#     def __init__(self, parent=None):
+#
+#         # Setup Dialog UI with MainWindow as parent and restore the previous window state
+#         super(SliceConverter, self).__init__(parent)
+#         self.setAttribute(Qt.WA_DeleteOnClose)
+#         self.setupUi(self)
+#         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+#
+#         try:
+#             self.restoreGeometry(self.window_settings.value('Slice Converter Geometry', ''))
+#         except TypeError:
+#             pass
+#
+#         with open('build.json') as build:
+#             self.build = json.load(build)
+#
+#         # Setup event listeners for all the relevant UI components, and connect them to specific functions
+#         self.buttonBrowseSF.clicked.connect(self.browse_slice)
+#         self.buttonBrowseF.clicked.connect(self.browse_folder)
+#         self.buttonStart.clicked.connect(self.start)
+#         self.buttonStop.clicked.connect(self.start_finished)
+#         self.checkDraw.toggled.connect(self.toggle_range)
+#         self.spinRangeLow.valueChanged.connect(self.set_range)
+#
+#         # Create and display a 'default' contours folder to store the drawn part contours
+#         self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
+#         self.lineFolder.setText(self.contours_folder)
+#
+#         self.threadpool = QThreadPool()
+#
+#     def browse_slice(self):
+#         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
+#
+#         filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cli)')[0]
+#
+#         if filenames:
+#             self.slice_list = filenames
+#             self.listSliceFiles.clear()
+#             self.buttonStart.setEnabled(True)
+#             self.update_status('Current Part: None | Waiting to start conversion.')
+#             for item in self.slice_list:
+#                 self.listSliceFiles.addItem(os.path.basename(item))
+#
+#     def browse_folder(self):
+#         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
+#
+#         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+#
+#         if folder:
+#             self.contours_folder = folder
+#             self.lineFolder.setText(self.contours_folder)
+#
+#     def start(self):
+#         """Executes when the Start/Pause/Resume button is clicked and does one of the following depending on the text"""
+#
+#         with open('build.json') as build:
+#             self.build = json.load(build)
+#
+#         if 'Start' in self.buttonStart.text():
+#             # Disable all buttons to prevent user from doing other tasks
+#             self.buttonStop.setEnabled(True)
+#             self.buttonBrowseSF.setEnabled(False)
+#             self.buttonBrowseF.setEnabled(False)
+#             self.buttonDone.setEnabled(False)
+#             self.checkDraw.setEnabled(False)
+#             self.checkRange.setEnabled(False)
+#             self.spinRangeLow.setEnabled(False)
+#             self.spinRangeHigh.setEnabled(False)
+#             self.update_progress(0)
+#
+#             # Change the Start button into a Pause/Resume button
+#             self.buttonStart.setText('Pause')
+#
+#             # Create a dictionary of colours (different shades of teal) for each part's contours and save it
+#             part_colours = dict()
+#             for index, part_name in enumerate(self.slice_list):
+#                 part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
+#                     ((100 + index) % 255, (100 + index) % 255, 0)
+#
+#             # Save the slice file list and the draw state to the config.json file
+#             self.build['SliceConverter']['Draw'] = self.checkDraw.isChecked()
+#             self.build['SliceConverter']['Folder'] = self.contours_folder
+#             self.build['SliceConverter']['Files'] = self.slice_list
+#             self.build['SliceConverter']['Run'] = True
+#             self.build['SliceConverter']['Pause'] = False
+#             self.build['SliceConverter']['Build'] = False
+#             self.build['SliceConverter']['Colours'] = part_colours
+#             self.build['SliceConverter']['Range'] = self.checkRange.isChecked()
+#             self.build['SliceConverter']['RangeLow'] = self.spinRangeLow.value()
+#             self.build['SliceConverter']['RangeHigh'] = self.spinRangeHigh.value()
+#
+#             with open('build.json', 'w+') as build:
+#                 json.dump(self.build, build, indent=4, sort_keys=True)
+#
+#             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
+#             worker.signals.status.connect(self.update_status)
+#             worker.signals.progress.connect(self.update_progress)
+#             worker.signals.finished.connect(self.start_finished)
+#             self.threadpool.start(worker)
+#
+#         elif 'Pause' in self.buttonStart.text():
+#             self.build['SliceConverter']['Pause'] = True
+#             self.buttonStart.setText('Resume')
+#         elif 'Resume' in self.buttonStart.text():
+#             self.build['SliceConverter']['Pause'] = False
+#             self.buttonStart.setText('Pause')
+#
+#         with open('build.json', 'w+') as build:
+#             json.dump(self.build, build, indent=4, sort_keys=True)
+#
+#     def start_finished(self):
+#         """Executes when the SliceConverter instance has finished"""
+#
+#         with open('build.json') as build:
+#             self.build = json.load(build)
+#
+#         # Stop the conversion thread
+#         self.build['SliceConverter']['Pause'] = False
+#         self.build['SliceConverter']['Run'] = False
+#
+#         with open('build.json', 'w+') as build:
+#             json.dump(self.build, build, indent=4, sort_keys=True)
+#
+#         # Enable/disable respective buttons
+#         self.buttonStart.setText('Start')
+#         self.buttonStop.setEnabled(False)
+#         self.buttonBrowseSF.setEnabled(True)
+#         self.buttonBrowseF.setEnabled(True)
+#         self.buttonDone.setEnabled(True)
+#         self.checkDraw.setEnabled(True)
+#         if self.checkDraw.isChecked():
+#             self.checkRange.setEnabled(True)
+#             self.spinRangeLow.setEnabled(True)
+#             self.spinRangeHigh.setEnabled(True)
+#
+#     def toggle_range(self):
+#         """Toggles the state of the Draw Range checkbox if the Draw Contours checkbox is unchecked"""
+#
+#         if not self.checkDraw.isChecked():
+#             self.checkRange.setChecked(False)
+#
+#     def set_range(self, value):
+#         """Sets the minimum value of the high spinbox to the current value of the low spinbox"""
+#
+#         self.spinRangeHigh.setMinimum(value)
+#
+#     def update_status(self, string):
+#         string = string.split(' | ')
+#         self.labelStatus.setText(string[1])
+#         self.labelStatusSlice.setText(string[0])
+#
+#     def update_progress(self, percentage):
+#         self.progressBar.setValue(percentage)
+#
+#     def closeEvent(self, event):
+#         """Executes when the window is closed"""
+#
+#         with open('build.json') as build:
+#             self.build = json.load(build)
+#
+#         # Check if a conversion is in progress or paused, and block the user from closing the window until stopped
+#         if not self.buttonDone.isEnabled():
+#             run_error = QMessageBox(self)
+#             run_error.setWindowTitle('Error')
+#             run_error.setIcon(QMessageBox.Critical)
+#             run_error.setText('Conversion in progress or paused.\n\n'
+#                               'Please stop or wait for the conversion to finish before exiting.')
+#             run_error.exec_()
+#             event.ignore()
+#         else:
+#             self.build['SliceConverter']['Folder'] = ''
+#             self.build['SliceConverter']['Files'] = []
+#
+#             with open('build.json', 'w+') as build:
+#                 json.dump(self.build, build, indent=4, sort_keys=True)
+#
+#             self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
 
 
 class PartAdjustment(QDialog, dialogPartAdjustment.Ui_dialogPartAdjustment):
@@ -1112,67 +1217,259 @@ class PartAdjustment(QDialog, dialogPartAdjustment.Ui_dialogPartAdjustment):
         self.window_settings.setValue('Part Adjustment Geometry', self.saveGeometry())
 
 
-class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
-    """Opens a Modeless Dialog Window when the CameraCalibration instance has finished
-    Or when the View Results button within the Camera Calibration Dialog Window is clicked
-    Allows user to look at the pertinent calibration parameters and results
-    """
+class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
+    """Opens a Modeless Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
+    Allows the user to batch convert a bunch of images to their fixed state"""
 
-    def __init__(self, parent=None, results=None):
+    def __init__(self, parent=None):
 
-        # Setup Dialog UI with CameraCalibration as parent and restore the previous window state
-        super(CalibrationResults, self).__init__(parent)
+        # Setup Dialog UI with MainWindow as parent
+        super(ImageConverter, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
-            self.restoreGeometry(self.window_settings.value('Calibration Results Geometry', ''))
+            self.restoreGeometry(self.window_settings.value('Image Converter Geometry', ''))
         except TypeError:
             pass
 
-        # Split camera parameters into their own respective values to be used in OpenCV functions
-        camera_matrix = np.array(results['CameraMatrix'])
-        distortion_coefficients = np.array(results['DistortionCoefficients'])
-        homography_matrix = np.array(results['HomographyMatrix'])
+        # Setup event listeners for all relevant UI components, and connect them to specific functions
+        self.pushBrowse.clicked.connect(self.browse)
+        self.checkToggleAll.toggled.connect(self.toggle_all)
+        self.checkUndistort.toggled.connect(self.toggle_save)
+        self.checkPerspective.toggled.connect(self.toggle_save)
+        self.checkCrop.toggled.connect(self.toggle_save)
+        self.checkCrop.toggled.connect(self.toggle_alternate)
+        self.checkEqualization.toggled.connect(self.toggle_save)
+        self.checkSave.toggled.connect(self.reset)
+        self.checkAlternate.toggled.connect(self.reset)
+        self.pushStart.clicked.connect(self.start)
 
-        # Sets the tables' columns and rows to automatically resize appropriately
-        self.tableCM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableDC.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableHM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableCM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableDC.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableHM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.threadpool = QThreadPool()
 
-        # Nested for loops to access each of the table boxes in order
-        for row in range(3):
-            for column in range(3):
-                # Setting the item using the corresponding index of the matrix arrays
-                self.tableCM.setItem(row, column, QTableWidgetItem(format(camera_matrix[row][column], '.10g')))
-                self.tableHM.setItem(row, column, QTableWidgetItem(format(homography_matrix[row][column], '.10g')))
+    def browse(self):
+        """Opens a File Dialog, allowing the user to select one or multiple image files"""
 
-                # Because the distortion coefficients matrix is a 1x5, a slight modification needs to be made
-                # Exception used to ignore the 2x3 box and 3rd row of the matrix
-                if row >= 1:
-                    column += 3
-                try:
-                    self.tableDC.setItem(row, column % 3, QTableWidgetItem(
-                        format(distortion_coefficients[0][column], '.10g')))
-                except (ValueError, IndexError):
-                    pass
+        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Image Files (*.png)')[0]
 
-        # Sets the row height to as small as possible to fit the text height
-        self.tableCM.resizeRowsToContents()
-        self.tableDC.resizeRowsToContents()
-        self.tableHM.resizeRowsToContents()
+        if filenames:
+            self.image_list = filenames
+            self.listImages.clear()
+            for index, item in enumerate(filenames):
+                self.listImages.addItem(os.path.basename(item))
+                # try:
+                #     self.listImages.item(index).setBackground(QColor('white'))
+                # except AttributeError:
+                #     pass
 
-        # Displaying the re-projection error on the appropriate text label
-        self.labelRMS.setText('Re-Projection Error: ' + format(results['RMS'], '.10g'))
+            self.groupImagesSave.setEnabled(True)
+            self.image_counter = 0
+            self.update_status('Please select images to save.')
+
+    def toggle_all(self):
+        """Toggles the checked state of all the options in the Images to Save groupBox"""
+
+        for checkbox in self.groupImagesSave.findChildren(QCheckBox):
+            checkbox.setChecked(self.checkToggleAll.isChecked())
+
+    def toggle_save(self):
+        """Toggles the enabled state of the Save to Individual Folders checkbox depending on the checked image boxes"""
+
+        # Check if any of the checkboxes within the groupBox is checked
+        for checkbox in self.groupImagesSave.findChildren(QCheckBox):
+            if checkbox.isChecked():
+                # Enable the relevant checkbox and the Start button and exit the method
+                self.checkSave.setEnabled(True)
+                self.pushStart.setEnabled(True)
+                self.reset()
+                return
+
+        # Disable the checkbox and Start button if none of the Save checkboxes are checked
+        self.checkSave.setEnabled(False)
+        self.checkSave.setChecked(False)
+        self.pushStart.setEnabled(False)
+        self.update_status('Please select images to save.')
+
+    def toggle_alternate(self):
+        """Toggles the enabled state of the Alternate Naming Scheme checkbox depending on the Crop checkbox"""
+
+        if not self.checkCrop.isChecked():
+            self.checkAlternate.setChecked(False)
+
+    def reset(self):
+        """Resets the state of converted images if any of the checkboxes are toggled"""
+
+        self.image_counter = 0
+        self.pushStart.setText('Start')
+        self.update_status('Waiting to start conversion.')
+        self.update_progress(0)
+
+        for index in range(self.listImages.count()):
+            self.listImages.item(index).setBackground(QColor('white'))
+
+    def start(self):
+        """Runs all the selected images in the image list through the Image Converter
+        The button also functions as a Stop button which halts the conversion process
+        Clicking the Start button again continues converting the remaining images unless the image list has changed"""
+
+        if 'Start' in self.pushStart.text():
+            self.run_flag = True
+
+            # Save the isChecked and isEnabled states of the checkboxes as a list
+            self.checked = list()
+            self.enabled = list()
+
+            # The findChildren function returns a list of all the checkboxes in the dialog window
+            for checkbox in self.findChildren(QCheckBox):
+                self.checked.append(checkbox.isChecked())
+                self.enabled.append(checkbox.isEnabled())
+
+                # Disable all the checkboxes to disallow the user from doing other tasks
+                checkbox.setEnabled(False)
+
+            print(self.checked)
+
+            # Disable all buttons to prevent user from doing other tasks
+            self.pushBrowse.setEnabled(False)
+
+            # Change the Start button into a Stop button
+            self.pushStart.setText('Pause')
+
+            folder_name = os.path.dirname(self.image_list[0])
+
+            # Create the individual folders if the Save to Individual Folders checkbox is checked
+            if self.checkSave.isChecked():
+                if self.checkUndistort.isChecked():
+                    if not os.path.isdir(folder_name + '/undistort'):
+                        os.makedirs(folder_name + '/undistort')
+                if self.checkPerspective.isChecked():
+                    if not os.path.isdir(folder_name + '/perspective'):
+                        os.makedirs(folder_name + '/perspective')
+                if self.checkCrop.isChecked() and not self.checkAlternate.isChecked():
+                    if not os.path.isdir(folder_name + '/crop'):
+                        os.makedirs(folder_name + '/crop')
+                if self.checkEqualization.isChecked():
+                    if not os.path.isdir(folder_name + '/equalization'):
+                        os.makedirs(folder_name + '/equalization')
+
+            if self.checkAlternate.isChecked():
+                if not os.path.isdir(folder_name + 'fixed'):
+                    os.makedirs(folder_name + '/fixed/coat')
+                    os.makedirs(folder_name + '/fixed/scan')
+                    os.makedirs(folder_name + '/fixed/snapshot')
+
+            self.convert_image(self.image_list[self.image_counter])
+
+
+        elif 'Pause' in self.pushStart.text():
+            self.run_flag = False
+            self.pushStart.setText('Resume')
+            self.pushStart.setEnabled(False)
+
+        elif 'Resume' in self.pushStart.text():
+            self.run_flag = True
+            self.pushStart.setText('Pause')
+
+            for checkbox in self.findChildren(QCheckBox):
+                checkbox.setEnabled(False)
+
+            self.convert_image(self.image_list[self.image_counter])
+
+    def convert_image(self, image_name
+                      ):
+        worker = qt_multithreading.Worker(self.convert_image_function, image_name, self.checked)
+        worker.signals.status.connect(self.update_status)
+        worker.signals.progress.connect(self.update_progress)
+        worker.signals.finished.connect(self.convert_image_finished)
+        self.threadpool.start(worker)
+
+    @staticmethod
+    def convert_image_function(image_name, checkboxes, status, progress):
+        """Applies the distortion, perspective, crop and CLAHE processes to the received image
+        Also subsequently saves each image after every process if the corresponding checkbox is checked"""
+
+        # Load the image into memory
+        image = cv2.imread(image_name)
+
+        # Grab the folder names and the image name which will be used to construct the new modified names
+        folder_name = os.path.dirname(image_name)
+        image_name = os.path.basename(os.path.splitext(image_name)[0])
+
+        # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
+        # Images are only saved if the corresponding checkbox is checked
+
+        progress.emit(0)
+        status.emit('Undistorting image...')
+        image = image_processing.ImageTransform().distortion_fix(image)
+
+        if checkboxes[4]:
+            if checkboxes[0]:
+                cv2.imwrite('%s/undistort/%s_D.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_D.png' % (folder_name, image_name), image)
+
+        progress.emit(25)
+        status.emit('Fixing perspective warp...')
+        image = image_processing.ImageTransform().perspective_fix(image)
+
+        if checkboxes[5]:
+            if checkboxes[0]:
+                cv2.imwrite('%s/perspective/%s_DP.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_DP.png' % (folder_name, image_name), image)
+
+        progress.emit(50)
+        status.emit('Cropping image to size...')
+        image = image_processing.ImageTransform().crop(image)
+
+        if checkboxes[6]:
+            if checkboxes[0]:
+                cv2.imwrite('%s/crop/%s_DPC.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_DPC.png' % (folder_name, image_name), image)
+
+        progress.emit(75)
+        status.emit('Applying CLAHE equalization...')
+        image = image_processing.ImageTransform().clahe(image)
+
+        if checkboxes[7]:
+            if checkboxes[0]:
+                cv2.imwrite('%s/equalization/%s_DPCE.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_DPCE.png' % (folder_name, image_name), image)
+
+        progress.emit(100)
+        status.emit('Image conversion successful.')
+
+
+    def convert_image_finished(self):
+
+        self.listImages.item(self.image_counter).setBackground(QColor('green'))
+        self.image_counter += 1
+
+        if self.run_flag and not self.image_counter == len(self.image_list):
+            self.convert_image(self.image_list[self.image_counter])
+        else:
+            self.pushBrowse.setEnabled(True)
+            for index, checkbox in enumerate(self.findChildren(QCheckBox)):
+                checkbox.setEnabled(self.enabled[index])
+
+            if self.image_counter == len(self.image_list):
+                self.pushStart.setEnabled(False)
+                self.update_status('Conversion finished.')
+            else:
+                self.pushStart.setEnabled(True)
+                self.update_status('Conversion paused.')
+
+    def update_status(self, string):
+        self.labelStatus.setText(string)
+
+    def update_progress(self, percentage):
+        self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
-        self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
-
+        self.window_settings.setValue('Image Converter Geometry', self.saveGeometry())
 
 class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
     """Opens a Modeless Dialog Window when the Defect Reports button is clicked

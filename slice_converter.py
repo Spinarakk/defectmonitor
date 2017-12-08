@@ -39,13 +39,11 @@ class SliceConverter:
         if self.build['SliceConverter']['Build']:
             self.part_colours = self.build['BuildInfo']['Colours']
             self.filenames = self.build['BuildInfo']['SliceFiles']
-            self.draw_flag = self.build['BuildInfo']['Draw']
             self.range_flag = False
             self.contours_folder = '%s/contours' % self.build['ImageCapture']['Folder']
         else:
             self.part_colours = self.build['SliceConverter']['Colours']
             self.filenames = self.build['SliceConverter']['Files']
-            self.draw_flag = self.build['SliceConverter']['Draw']
             self.range_flag = self.build['SliceConverter']['Range']
             self.contours_folder = self.build['SliceConverter']['Folder']
 
@@ -60,11 +58,8 @@ class SliceConverter:
             if not os.path.isfile(filename.replace('.cli', '_contours.txt')):
                 self.convert_cli(filename)
 
-        if self.draw_flag:
-            # Draw and save the contours to an image file
-            if self.draw_contours(self.filenames, self.part_colours, self.contours_folder):
-                self.status.emit('Current Part: None | Conversion completed successfully.')
-        else:
+        # Draw and save the contours to an image file
+        if self.draw_contours(self.filenames, self.part_colours, self.contours_folder):
             self.status.emit('Current Part: None | Conversion completed successfully.')
 
     def convert_cli(self, filename):
@@ -152,7 +147,6 @@ class SliceConverter:
                         self.check_flags()
                     if not self.run_flag:
                         self.status.emit('Current Part: %s | Conversion stopped.' % part_name)
-                        self.draw_flag = False
                         return False
 
                     self.status.emit('Current Part: %s | Converting CLI file...' % part_name)
@@ -297,10 +291,6 @@ class SliceConverter:
         with open('build.json') as build:
             self.build = json.load(build)
 
-        # Check if the current method was executed by a New Build or the Slice Converter
-        if self.build['SliceConverter']['Build']:
-            self.run_flag = self.build['BuildInfo']['Run']
-            self.pause_flag = self.build['BuildInfo']['Pause']
-        else:
-            self.run_flag = self.build['SliceConverter']['Run']
-            self.pause_flag = self.build['SliceConverter']['Pause']
+        # Check the Run and Pause flags
+        self.run_flag = self.build['SliceConverter']['Run']
+        self.pause_flag = self.build['SliceConverter']['Pause']
