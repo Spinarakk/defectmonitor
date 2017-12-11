@@ -783,7 +783,14 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         with open('build.json') as build:
             self.build = json.load(build)
 
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.pushAddSF.clicked.connect(self.add_files)
+        self.pushRemoveSF.clicked.connect(self.remove_files)
         self.pushPreviewLayer.clicked.connect(self.preview_layer)
+
+        self.pushBrowseOF.clicked.connect(self.browse_folder)
+
+        self.graphicsLayerPreview.mouse_pos.connect(self.update_position)
 
         # Set a 'default' contours folder to store the drawn contours if no build has been started
         # Otherwise use the contours folder in the build folder
@@ -794,8 +801,33 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.lineFolder.setText(self.contours_folder)
 
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.pushBrowseOF.clicked.connect(self.browse_folder)
+        self.slice_list = list()
+
+    def add_files(self):
+        """Adds slice files to the slice file list"""
+
+        filenames = QFileDialog.getOpenFileNames(self, 'Add Slice Files...', '', 'Slice Files (*.cli)')[0]
+
+        if filenames:
+            # Check if any of the selected files are already in the slice list and only add the ones which aren't
+            for file in filenames:
+                if not file in self.slice_list:
+                    self.slice_list.append(file)
+
+            # Sort the slice list and add them to the QListWidget
+            self.slice_list.sort()
+            self.listSliceFiles.clear()
+            for item in self.slice_list:
+                self.listSliceFiles.addItem(os.path.basename(item))
+
+    def remove_files(self):
+        """Removes slice files from the slice file list"""
+
+        # Grab the list of selected items in the QListWidget
+        for item in self.listSliceFiles.selectedItems():
+            # Delete the corresponding file from both slice file lists using the row index of the file
+            del self.slice_list[self.listSliceFiles.row(item)]
+            self.listSliceFiles.takeItem(self.listSliceFiles.row(item))
 
     def browse_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
@@ -809,8 +841,14 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def preview_layer(self):
         pass
 
+    def update_position(self, x, y):
+        self.labelXPosition.setText('X - ' + str(x).zfill(3))
+        self.labelYPosition.setText('Y - ' + str(y).zfill(3))
+
     def closeEvent(self, event):
         self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
+
+
 
 
 # class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
@@ -1246,6 +1284,10 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         self.checkAlternate.toggled.connect(self.reset)
         self.pushStart.clicked.connect(self.start)
 
+        # Couple of flags
+        self.run_flag = False
+        self.naming_flag = True
+
         self.threadpool = QThreadPool()
 
     def browse(self):
@@ -1256,12 +1298,10 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         if filenames:
             self.image_list = filenames
             self.listImages.clear()
+
+            # Add just the filename (without the directory path) to the list widget
             for index, item in enumerate(filenames):
                 self.listImages.addItem(os.path.basename(item))
-                # try:
-                #     self.listImages.item(index).setBackground(QColor('white'))
-                # except AttributeError:
-                #     pass
 
             self.groupImagesSave.setEnabled(True)
             self.image_counter = 0
@@ -1271,25 +1311,40 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         """Toggles the checked state of all the options in the Images to Save groupBox"""
 
         for checkbox in self.groupImagesSave.findChildren(QCheckBox):
+            checkbox.blockSignals(True)
             checkbox.setChecked(self.checkToggleAll.isChecked())
+            checkbox.blockSignals(False)
+
+        self.checkAlternate.setEnabled(self.checkToggleAll.isChecked())
+        self.toggle_save()
 
     def toggle_save(self):
-        """Toggles the enabled state of the Save to Individual Folders checkbox depending on the checked image boxes"""
+        """Toggles the enabled state of the Save to Individual Folders checkbox depending on the checked image boxes
+        Also toggles the checked state of the Toggle All checkbox"""
 
-        # Check if any of the checkboxes within the groupBox is checked
-        for checkbox in self.groupImagesSave.findChildren(QCheckBox):
+        # Count the number of checked checkboxes
+        counter = 0
+
+        # Check if any of the checkboxes within the groupBox is checked (ignoring the Toggle All checkbox)
+        for checkbox in self.groupImagesSave.findChildren(QCheckBox)[1:]:
             if checkbox.isChecked():
-                # Enable the relevant checkbox and the Start button and exit the method
-                self.checkSave.setEnabled(True)
-                self.pushStart.setEnabled(True)
-                self.reset()
-                return
+                counter += 1
 
-        # Disable the checkbox and Start button if none of the Save checkboxes are checked
-        self.checkSave.setEnabled(False)
-        self.checkSave.setChecked(False)
-        self.pushStart.setEnabled(False)
-        self.update_status('Please select images to save.')
+        if counter > 0:
+            # Enable the relevant checkbox and the Start button and exit the method
+            self.checkSave.setEnabled(True)
+            self.checkToggleAll.blockSignals(True)
+            self.checkToggleAll.setChecked(counter == 4)
+            self.checkToggleAll.blockSignals(False)
+            self.reset()
+            return
+        else:
+            # Disable the checkbox and Start button if none of the Save checkboxes are checked
+            self.checkToggleAll.setChecked(False)
+            self.checkSave.setEnabled(False)
+            self.checkSave.setChecked(False)
+            self.pushStart.setEnabled(False)
+            self.update_status('Please select images to save.')
 
     def toggle_alternate(self):
         """Toggles the enabled state of the Alternate Naming Scheme checkbox depending on the Crop checkbox"""
@@ -1302,6 +1357,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
         self.image_counter = 0
         self.pushStart.setText('Start')
+        self.pushStart.setEnabled(True)
         self.update_status('Waiting to start conversion.')
         self.update_progress(0)
 
@@ -1328,8 +1384,6 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
                 # Disable all the checkboxes to disallow the user from doing other tasks
                 checkbox.setEnabled(False)
 
-            print(self.checked)
-
             # Disable all buttons to prevent user from doing other tasks
             self.pushBrowse.setEnabled(False)
 
@@ -1354,13 +1408,13 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
                         os.makedirs(folder_name + '/equalization')
 
             if self.checkAlternate.isChecked():
-                if not os.path.isdir(folder_name + 'fixed'):
+                if not os.path.isdir(folder_name + '/fixed'):
                     os.makedirs(folder_name + '/fixed/coat')
                     os.makedirs(folder_name + '/fixed/scan')
                     os.makedirs(folder_name + '/fixed/snapshot')
 
+            # Start the image conversion loop
             self.convert_image(self.image_list[self.image_counter])
-
 
         elif 'Pause' in self.pushStart.text():
             self.run_flag = False
@@ -1376,16 +1430,20 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
             self.convert_image(self.image_list[self.image_counter])
 
-    def convert_image(self, image_name
-                      ):
+    def convert_image(self, image_name):
+        """Converts the image by applying the required image processing functions to fix the images using QThreads"""
+
+        self.naming_flag = True
+
         worker = qt_multithreading.Worker(self.convert_image_function, image_name, self.checked)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
+        worker.signals.naming_error.connect(self.naming_error)
         worker.signals.finished.connect(self.convert_image_finished)
         self.threadpool.start(worker)
 
     @staticmethod
-    def convert_image_function(image_name, checkboxes, status, progress):
+    def convert_image_function(image_name, checkboxes, status, progress, naming_error):
         """Applies the distortion, perspective, crop and CLAHE processes to the received image
         Also subsequently saves each image after every process if the corresponding checkbox is checked"""
 
@@ -1396,6 +1454,29 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         folder_name = os.path.dirname(image_name)
         image_name = os.path.basename(os.path.splitext(image_name)[0])
 
+        # If the Alternate Naming Scheme for Crop Images checkbox is checked
+        # Detect the phase and layer number from the image name itself and use those to save to the fixed folder instead
+        if checkboxes[0]:
+            # Phase check
+            if 'coatR_' in image_name:
+                phase = 'coat'
+            elif 'scanR_' in image_name:
+                phase = 'scan'
+            elif 'snapshotR_' in image_name:
+                phase = 'snapshot'
+            else:
+                # If the phase can't be determined due to incorrect naming, don't use alternate naming scheme
+                checkboxes[0] = False
+                naming_error.emit()
+
+            # Layer check
+            try:
+                layer = int(image_name[-4:])
+            except ValueError:
+                # If the layer number can't be determined due to incorrect naming, don't use alternate naming scheme
+                checkboxes[0] = False
+                naming_error.emit()
+
         # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
         # Images are only saved if the corresponding checkbox is checked
 
@@ -1403,8 +1484,8 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         status.emit('Undistorting image...')
         image = image_processing.ImageTransform().distortion_fix(image)
 
-        if checkboxes[4]:
-            if checkboxes[0]:
+        if checkboxes[3]:
+            if checkboxes[1]:
                 cv2.imwrite('%s/undistort/%s_D.png' % (folder_name, image_name), image)
             else:
                 cv2.imwrite('%s/%s_D.png' % (folder_name, image_name), image)
@@ -1413,8 +1494,8 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         status.emit('Fixing perspective warp...')
         image = image_processing.ImageTransform().perspective_fix(image)
 
-        if checkboxes[5]:
-            if checkboxes[0]:
+        if checkboxes[4]:
+            if checkboxes[1]:
                 cv2.imwrite('%s/perspective/%s_DP.png' % (folder_name, image_name), image)
             else:
                 cv2.imwrite('%s/%s_DP.png' % (folder_name, image_name), image)
@@ -1423,8 +1504,10 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         status.emit('Cropping image to size...')
         image = image_processing.ImageTransform().crop(image)
 
-        if checkboxes[6]:
+        if checkboxes[5]:
             if checkboxes[0]:
+                cv2.imwrite('%s/fixed/%s/%s.png' % (folder_name, phase, image_name.replace('R_', 'F_')), image)
+            elif checkboxes[1]:
                 cv2.imwrite('%s/crop/%s_DPC.png' % (folder_name, image_name), image)
             else:
                 cv2.imwrite('%s/%s_DPC.png' % (folder_name, image_name), image)
@@ -1433,8 +1516,8 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         status.emit('Applying CLAHE equalization...')
         image = image_processing.ImageTransform().clahe(image)
 
-        if checkboxes[7]:
-            if checkboxes[0]:
+        if checkboxes[6]:
+            if checkboxes[1]:
                 cv2.imwrite('%s/equalization/%s_DPCE.png' % (folder_name, image_name), image)
             else:
                 cv2.imwrite('%s/%s_DPCE.png' % (folder_name, image_name), image)
@@ -1442,10 +1525,12 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         progress.emit(100)
         status.emit('Image conversion successful.')
 
-
     def convert_image_finished(self):
+        """Continuation function that either continues the image processing loop or finishes the entire run"""
 
-        self.listImages.item(self.image_counter).setBackground(QColor('green'))
+        if self.naming_flag:
+            self.listImages.item(self.image_counter).setBackground(QColor('green'))
+
         self.image_counter += 1
 
         if self.run_flag and not self.image_counter == len(self.image_list):
@@ -1456,11 +1541,20 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
                 checkbox.setEnabled(self.enabled[index])
 
             if self.image_counter == len(self.image_list):
+                self.run_flag = False
                 self.pushStart.setEnabled(False)
+                self.pushStart.setText('Start')
                 self.update_status('Conversion finished.')
             else:
                 self.pushStart.setEnabled(True)
                 self.update_status('Conversion paused.')
+
+    def naming_error(self):
+        """Sets the colour of the current item to yellow and stops the conversion from turning the item green
+        Indicates that the image names are incorrect for the Alternate Naming Scheme"""
+
+        self.naming_flag = False
+        self.listImages.item(self.image_counter).setBackground(QColor('yellow'))
 
     def update_status(self, string):
         self.labelStatus.setText(string)
@@ -1469,7 +1563,20 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        self.window_settings.setValue('Image Converter Geometry', self.saveGeometry())
+        """Executes when the window is closed"""
+
+        # Check if a conversion is in progress, and block the user from closing the window until stopped
+        if self.run_flag:
+            run_error = QMessageBox(self)
+            run_error.setWindowTitle('Error')
+            run_error.setIcon(QMessageBox.Critical)
+            run_error.setText('Conversion in progress.\n\n'
+                              'Please pause or wait for the conversion to finish before exiting.')
+            run_error.exec_()
+            event.ignore()
+        else:
+            self.window_settings.setValue('Image Converter Geometry', self.saveGeometry())
+
 
 class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
     """Opens a Modeless Dialog Window when the Defect Reports button is clicked

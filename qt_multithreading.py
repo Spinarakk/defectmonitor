@@ -15,6 +15,8 @@ class WorkerSignals(QObject):
     status_camera = pyqtSignal(str)
     status_trigger = pyqtSignal(str)
 
+    naming_error = pyqtSignal()
+
     name = pyqtSignal(str)
     progress = pyqtSignal(int)
     colour = pyqtSignal(int, bool)
@@ -44,7 +46,10 @@ class Worker(QRunnable):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
 
-        if 'calibrate' in str(self.function):
+        if 'image_function' in str(self.function):
+            kwargs['naming_error'] = self.signals.naming_error
+
+        if 'calibrate' in str(self.function) or 'run_converter' in str(self.function):
             kwargs['colour'] = self.signals.colour
 
         if 'run_detector' in str(self.function):

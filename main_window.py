@@ -48,7 +48,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.setWindowIcon(QIcon('gui/logo.ico'))
 
         # Set the version number here
-        self.version = '0.8.4'
+        self.version = '0.8.9'
 
         # Load default working build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
         self.actionSnapshot.triggered.connect(self.snapshot)
-        self.actionRunPauseResume.triggered.connect(self.run_build)
+        self.actionRun.triggered.connect(self.run_build)
         self.actionStop.triggered.connect(self.stop_build)
         self.actionFauxTrigger.triggered.connect(lambda: self.run_loop('TRIG'))
         self.actionProcessCurrent.triggered.connect(self.process_current)
@@ -126,9 +126,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Sidebar Toolbox Assorted Tools
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
-        self.pushPartAdjustment.clicked.connect(self.part_adjustment)
         self.pushSliceConverter.clicked.connect(self.slice_converter)
+        self.pushPartAdjustment.clicked.connect(self.part_adjustment)
         self.pushImageConverter.clicked.connect(self.image_converter)
+
+        # Sidebar Toolbox Image Capture
+        self.pushAcquireCT.clicked.connect(self.acquire_camera)
+        self.pushAcquireCT.clicked.connect(self.acquire_trigger)
+        self.pushSnapshot.clicked.connect(self.snapshot)
+        self.pushRun.clicked.connect(self.run_build)
+        self.pushStop.clicked.connect(self.stop_build)
 
         # Sidebar Toolbox Defect Processor
         self.pushProcessCurrent.clicked.connect(self.process_current)
@@ -137,13 +144,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Layer Selection
         self.pushGo.clicked.connect(self.set_layer)
-
-        # Image Capture
-        self.pushAcquireCT.clicked.connect(self.acquire_camera)
-        self.pushAcquireCT.clicked.connect(self.acquire_trigger)
-        self.pushSnapshot.clicked.connect(self.snapshot)
-        self.pushRunPauseResume.clicked.connect(self.run_build)
-        self.pushStop.clicked.connect(self.stop_build)
 
         # Display Widget
         self.widgetDisplay.currentChanged.connect(self.tab_change)
@@ -781,14 +781,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionSnapshot.setEnabled(True)
             self.pushSnapshot.setEnabled(True)
             if bool(self.trigger_port):
-                self.pushRunPauseResume.setEnabled(True)
-                self.actionRunPauseResume.setEnabled(True)
+                self.pushRun.setEnabled(True)
+                self.actionRun.setEnabled(True)
         else:
             self.update_status_camera('Not Found')
             self.actionSnapshot.setEnabled(False)
             self.pushSnapshot.setEnabled(False)
-            self.pushRunPauseResume.setEnabled(False)
-            self.actionRunPauseResume.setEnabled(False)
+            self.pushRun.setEnabled(False)
+            self.actionRun.setEnabled(False)
 
     def acquire_trigger(self):
         """Executes after setting up a new build or loading a build, or when Settings -> Acquire Camera is clicked
@@ -801,12 +801,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if bool(self.trigger_port):
             self.update_status_trigger(self.trigger_port)
             if 'Found' in self.labelCameraStatus.text():
-                self.pushRunPauseResume.setEnabled(True)
-                self.actionRunPauseResume.setEnabled(True)
+                self.pushRun.setEnabled(True)
+                self.actionRun.setEnabled(True)
         else:
             self.update_status_trigger('Not Found')
-            self.pushRunPauseResume.setEnabled(False)
-            self.actionRunPauseResume.setEnabled(False)
+            self.pushRun.setEnabled(False)
+            self.actionRun.setEnabled(False)
 
     def preferences(self):
         """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
@@ -865,7 +865,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Polls the trigger device for a trigger, subsequently capturing and saving an image if triggered
         """
 
-        if 'RUN' in self.pushRunPauseResume.text():
+        if 'RUN' in self.pushRun.text():
             # Check whether the build has been saved before running anything
             if self.build_name is None:
                 # Open a message box with a save confirmation message so that the user can save the build before running
@@ -925,27 +925,27 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.timer_stopwatch.start(1000)
 
             # Change the RUN button/action into a PAUSE/RESUME button/action
-            self.pushRunPauseResume.setStyleSheet('QPushButton {color: #ffaa00;}')
-            self.pushRunPauseResume.setText('PAUSE')
-            self.actionRunPauseResume.setText('PAUSE')
+            self.pushRun.setStyleSheet('QPushButton {color: #ffaa00;}')
+            self.pushRun.setText('PAUSE')
+            self.actionRun.setText('PAUSE')
 
             # Start the capture run process
             self.run_loop('')
 
-        elif 'PAUSE' in self.pushRunPauseResume.text():
-            self.pushRunPauseResume.setStyleSheet('QPushButton {color: $00aa00;}')
-            self.pushRunPauseResume.setText('RESUME')
-            self.actionRunPauseResume.setText('RESUME')
+        elif 'PAUSE' in self.pushRun.text():
+            self.pushRun.setStyleSheet('QPushButton {color: $00aa00;}')
+            self.pushRun.setText('RESUME')
+            self.actionRun.setText('RESUME')
             self.timer_stopwatch.stop()
             self.update_status('Current build paused.')
             self.update_status_camera('Paused')
             self.update_status_trigger('Paused')
             self.actionFauxTrigger.setEnabled(False)
 
-        elif 'RESUME' in self.pushRunPauseResume.text():
-            self.pushRunPauseResume.setStyleSheet('QPushButton {color: #ffaa00;}')
-            self.pushRunPauseResume.setText('PAUSE')
-            self.actionRunPauseResume.setText('PAUSE')
+        elif 'RESUME' in self.pushRun.text():
+            self.pushRun.setStyleSheet('QPushButton {color: #ffaa00;}')
+            self.pushRun.setText('PAUSE')
+            self.actionRun.setText('PAUSE')
             self.timer_stopwatch.start(1000)
             self.run_exit()
             self.update_status('Current build resumed.')
@@ -961,11 +961,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Check if the build is still 'running'
-        if 'PAUSE' in self.pushRunPauseResume.text():
+        if 'PAUSE' in self.pushRun.text():
             if 'TRIG' in result:
                 # Disable all the image capture buttons
-                self.pushRunPauseResume.setEnabled(False)
-                self.actionRunPauseResume.setEnabled(False)
+                self.pushRun.setEnabled(False)
+                self.actionRun.setEnabled(False)
                 self.actionFauxTrigger.setEnabled(False)
                 self.pushStop.setEnabled(False)
 
@@ -993,8 +993,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.serial_trigger.reset_input_buffer()
         self.stopwatch_idle = 0
-        self.pushRunPauseResume.setEnabled(True)
-        self.actionRunPauseResume.setEnabled(True)
+        self.pushRun.setEnabled(True)
+        self.actionRun.setEnabled(True)
         self.actionFauxTrigger.setEnabled(True)
         self.pushStop.setEnabled(True)
 
@@ -1012,8 +1012,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_status('Build stopped.', 3000)
         self.update_status_camera('Found')
         self.update_status_trigger(self.trigger_port)
-        self.pushRunPauseResume.setEnabled(True)
-        self.actionRunPauseResume.setEnabled(True)
+        self.pushRun.setEnabled(True)
+        self.actionRun.setEnabled(True)
         self.pushStop.setEnabled(False)
         self.actionAcquireCamera.setEnabled(True)
         self.actionAcquireTrigger.setEnabled(True)
@@ -1024,9 +1024,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushSnapshot.setEnabled(True)
 
         # Reset the Pause/Resume button back to its default RUN state (including the text colour)
-        self.pushRunPauseResume.setStyleSheet('QPushButton {color: #008080;}')
-        self.pushRunPauseResume.setText('RUN')
-        self.actionRunPauseResume.setText('RUN')
+        self.pushRun.setStyleSheet('QPushButton {color: #008080;}')
+        self.pushRun.setText('RUN')
+        self.actionRun.setText('RUN')
 
         # Stop the stopwatch timer and close the serial port
         self.timer_stopwatch.stop()

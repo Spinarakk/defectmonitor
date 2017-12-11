@@ -12,6 +12,7 @@ class ImageViewer(QGraphicsView):
     # Signal that will be emitted after the zoom in action has been completed
     # Just used to toggle the Zoom In action unchecked
     zoom_done = pyqtSignal()
+    mouse_pos = pyqtSignal(int, int)
 
     def __init__(self, parent):
 
@@ -76,7 +77,7 @@ class ImageViewer(QGraphicsView):
         self.update_viewer()
 
     def mousePressEvent(self, event):
-        """"""
+        """When the Left Mouse button is held down, allow the user to set a zoom box"""
 
         if event.button() == Qt.LeftButton:
             if self.zoom_flag:
@@ -87,6 +88,7 @@ class ImageViewer(QGraphicsView):
         QGraphicsView.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event):
+        """When the Left Mouse button is released after being held down, zoom to the set zoom box area"""
 
         QGraphicsView.mouseReleaseEvent(self, event)
 
@@ -97,12 +99,16 @@ class ImageViewer(QGraphicsView):
             if selection_box.isValid() and (selection_box != view_box):
                 self.zoom_list.append(selection_box)
                 self.update_viewer()
-
-            self.zoom_done.emit()
             self.setDragMode(QGraphicsView.NoDrag)
+            self.zoom_done.emit()
 
     def mouseDoubleClickEvent(self, event):
+        """When the Left Mouse button is double clicked, reset the zoom back to the original size"""
+
         if event.button() == Qt.LeftButton:
             self.reset_image()
 
-        QGraphicsView.mouseDoubleClickEvent(self, event)
+    def mouseMoveEvent(self, event):
+        """When the mouse cursor is moved over the graphics view, the position of the cursor within the graphics view
+        Will be emitted back to the dialog box if mouseTracking is enabled on the graphics view in question"""
+        self.mouse_pos.emit(event.x(), event.y())

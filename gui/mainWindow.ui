@@ -1214,7 +1214,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>98</width>
+            <width>136</width>
             <height>110</height>
            </rect>
           </property>
@@ -1302,7 +1302,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushRunPauseResume">
+            <widget class="QPushButton" name="pushRun">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -1410,7 +1410,7 @@
             </widget>
            </item>
           </layout>
-          <zorder>pushRunPauseResume</zorder>
+          <zorder>pushRun</zorder>
           <zorder>pushStop</zorder>
           <zorder>pushSnapshot</zorder>
           <zorder>pushAcquireCT</zorder>
@@ -1420,7 +1420,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>106</width>
+            <width>136</width>
             <height>110</height>
            </rect>
           </property>
@@ -1548,7 +1548,7 @@
       <string>Image Capture</string>
      </property>
      <addaction name="actionSnapshot"/>
-     <addaction name="actionRunPauseResume"/>
+     <addaction name="actionRun"/>
      <addaction name="actionStop"/>
      <addaction name="separator"/>
      <addaction name="actionFauxTrigger"/>
@@ -1849,7 +1849,7 @@
     <string>Snapshot</string>
    </property>
   </action>
-  <action name="actionRunPauseResume">
+  <action name="actionRun">
    <property name="enabled">
     <bool>false</bool>
    </property>
