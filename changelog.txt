@@ -1,7 +1,20 @@
+December 12
+- Continued working on the Slice Converter dialog window
+- Coded the list widget to work with adding slice files and removing selected slice files
+- Adding a slice file now immediately converts the .cli into contours
+- Added a Mouse Position groupbox to track where on the platform the mouse is
+- Finalized the design of the dialog window including all the current features and buttons
+- Implemented auto conversion of the slice files after adding them to the list if they haven't already been converted
+
+December 11
+- Finished off the proper functionality and operation of the checkboxes in the Image Converter dialog window
+- Images to Save Toggle All checkbox now works as intended
+- The tool now works properly for any number of images
+- Version 0.8.9
+
 December 8
 - Created an Image Converter dialog window in order to batch convert images (not yet finished)
 - Rewrote a few old lines of code
-- Incorporated the Part Adjustment move buttons into the Slice Converter's preview screen
 
 December 7
 - Started redesigning the Slice Converter dialog window to now include a Contour Preview image viewer which displays a preview of what the chosen slice layer's part contours will look like

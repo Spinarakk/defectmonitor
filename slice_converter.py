@@ -21,9 +21,6 @@ class SliceConverter:
         self.run_flag = True
         self.pause_flag = False
 
-        # Method that loads the build.json file and checks the run and pause keys
-        self.check_flags()
-
         # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
@@ -36,16 +33,16 @@ class SliceConverter:
 
         # Part names are taken from the build.json file, depending if this method was run from the Slice Converter
         # Or as part of a new build, different files will be read and used
-        if self.build['SliceConverter']['Build']:
-            self.part_colours = self.build['BuildInfo']['Colours']
-            self.filenames = self.build['BuildInfo']['SliceFiles']
-            self.range_flag = False
-            self.contours_folder = '%s/contours' % self.build['ImageCapture']['Folder']
-        else:
-            self.part_colours = self.build['SliceConverter']['Colours']
-            self.filenames = self.build['SliceConverter']['Files']
-            self.range_flag = self.build['SliceConverter']['Range']
-            self.contours_folder = self.build['SliceConverter']['Folder']
+        # if self.build['SliceConverter']['Build']:
+        #     self.part_colours = self.build['BuildInfo']['Colours']
+        #     self.filenames = self.build['BuildInfo']['SliceFiles']
+        #     self.range_flag = False
+        #     self.contours_folder = '%s/contours' % self.build['ImageCapture']['Folder']
+        # else:
+        #     self.part_colours = self.build['SliceConverter']['Colours']
+        #     self.filenames = self.build['SliceConverter']['Files']
+        #     self.range_flag = self.build['SliceConverter']['Range']
+        #     self.contours_folder = self.build['SliceConverter']['Folder']
 
     def run_converter(self, status, progress):
 
@@ -62,8 +59,8 @@ class SliceConverter:
         if self.draw_contours(self.filenames, self.part_colours, self.contours_folder):
             self.status.emit('Current Part: None | Conversion completed successfully.')
 
-    def convert_cli(self, filename):
-        """Reads the .cli file and converts the contents from binary into an organised ASCII list"""
+    def convert_cli(self, filename, status, progress):
+        """Reads the .cli file and converts the contents from binary into an organised ASCII contour list"""
 
         # TODO remove timers if not needed
         t0 = time.time()
@@ -71,14 +68,15 @@ class SliceConverter:
         # UI Progress and Status Messages
         progress_previous = None
         part_name = os.path.splitext(os.path.basename(filename))[0]
-        self.status.emit('Current Part: %s | Converting CLI file...' % part_name)
-        self.progress.emit(0)
+        status.emit('%s | Converting CLI file...' % part_name)
+        progress.emit(0)
 
         # Set up counters
         layer_flag = False
         polyline_count = 0
         vector_count = 0
         header_length = 0
+        max_layers = 0
 
         # File needs to be opened and read as binary as it is encoded in binary
         with open(filename, 'rb') as cli_file:
@@ -113,6 +111,7 @@ class SliceConverter:
                 if layer_flag:
                     # Because the number directly after a 128 represents the layer height, this flag skips the number
                     layer_flag = False
+                    max_layers += 1
                 elif polyline_count > 0:
                     polyline_count -= 1
                     if polyline_count == 0:
@@ -132,30 +131,18 @@ class SliceConverter:
 
                 # Put into a conditional to only trigger at every interval of 5 so as to not overload the emit
                 progress_count += increment
-                progress = 5 * round(progress_count / 5)
-                if not progress == progress_previous:
-                    self.progress.emit(progress)
-                    progress_previous = progress
+                progress_current = 5 * round(progress_count / 5)
+                if not progress_current == progress_previous:
+                    progress.emit(progress_current)
+                    progress_previous = progress_current
 
-                    # Check if the user has paused/resumed the conversion
-                    # Put in the progress conditional so as to not slow down the conversion process
-                    # If paused, sleep here indefinitely while constantly checking if the user has resumed operation
-                    self.check_flags()
-                    while self.pause_flag:
-                        self.status.emit('Current Part: %s | Conversion paused.' % part_name)
-                        time.sleep(0.5)
-                        self.check_flags()
-                    if not self.run_flag:
-                        self.status.emit('Current Part: %s | Conversion stopped.' % part_name)
-                        return False
-
-                    self.status.emit('Current Part: %s | Converting CLI file...' % part_name)
-
-        self.progress.emit(100)
+        progress.emit(100)
 
         print('Read CLI %s + READ Time\n%s\n' % (part_name, time.time() - t0))
 
-    def draw_contours(self, filenames, part_colours, folder):
+        return max_layers
+
+    def draw_contours(self, filenames, part_colours, range, folder, status, progress):
         """Draw all the contours of the selected parts on the same image"""
 
         # Make sure the received contours folder exists
@@ -163,16 +150,16 @@ class SliceConverter:
             os.makedirs(folder)
 
         # UI Progress and Status Messages
-        progress = 0.0
+        progress_current = 0.0
         progress_previous = None
-        self.progress.emit(0)
+        progress.emit(0)
 
         # Set up values and a dictionary
         layer_low = 1
         layer_high = 1
         contour_dict = dict()
 
-        self.status.emit('Current Part: All | Loading contours into memory...')
+        status.emit('Current Part: All | Loading contours into memory...')
 
         # Read all the contour files into memory and save them to a dictionary
         for filename in filenames:
@@ -208,19 +195,8 @@ class SliceConverter:
             # TODO remove timers if not needed
             t0 = time.time()
 
-            self.status.emit('Current Part: All | Drawing contours %s of %s.' %
+            status.emit('Current Part: All | Drawing contours %s of %s.' %
                              (str(layer).zfill(4), str(layer_high).zfill(4)))
-
-            # Check if the process has been paused or stopped
-            self.check_flags()
-            while self.pause_flag:
-                self.status.emit('Current Part: All | Drawing contours %s of %s paused.' %
-                                 (str(layer).zfill(4), str(layer_high).zfill(4)))
-                time.sleep(1)
-                self.check_flags()
-            if not self.run_flag:
-                self.status.emit('Current Part: All | Conversion stopped.')
-                return False
 
             # Create a blank black RGB image to draw contours on
             image_contours = np.zeros(self.image_resolution, np.uint8)
@@ -275,22 +251,11 @@ class SliceConverter:
                 image_names = image_processing.ImageTransform().apply_transformation(image_names, False)
                 cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
-            progress += increment
-            if round(progress) is not progress_previous:
-                self.progress.emit(round(progress))
-                progress_previous = round(progress)
+            progress_current += increment
+            if round(progress_current) is not progress_previous:
+                self.progress.emit(round(progress_current))
+                progress_previous = round(progress_current)
 
             print('Contour %s Time\n%s\n' % (layer, time.time() - t0))
 
         return True
-
-    def check_flags(self):
-        """Checks the respective Run and Pause keys from the config.json file"""
-
-        # Load from the build.json file
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        # Check the Run and Pause flags
-        self.run_flag = self.build['SliceConverter']['Run']
-        self.pause_flag = self.build['SliceConverter']['Pause']

@@ -20,7 +20,7 @@ import qt_multithreading
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogCameraCalibration, \
-    dialogCalibrationResults, dialogSliceConverter,  dialogPartAdjustment, dialogImageConverter, dialogDefectReports
+    dialogCalibrationResults, dialogSliceConverter, dialogPartAdjustment, dialogImageConverter, dialogDefectReports
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -318,14 +318,14 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
 
     def modify_gridlines(self):
         """Redraws the gridlines .png image with a new gridlines image using the updated settings"""
-        
+
         # Grab the image resolution to be used for the gridlines
         width = self.config['ImageCorrection']['ImageResolution'][1]
         height = self.config['ImageCorrection']['ImageResolution'][0]
-        
+
         size = self.spinSize.value()
         thickness = self.spinThickness.value()
-        
+
         # Create a black image to draw the gridlines on
         image = np.zeros((height, width, 3), np.uint8)
 
@@ -786,39 +786,75 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.pushAddSF.clicked.connect(self.add_files)
         self.pushRemoveSF.clicked.connect(self.remove_files)
-        self.pushPreviewLayer.clicked.connect(self.preview_layer)
+        self.pushDrawContours.clicked.connect(self.draw_contours)
+        self.pushZoomIn.clicked.connect(self.zoom_in)
+        self.pushZoomOut.clicked.connect(self.zoom_out)
+        self.pushGoSlice.clicked.connect(self.set_slice)
+        self.pushGoHeight.clicked.connect(self.set_height)
+        self.pushRotate.clicked.connect(self.rotate)
+        self.pushResetR.clicked.connect(self.rotate_reset)
+        self.pushTranslate.clicked.connect(self.translate)
+        self.pushResetT.clicked.connect(self.translate_reset)
+        self.pushPause.clicked.connect(self.pause)
+        self.pushBrowseCB.clicked.connect(self.browse_background)
+        self.pushBrowseOF.clicked.connect(self.browse_output)
+        self.graphicsDisplay.mouse_pos.connect(self.update_position)
 
-        self.pushBrowseOF.clicked.connect(self.browse_folder)
-
-        self.graphicsLayerPreview.mouse_pos.connect(self.update_position)
-
-        # Set a 'default' contours folder to store the drawn contours if no build has been started
+        # Set a 'default' output folder to store the drawn contours if no build has been started
         # Otherwise use the contours folder in the build folder
         if self.build['ImageCapture']['Folder']:
-            self.contours_folder = self.build['ImageCapture']['Folder'] + '/contours'
+            self.output_folder = self.build['ImageCapture']['Folder'] + '/contours'
+            self.slice_list = self.build['BuildInfo']['SliceFiles']
+            self.check_files()
         else:
-            self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
+            self.output_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
 
-        self.lineFolder.setText(self.contours_folder)
+        self.lineOutputFolder.setText(self.output_folder)
 
         self.slice_list = list()
 
+        self.run_flag = False
+
+        self.threadpool = QThreadPool()
+
     def add_files(self):
-        """Adds slice files to the slice file list"""
+        """Adds slice files to the slice file list
+        Subsequently converts all not yet converted .cli files into ASCII contours"""
 
         filenames = QFileDialog.getOpenFileNames(self, 'Add Slice Files...', '', 'Slice Files (*.cli)')[0]
 
         if filenames:
             # Check if any of the selected files are already in the slice list and only add the ones which aren't
             for file in filenames:
-                if not file in self.slice_list:
+                if file not in self.slice_list:
                     self.slice_list.append(file)
 
-            # Sort the slice list and add them to the QListWidget
-            self.slice_list.sort()
-            self.listSliceFiles.clear()
-            for item in self.slice_list:
-                self.listSliceFiles.addItem(os.path.basename(item))
+            self.check_files()
+
+    def check_files(self):
+        """Checks whether all the selected slice files have been converted from .cli into ASCII contours
+        Subsequently converts the files that haven't been converted
+        Also adds the slice files to the listWidget"""
+
+        # Sort the slice list and clear the QListWidget
+        self.slice_list.sort()
+        self.listSliceFiles.clear()
+        self.index_list = list()
+        self.slice_counter = 0
+        self.max_layers = 1
+
+        # Add the slice files to the listWidget while checking if the .cli files have been converted
+        for index, item in enumerate(self.slice_list):
+            self.listSliceFiles.addItem(os.path.basename(item))
+            if os.path.isfile(item.replace('.cli', '_contours.txt')):
+                self.listSliceFiles.item(index).setBackground(QColor('yellow'))
+            else:
+                self.index_list.append(index)
+                self.listSliceFiles.item(index).setBackground(QColor('red'))
+
+        if self.index_list:
+            self.run_flag = True
+            self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
 
     def remove_files(self):
         """Removes slice files from the slice file list"""
@@ -829,26 +865,88 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             del self.slice_list[self.listSliceFiles.row(item)]
             self.listSliceFiles.takeItem(self.listSliceFiles.row(item))
 
-    def browse_folder(self):
+    def convert_slice(self, slice_file):
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert_cli, slice_file)
+        worker.signals.status.connect(self.update_status)
+        worker.signals.progress.connect(self.update_progress)
+        worker.signals.result.connect(self.convert_slice_finished)
+        self.threadpool.start(worker)
+
+    def convert_slice_finished(self, max_layers):
+
+        if max_layers > self.max_layers:
+            self.max_layers = max_layers
+
+        self.labelSliceNumber.setText('0001 / %s' % (self.max_layers).zfill(4))
+
+        self.listSliceFiles.item(self.index_list[self.slice_counter]).setBackground(QColor('yellow'))
+        self.slice_counter += 1
+
+        if self.run_flag and not self.slice_counter == len(self.index_list):
+            self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
+        else:
+            self.update_status('None | Conversion finished.')
+
+    def draw_contours(self):
+        pass
+
+    def zoom_in(self):
+        pass
+
+    def zoom_out(self):
+        pass
+
+    def set_slice(self):
+        pass
+
+    def set_height(self):
+        pass
+
+    def rotate(self):
+        pass
+
+    def rotate_reset(self):
+        pass
+
+    def translate(self):
+        pass
+
+    def translate_reset(self):
+        pass
+
+    def pause(self):
+        pass
+
+    def browse_background(self):
+        pass
+
+    def browse_output(self):
         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
 
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if folder:
-            self.contours_folder = folder
-            self.lineFolder.setText(self.contours_folder)
+            self.output_folder = folder
+            self.lineFolder.setText(self.output_folder)
 
-    def preview_layer(self):
+    def update_display(self):
         pass
 
     def update_position(self, x, y):
-        self.labelXPosition.setText('X - ' + str(x).zfill(3))
-        self.labelYPosition.setText('Y - ' + str(y).zfill(3))
+        """Displays the relative position of the mouse cursor over the Layer Preview graphics view"""
+        self.labelXPosition.setText('X     ' + str(x).zfill(3) + ' px')
+        self.labelYPosition.setText('Y     ' + str(y).zfill(3) + ' px')
+
+    def update_status(self, string):
+        string = string.split(' | ')
+        self.labelStatus.setText(string[1])
+        self.labelStatusPart.setText(string[0])
+
+    def update_progress(self, percentage):
+        self.progressBar.setValue(percentage)
 
     def closeEvent(self, event):
         self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
-
-
 
 
 # class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
@@ -1471,7 +1569,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
             # Layer check
             try:
-                layer = int(image_name[-4:])
+                int(image_name[-4:])
             except ValueError:
                 # If the layer number can't be determined due to incorrect naming, don't use alternate naming scheme
                 checkboxes[0] = False
@@ -1634,8 +1732,6 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
 
     def populate_tables(self, part):
         """Populates both tables with the data from the selected defect report"""
-
-
 
         # Read the appropriate report into memory
         with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'],

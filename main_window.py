@@ -48,7 +48,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.setWindowIcon(QIcon('gui/logo.ico'))
 
         # Set the version number here
-        self.version = '0.8.9'
+        self.version = '0.9.0'
 
         # Load default working build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:

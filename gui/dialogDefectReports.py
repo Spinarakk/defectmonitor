@@ -20,7 +20,7 @@ class Ui_dialogDefectReports(object):
         self.groupThresholdValues = QtWidgets.QGroupBox(dialogDefectReports)
         self.groupThresholdValues.setObjectName("groupThresholdValues")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.groupThresholdValues)
-        self.gridLayout_4.setContentsMargins(9, 3, 9, 6)
+        self.gridLayout_4.setContentsMargins(-1, 3, -1, 6)
         self.gridLayout_4.setObjectName("gridLayout_4")
         self.frameLeft = QtWidgets.QFrame(self.groupThresholdValues)
         self.frameLeft.setFrameShape(QtWidgets.QFrame.StyledPanel)
