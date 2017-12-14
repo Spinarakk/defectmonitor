@@ -110,7 +110,7 @@ class ImageCapture:
             status_camera.emit('Error')
         else:
             # Construct the image name using the current layer
-            image_name = '%s/raw/snapshot/snapshotR_%s.png' % (self.build['ImageCapture']['Folder'],
+            image_name = '%s/raw/snapshot/snapshotR_%s.png' % (self.build['BuildInfo']['Folder'],
                                                            str(self.snapshot_layer).zfill(4))
 
             # Save the raw image to the snapshot folder
@@ -146,7 +146,7 @@ class ImageCapture:
             image = next(self.camera.grab_images(1))
 
         # Construct the image name using the current layer and phase
-        image_name = '%s/raw/%s/%sR_%s.png' % (self.build['ImageCapture']['Folder'], self.phases[self.current_phase],
+        image_name = '%s/raw/%s/%sR_%s.png' % (self.build['BuildInfo']['Folder'], self.phases[self.current_phase],
                                                self.phases[self.current_phase], str(int(self.current_layer)).zfill(4))
 
         # Save the raw image to the appropriate folder

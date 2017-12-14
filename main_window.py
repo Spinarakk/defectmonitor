@@ -43,6 +43,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Setup Main Window UI
         super(self.__class__, self).__init__(parent)
         self.setupUi(self)
+        self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
+        try:
+            self.restoreGeometry(self.window_settings.value('Defect Monitor Geometry', ''))
+        except TypeError:
+            pass
 
         # Set the window icon
         self.setWindowIcon(QIcon('gui/logo.ico'))
@@ -50,7 +56,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Set the version number here
         self.version = '0.9.0'
 
-        # Load default working build settings from the hidden non-user accessible build_default.json file
+        # Load default build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
             self.build = json.load(build)
 
@@ -58,12 +64,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Get the current working directory and save it to the config.json file so later methods can grab it
-        # Additionally, create a default builds folder (if it doesn't exist) using the cwd to store images
-        self.build['WorkingDirectory'] = os.getcwd().replace('\\', '/')
-        self.build['BuildInfo']['Folder'] = os.path.dirname(self.build['WorkingDirectory']) + '/Builds'
-        if not os.path.isdir(self.build['BuildInfo']['Folder']):
-            os.makedirs(self.build['BuildInfo']['Folder'])
+        # Verify that the stored Build folder exists, and create a new default one if it doesn't
+        if not os.path.isdir(self.config['BuildFolder']):
+            self.config['BuildFolder'] = os.path.dirname(os.getcwd().replace('\\', '/')) + '/Builds'
+            os.makedirs(self.config['BuildFolder'])
 
         # Save the default build to the current working build.json file (using w+ in case file doesn't exist)
         with open('build.json', 'w+') as build:
@@ -143,6 +147,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushDefectReports.clicked.connect(self.defect_reports)
 
         # Layer Selection
+        self.spinLayer.editingFinished.connect(self.set_layer)
         self.pushGo.clicked.connect(self.set_layer)
 
         # Display Widget
@@ -170,7 +175,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
         self.DR_dialog = None  # Defect Reports
-        self.P_dialog = None  # Preferences
+        self.P_dialog = None   # Preferences
         self.CS_dialog = None  # Camera Settings
         self.CC_dialog = None  # Camera Calibration
         self.SC_dialog = None  # Slice Converter
@@ -229,7 +234,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Executes the build setup if the OK button is clicked, otherwise nothing happens
         if NB_dialog.exec_():
-            self.setup_build()
+            self.setup_build(False, False)
 
     def open_build(self):
         """Opens a File Dialog when File -> Open... is clicked or if a recent build action is clicked
@@ -263,8 +268,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         if not filename:
             # Open a File Dialog to allow the user to select a file if it wasn't a recent build that was selected
-            filename = QFileDialog.getOpenFileName(self, 'Open', self.build['BuildInfo']['Folder'],
-                                                   'JSON File (*.json)')[0]
+            filename = QFileDialog.getOpenFileName(self, 'Open', self.config['BuildFolder'], 'JSON File (*.json)')[0]
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if filename:
@@ -283,9 +287,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 # Add the opened build name to the Recent Builds drop-down menu
                 self.add_recent_build(self.build_name)
 
-                self.setup_build()
+                self.setup_build(False, True)
 
-    def setup_build(self, settings_flag=False):
+    def setup_build(self, settings_flag=False, load_flag=False):
         """Sets up the widgetDisplay and any background processes for the current build"""
 
         # Reload any modified build settings that the New Build dialog has changed
@@ -294,6 +298,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Update the window title with the build name
         self.setWindowTitle('Defect Monitor - Build ' + self.build['BuildInfo']['Name'])
+        self.update_progress(0)
 
         # Don't do the following if this method was triggered by changing the build settings
         if not settings_flag:
@@ -311,10 +316,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.toolSidebar.setCurrentIndex(1)
 
             # Store the names of the four folders containing the display images in the display dictionary
-            self.display['ImageFolder'] = ['%s/fixed/coat' % self.build['ImageCapture']['Folder'],
-                                           '%s/fixed/scan' % self.build['ImageCapture']['Folder'],
-                                           '%s/contours' % self.build['ImageCapture']['Folder'],
-                                           '%s/fixed/snapshot' % self.build['ImageCapture']['Folder']]
+            self.display['ImageFolder'] = ['%s/fixed/coat' % self.build['BuildInfo']['Folder'],
+                                           '%s/fixed/scan' % self.build['BuildInfo']['Folder'],
+                                           '%s/contours' % self.build['BuildInfo']['Folder'],
+                                           '%s/fixed/snapshot' % self.build['BuildInfo']['Folder']]
 
             # Set the display flag to true to allow tab changes to update images
             self.display_flag = True
@@ -323,19 +328,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.acquire_camera()
             self.acquire_trigger()
 
-        # Converts and draws the contours if set to do so in the build settings
-        if self.build['BuildInfo']['Convert']:
-            self.slice_converter()
-        else:
-            self.setup_build_finished(settings_flag)
-
-    def setup_build_finished(self, settings_flag):
-        """Executes when the slice conversion process is finished, or the Stop button is pressed"""
-
-        if not settings_flag:
+            # Update the display to start displaying images
             self.update_folders(True)
-            self.update_progress(0)
+
             self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 5000)
+
+            if not load_flag:
+                # Open the Slice Converter dialog window to let the user
+                self.slice_converter()
         else:
             self.update_status('Build %s settings changed' % self.build['BuildInfo']['Name'], 5000)
 
@@ -346,7 +346,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.config = json.load(config)
 
         # Add the opened/saved build name to the list, only if a build name was sent
-        # And if it doesn't match a build already in the list, otherwise send that build to the end of the list
+        # And send the build to the end of the list if it already is on the list
         if build_name:
             if build_name in self.config['RecentBuilds']:
                 self.config['RecentBuilds'].remove(build_name)
@@ -368,8 +368,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 action.triggered.connect(self.open_build)
             else:
                 # If the file doesn't exist, remove the build from both lists
-                self.recent_builds_list.remove(build)
                 self.config['RecentBuilds'].remove(build)
+
+        # Copy the reversed list again in case files got removed
+        self.recent_builds_list = self.config['RecentBuilds'][::-1]
 
         # Add a separator and finally the Clear Builds action
         self.menuRecentBuilds.addSeparator()
@@ -420,18 +422,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Allows the user to save the current build's config.json file to whatever location the user specifies
         """
 
-        filename = QFileDialog.getSaveFileName(self, 'Save As', '%s/%s' %
-                                               (self.build['BuildInfo']['Folder'], self.build['BuildInfo']['Name']),
+        filename = QFileDialog.getSaveFileName(self, 'Save As', '%s/%s' % (self.config['BuildFolder'],
+                                                                           self.build['BuildInfo']['Name']),
                                                'JSON File (*.json)')[0]
 
         # Checking if user has chosen to save the build or clicked cancel
         if filename:
             self.build_name = filename
-
-            # Add the opened build name to the Recent Builds drop-down menu
-            self.add_recent_build(self.build_name)
-
             self.save_build()
+
+            # Add the saved build name to the Recent Builds drop-down menu
+            self.add_recent_build(self.build_name)
 
     def export_image(self):
         """Opens a FileDialog Window when File > Export Image... is clicked
@@ -481,12 +482,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             results = json.load(file)
 
         try:
-            self.calibration_results_dialog.close()
+            self.CR_dialog.close()
         except AttributeError:
             pass
 
-        self.calibration_results_dialog = dialog_windows.CalibrationResults(self, results['ImageCorrection'])
-        self.calibration_results_dialog.show()
+        self.CR_dialog = dialog_windows.CalibrationResults(self, results['ImageCorrection'])
+        self.CR_dialog.show()
 
     def defect_reports(self):
         """Opens a Modeless Dialog Window when the Defect Reports button is clicked
@@ -637,16 +638,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessAll.setText('Process Stop')
 
             # Remove the already processed defect images from the image list as dictated by the combined report keys
-            with open('%s/reports/combined_report.json' % self.build['ImageCapture']['Folder']) as report:
+            with open('%s/reports/combined_report.json' % self.build['BuildInfo']['Folder']) as report:
                 report = json.load(report)
 
             phases = ['coat', 'scan']
             layers = list()
+
             for layer in report.keys():
                 if phases[self.tab_index] in report[layer]:
                     layers.append(int(layer))
 
-            self.layer_numbers = sorted(list(set(self.display['LayerNumbers'][self.tab_index]) - set(layers)))
+            self.layer_numbers = sorted(list(set(self.display['LayerNumbers'][self.tab_index]) ^ set(layers)))
+
             self.process_settings(self.layer_numbers[self.defect_counter])
 
         elif 'Process Stop' in self.pushProcessAll.text():
@@ -768,7 +771,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         BS_dialog = dialog_windows.NewBuild(self, open_flag=True, settings_flag=True)
 
         if BS_dialog.exec_():
-            self.setup_build(True)
+            self.setup_build(True, False)
 
     def acquire_camera(self):
         """Executes after setting up a new build or loading a build, or when Settings -> Acquire Camera is clicked
@@ -1099,7 +1102,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         label = self.display['LabelNames'][index]
         stack = self.display['StackNames'][index]
         image_list = self.display['ImageList'][index]
-        image_folder = self.build['ImageCapture']['Folder']
+        image_folder = self.build['BuildInfo']['Folder']
         value = self.sliderDisplay.value()
         layer = str(value).zfill(4)
         phase = self.display['FolderNames'][index][:-1].lower()
@@ -1150,7 +1153,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkContours.setChecked(False)
 
             # Part Names only toggleable on the Coat, Scan and Part Contour tabs
-            if os.path.isfile('%s/part_names.png' % self.build['ImageCapture']['Folder']) and index < 3:
+            if os.path.isfile('%s/part_names.png' % self.build['BuildInfo']['Folder']) and index < 3:
                 self.checkNames.setEnabled(True)
             else:
                 self.checkNames.setEnabled(False)
@@ -1333,8 +1336,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def update_table(self):
         """Updates the Defect Data table with the current layer's defect data if available"""
 
-        # Load the defect (combined) data from the report JSON file
-        with open('%s/reports/combined_report.json' % self.build['ImageCapture']['Folder']) as report:
+        # Load the combined defect report json file
+        with open('%s/reports/combined_report.json' % self.build['BuildInfo']['Folder']) as report:
             report = json.load(report)
 
         index = self.widgetDisplay.currentIndex()
@@ -1711,6 +1714,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             elif retval == 4194304:
                 event.ignore()
                 # Otherwise just close the Main Window without saving
+
+        self.window_settings.setValue('Defect Monitor Geometry', self.saveGeometry())
 
 
 if __name__ == '__main__':

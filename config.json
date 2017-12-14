@@ -1,4 +1,5 @@
 {
+    "BuildFolder": "D:/Documents/MCAM/Builds",
     "CameraCalibration": {
         "Apply": false,
         "Chessboard": false,
@@ -20,6 +21,11 @@
         "PacketSize": 1500,
         "PixelFormat": 0,
         "TriggerTimeout": 3
+    },
+    "Defaults": {
+        "BuildName": "Default",
+        "EmailAddress": "nicholascklee@gmail.com",
+        "Username": "Nicholas Lee"
     },
     "Gridlines": {
         "Size": 99,
@@ -128,9 +134,7 @@
             0
         ]
     },
-    "RecentBuilds": [
-        "D:/Documents/MCAM/Builds/Demo 1.json"
-    ],
+    "RecentBuilds": [],
     "Threshold": {
         "HistogramCoat": 5000,
         "HistogramScan": 5000,

@@ -1,50 +1,37 @@
 {
     "BuildInfo": {
-        "Colours": {},
-        "Convert": false,
-        "EmailAddress": "",
-        "Folder": "D:/Documents/MCAM/Builds",
-        "Name": "Default",
-        "Platform": 0,
+        "Camera": 0,
+        "EmailAddress": "nicholascklee@gmail.com",
+        "Folder": "D:/Documents/MCAM/Builds/2017-12-14 [16''26'32] Demo 3",
+        "Machine": 0,
+        "Name": "Demo 3",
         "PlatformDimensions": [
-            636.0,
-            406.0
+            636,
+            406
         ],
-        "SliceFiles": [],
-        "Username": ""
+        "Username": "Nicholas Lee"
     },
     "DefectDetector": {
         "Contours": "",
         "Image": "",
         "ImagePrevious": "",
         "Layer": 0,
-        "Mode": "snapshot",
         "Phase": "coat"
     },
     "ImageCapture": {
-        "Folder": "",
         "Layer": 0.5,
         "Phase": 1,
         "Snapshot": 1
     },
     "Notifications": {
         "Attachment": "",
-        "Major": true,
-        "Minor": true,
+        "Major": false,
+        "Minor": false,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Build": false,
-        "Colours": {},
-        "Draw": false,
         "Files": [],
-        "Folder": "",
-        "Pause": false,
-        "Range": false,
-        "RangeHigh": 1,
-        "RangeLow": 1,
-        "Run": false
-    },
-    "WorkingDirectory": "D:/Documents/MCAM/Defect Monitor"
+        "PartColours": {}
+    }
 }

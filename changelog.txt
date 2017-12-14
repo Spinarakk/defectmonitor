@@ -1,3 +1,20 @@
+December 14
+- Removed the slice files box from the New Build window and instead moved it to the Slice Converter window
+- Removed keys from the build.json file that are unneeded
+- The user now selects slice files for the build in the Slice Converter window, which opens immediately after creating a new build
+- Any processes involving the slice files that used to happen within the New Build method now happens in the Slice Converter dialog once the user clicks the Draw Contours button
+- Figured out how to connect pressing the enter key while editing spinboxes with methods, allowing the user to type in a layer number and pressing enter will go to that layer
+- Removed a lot of json entries like working directory as it was deemed unnecessary
+- Rewrote a lot of the functionality of the program when creating a new build
+- Creating a new build now opens the Slice Converter window where the user can add slice files to be converted and drawn into contours
+- If they don't select any files at all to convert and draw, the defect deetector will just not do the part by part comparison and scan comparison
+- Fixed a bug with the recent files list where saving a file was causing all the recent files to be input wrong
+
+December 13
+- Continued rewriting the slice converter function to accomodate the new slice converter dialog window and method of converting and drawing slices
+- Implemented drawing of a layer as a preview
+- Added feature where selecting a slice on the slice list would change that part's contours to a different colour
+
 December 12
 - Continued working on the Slice Converter dialog window
 - Coded the list widget to work with adding slice files and removing selected slice files
@@ -5,6 +22,9 @@ December 12
 - Added a Mouse Position groupbox to track where on the platform the mouse is
 - Finalized the design of the dialog window including all the current features and buttons
 - Implemented auto conversion of the slice files after adding them to the list if they haven't already been converted
+- Rewrote the entire slice converter function to instead loop within the Slice Converter dialog window rather than within the QThread
+- Pause/Resume now pauses between files and contour layers rather than within the function itself, and pressing the pause button will only pause once the currently running conversion has finished
+- Removed pause flags from the build/config json files
 
 December 11
 - Finished off the proper functionality and operation of the checkboxes in the Image Converter dialog window

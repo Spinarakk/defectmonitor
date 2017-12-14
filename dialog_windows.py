@@ -39,31 +39,46 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         with open('build.json') as build:
             self.build = json.load(build)
 
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        # Buttons
-        self.pushBrowseSF.clicked.connect(self.browse_slice)
-        self.pushBrowseBF.clicked.connect(self.browse_build_folder)
-        self.pushSendTestEmail.clicked.connect(self.send_test)
-        self.pushCreate.clicked.connect(self.create)
-        self.lineEmailAddress.textChanged.connect(self.enable_button)
+        # Load from the config.json file
+        with open('config.json') as config:
+            self.config = json.load(config)
 
         # Flag to prevent additional image folders from being created
         self.open_flag = open_flag
+        self.settings_flag = settings_flag
 
-        # Set and display the default build image save folder
-        self.slice_list = list()
-        self.build_folder = self.build['BuildInfo']['Folder']
-        self.lineBuildFolder.setText(self.build_folder)
+        # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        # Buttons
+        self.pushBrowseIF.clicked.connect(self.browse_folder)
+        self.pushSendTestEmail.clicked.connect(self.send_test_email)
+        self.pushCreate.clicked.connect(self.create)
+
+        # Lines
+        self.lineBuildName.textChanged.connect(self.change_folder)
+        self.lineEmailAddress.textChanged.connect(self.enable_button)
+
+        # Set default placeholder text in some of the fields
+        self.lineBuildName.setPlaceholderText(self.config['Defaults']['BuildName'])
+        self.lineUsername.setPlaceholderText(self.config['Defaults']['Username'])
+        self.lineEmailAddress.setPlaceholderText(self.config['Defaults']['EmailAddress'])
+
+        # Set and display a default image folder name to save images for the current build
+        # Generate a timestamp for folder labelling purposes
+        time = datetime.now()
+        self.image_folder = """%s/%s-%s-%s [%s''%s'%s]""" % \
+                            (self.config['BuildFolder'], time.year, str(time.month).zfill(2), str(time.day).zfill(2),
+                             str(time.hour).zfill(2), str(time.minute).zfill(2), str(time.second).zfill(2))
+        self.change_folder()
 
         # If this dialog window was opened as a result of the Open... action, then the following is executed
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
         if self.open_flag:
             self.setWindowTitle('Open Build')
             self.pushCreate.setText('Load')
+            self.pushBrowseIF.setEnabled(False)
             self.lineBuildName.setText(self.build['BuildInfo']['Name'])
-            self.comboPlatform.setCurrentIndex(self.build['BuildInfo']['Platform'])
-            self.slice_list = self.build['BuildInfo']['SliceFiles']
-            self.set_list(self.slice_list)
+            self.lineBuildName.blockSignals(True)
+            self.lineImageFolder.setText(self.build['BuildInfo']['Folder'])
             self.lineUsername.setText(self.build['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
             self.checkMinor.setChecked(self.build['Notifications']['Minor'])
@@ -72,34 +87,32 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         # If this dialog window was opened as a result of the Build Settings... action, then the following is executed
         # Disable a few of the buttons to disallow changing of the slice files and build folder
         if settings_flag:
-            self.pushBrowseSF.setEnabled(False)
-            self.pushBrowseBF.setEnabled(False)
+            self.pushBrowseIF.setEnabled(False)
             self.setWindowTitle('Build Settings')
             self.pushCreate.setText('OK')
 
         self.threadpool = QThreadPool()
 
-    def browse_slice(self):
-        """Opens a File Dialog, allowing the user to select one or multiple slice files"""
-
-        filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cli)')[0]
-
-        # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
-        if filenames:
-            self.slice_list = filenames
-            self.set_list(self.slice_list)
-
-    def browse_build_folder(self):
+    def browse_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
 
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if folder:
-            # Display just the file name on the line box
-            self.build_folder = folder
-            self.lineBuildFolder.setText(folder)
+            # Display just the folder name on the line box and disable the Build Name from changing the folder name
+            self.lineImageFolder.setText(folder)
+            self.lineBuildName.blockSignals(True)
 
-    def send_test(self):
+    def change_folder(self):
+        """Changes the prospective image folder name depending on the entered Build Name"""
+
+        # Use the placeholder text if the user hasn't entered anything into the lineEdit
+        if self.lineBuildName.text():
+            self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.text()))
+        else:
+            self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.placeholderText()))
+
+    def send_test_email(self):
         """Sends a test notification email to the entered email address"""
 
         # Open a message box with a send test email confirmation message so accidental emails don't get sent
@@ -124,7 +137,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.build['BuildInfo']['Username'] = self.lineUsername.text()
                 self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.text()
                 if self.checkAddAttachment.isChecked():
-                    self.build['Notifications']['Attachment'] = '%s/test_image.jpg' % self.build['WorkingDirectory']
+                    self.build['Notifications']['Attachment'] = 'test_image.jpg'
                 else:
                     self.build['Notifications']['Attachment'] = ''
 
@@ -155,24 +168,11 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                                        (self.lineEmailAddress.text(), self.lineUsername.text()))
         send_test_confirmation.exec_()
 
-    def set_list(self, file_list):
-        """Adds file base names to the ListWidget"""
-
-        self.listSliceFiles.clear()
-
-        # For loop required in order to use the basename of each slice file
-        for item in file_list:
-            self.listSliceFiles.addItem(os.path.basename(item))
-
     def enable_button(self):
         """(Re-)Enables the Send Test Email button if the email address box is changed and not empty"""
 
-        if self.lineEmailAddress.text():
-            self.pushSendTestEmail.setEnabled(True)
-            self.checkAddAttachment.setEnabled(True)
-        else:
-            self.pushSendTestEmail.setEnabled(False)
-            self.checkAddAttachment.setEnabled(False)
+        self.pushSendTestEmail.setEnabled(bool(self.lineEmailAddress.text()))
+        self.checkAddAttachment.setEnabled(bool(self.lineEmailAddress.text()))
 
     def create(self):
         """Executes when the Create button is clicked
@@ -180,110 +180,78 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         Saves important selection options to the config.json file and closes the window
         """
 
-        error_message = str()
-
-        if not self.lineBuildName.text():
-            error_message += 'Build Name not entered.\n'
-        if not self.slice_list:
-            error_message += 'Slice File(s) not selected.\n'
-        if not self.lineUsername.text():
-            error_message += 'Username not entered.\n'
-        if not validate_email(self.lineEmailAddress.text()):
-            error_message += 'Email Address not valid.\n'
-
-        if error_message:
-            missing_folder_error = QMessageBox(self)
-            missing_folder_error.setWindowTitle('Error')
-            missing_folder_error.setIcon(QMessageBox.Critical)
-            missing_folder_error.setText(error_message.rstrip('\n'))
-            missing_folder_error.exec_()
+        # Save all the entered information to the config.json file
+        # If the user didn't enter anything into the following fields, save the placeholder text instead
+        if self.lineBuildName.text():
+            self.build['BuildInfo']['Name'] = self.lineBuildName.text()
         else:
-            # Save all the entered information to the config.json file
-            self.build['BuildInfo']['Name'] = str(self.lineBuildName.text())
-            self.build['BuildInfo']['Platform'] = self.comboPlatform.currentIndex()
-            self.build['BuildInfo']['Username'] = str(self.lineUsername.text())
-            self.build['BuildInfo']['EmailAddress'] = str(self.lineEmailAddress.text())
-            self.build['BuildInfo']['Convert'] = self.checkConvert.isChecked()
-            self.build['BuildInfo']['Folder'] = self.build_folder
-            self.build['BuildInfo']['SliceFiles'] = self.slice_list
-            self.build['Notifications']['Minor'] = self.checkMinor.isChecked()
-            self.build['Notifications']['Major'] = self.checkMajor.isChecked()
+            self.build['BuildInfo']['Name'] = self.lineBuildName.placeholderText()
 
-            # Save the selected platform dimensions to the config.json file
-            if self.comboPlatform.currentIndex() == 0:
-                self.build['BuildInfo']['PlatformDimensions'] = [636, 406]
+        if self.lineUsername.text():
+            self.build['BuildInfo']['Username'] = self.lineUsername.text()
+        else:
+            self.build['BuildInfo']['Username'] = self.lineUsername.placeholderText()
 
-            # If a New Build is being created (rather than Open Build), create some folders to store images
-            if not self.open_flag:
-                # Generate a timestamp for folder labelling purposes
-                current_time = datetime.now()
+        if self.lineEmailAddress.text():
+            self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.text()
+        else:
+            self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.placeholderText()
 
-                # Set the full name of the main storage folder for all acquired images
-                image_folder = """%s/%s-%s-%s [%s''%s'%s] %s""" % \
-                               (self.build['BuildInfo']['Folder'], current_time.year, str(current_time.month).zfill(2),
-                                str(current_time.day).zfill(2), str(current_time.hour).zfill(2),
-                                str(current_time.minute).zfill(2), str(current_time.second).zfill(2),
-                                self.build['BuildInfo']['Name'])
+        self.build['BuildInfo']['Machine'] = self.comboMachine.currentIndex()
+        self.build['BuildInfo']['Camera'] = self.comboCamera.currentIndex()
+        self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
+        self.build['Notifications']['Minor'] = self.checkMinor.isChecked()
+        self.build['Notifications']['Major'] = self.checkMajor.isChecked()
 
-                # Save the created image folder's name to the build.json file
-                self.build['ImageCapture']['Folder'] = image_folder
+        # Save the selected platform dimensions to the config.json file
+        if self.comboMachine.currentIndex() == 0:
+            self.build['BuildInfo']['PlatformDimensions'] = [636, 406]
 
-                # Create respective sub-directories for images (and reports)
-                os.makedirs('%s/raw/coat' % image_folder)
-                os.makedirs('%s/raw/scan' % image_folder)
-                os.makedirs('%s/raw/snapshot' % image_folder)
-                os.makedirs('%s/fixed/coat' % image_folder)
-                os.makedirs('%s/fixed/scan' % image_folder)
-                os.makedirs('%s/fixed/snapshot' % image_folder)
-                os.makedirs('%s/defects/coat/streaks' % image_folder)
-                os.makedirs('%s/defects/coat/chatter' % image_folder)
-                os.makedirs('%s/defects/coat/patches' % image_folder)
-                os.makedirs('%s/defects/coat/outliers' % image_folder)
-                os.makedirs('%s/defects/scan/streaks' % image_folder)
-                os.makedirs('%s/defects/scan/chatter' % image_folder)
-                os.makedirs('%s/defects/scan/pattern' % image_folder)
-                os.makedirs('%s/contours' % image_folder)
-                os.makedirs('%s/reports' % image_folder)
+        # If a New Build is being created (rather than Open Build or Settings), create folders to store images
+        if not self.open_flag and not self.settings_flag:
+            # Save the created image folder's name to the build.json file
+            self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
 
-                # Create a dictionary of colours (different shades of teal) for each part's contours and save it
-                # At the same time, create a bunch of json files containing a blank dictionary
-                # These json files are used to store the defect coordinate and pixel size data for each of the parts
-                part_colours = dict()
-                dict_blank = dict()
+            # Create respective sub-directories for images (and reports)
+            os.makedirs('%s/raw/coat' % self.lineImageFolder.text())
+            os.makedirs('%s/raw/scan' % self.lineImageFolder.text())
+            os.makedirs('%s/raw/snapshot' % self.lineImageFolder.text())
+            os.makedirs('%s/fixed/coat' % self.lineImageFolder.text())
+            os.makedirs('%s/fixed/scan' % self.lineImageFolder.text())
+            os.makedirs('%s/fixed/snapshot' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/coat/streaks' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/coat/chatter' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/coat/patches' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/coat/outliers' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/scan/streaks' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/scan/chatter' % self.lineImageFolder.text())
+            os.makedirs('%s/defects/scan/pattern' % self.lineImageFolder.text())
+            os.makedirs('%s/contours' % self.lineImageFolder.text())
+            os.makedirs('%s/reports' % self.lineImageFolder.text())
 
-                # Append additional 'background' and 'combined' parts and create their folders as well
-                report_list = self.slice_list.copy()
-                report_list.append('background')
-                report_list.append('combined')
+            # Create combined and background blank json reports and save them to the build reports folder
+            with open('%s/reports/combined_report.json' % self.lineImageFolder.text(), 'w+') as report:
+                json.dump(dict(), report)
+            with open('%s/reports/background_report.json' % self.lineImageFolder.text(), 'w+') as report:
+                json.dump(dict(), report)
+        else:
+            # Check if the folder containing the images exist if a build was opened
+            if not os.path.isdir(self.build['BuildInfo']['Folder']):
+                missing_folder_error = QMessageBox(self)
+                missing_folder_error.setWindowTitle('Error')
+                missing_folder_error.setIcon(QMessageBox.Critical)
+                missing_folder_error.setText('Image folder not found.\n\nBuild cancelled.')
+                missing_folder_error.exec_()
 
-                for index, part_name in enumerate(report_list):
-                    part_name = os.path.splitext(os.path.basename(part_name))[0]
-                    part_colours[part_name] = ((100 + index) % 255, (100 + index) % 255, 0)
+                # Close the New Build window, return to the Main Window and do nothing
+                self.done(0)
+                return
 
-                    with open('%s/reports/%s_report.json' % (image_folder, part_name), 'w+') as report:
-                        json.dump(dict_blank, report)
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
 
-                # Set the 'background' part colour to black and save the dictionary
-                part_colours['background'] = (0, 0, 0)
-                self.build['BuildInfo']['Colours'] = part_colours
-            else:
-                # Check if the folder containing the images exist if a build was opened
-                if not os.path.isdir(self.build['ImageCapture']['Folder']):
-                    missing_folder_error = QMessageBox(self)
-                    missing_folder_error.setWindowTitle('Error')
-                    missing_folder_error.setIcon(QMessageBox.Critical)
-                    missing_folder_error.setText('Image folder not found.\n\nBuild cancelled.')
-                    missing_folder_error.exec_()
-
-                    # Close the New Build window, return to the Main Window and do nothing
-                    self.done(0)
-                    return
-
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
-
-            # Close the dialog window and return True
-            self.done(1)
+        # Close the dialog window and return True
+        self.done(1)
 
 
 class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
@@ -297,6 +265,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
         try:
             self.restoreGeometry(self.window_settings.value('Preferences Geometry', ''))
         except TypeError:
@@ -306,15 +275,37 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
             self.config = json.load(config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.pushBrowseBF.clicked.connect(self.browse_folder)
         self.pushModify.clicked.connect(self.modify_gridlines)
+        self.pushApply.clicked.connect(self.apply)
 
-        # Set the combo box and settings to previously saved values
+        # Set all settings to to previously saved values
+        self.lineBuildFolder.setText(self.config['BuildFolder'])
+        self.lineBuildName.setText(self.config['Defaults']['BuildName'])
+        self.lineUsername.setText(self.config['Defaults']['Username'])
+        self.lineEmailAddress.setText(self.config['Defaults']['EmailAddress'])
         self.spinSize.setValue(self.config['Gridlines']['Size'])
         self.spinThickness.setValue(self.config['Gridlines']['Thickness'])
 
         # Set the maximum range of the grid size spinbox
         self.spinSize.setMaximum(int(self.config['ImageCorrection']['ImageResolution'][0] / 2))
         self.spinSize.setToolTip('5 - %s' % int(self.config['ImageCorrection']['ImageResolution'][0] / 2))
+
+        # Setup event listeners for all the setting boxes to detect a change in an entered value
+        self.lineBuildFolder.textChanged.connect(self.apply_enable)
+        self.spinSize.valueChanged.connect(self.apply_enable)
+        self.spinThickness.valueChanged.connect(self.apply_enable)
+        self.lineBuildName.textChanged.connect(self.apply_enable)
+        self.lineUsername.textChanged.connect(self.apply_enable)
+        self.lineEmailAddress.textChanged.connect(self.apply_enable)
+
+    def browse_folder(self):
+        """Opens a File Dialog, allowing the user to select a folder to store all the builds"""
+
+        folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+
+        if folder:
+            self.lineBuildFolder.setText(folder)
 
     def modify_gridlines(self):
         """Redraws the gridlines .png image with a new gridlines image using the updated settings"""
@@ -359,6 +350,37 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
                                     ' line thickness of <b>%s</b>.' % (size, thickness))
         modify_confirmation.exec_()
 
+    def apply_enable(self):
+        """Enable the Apply button on any change of settings"""
+        self.pushApply.setEnabled(True)
+
+    def apply(self):
+        """Executes when the Apply or OK button is clicked and saves the entered values to the config.json file"""
+
+        with open('config.json') as config:
+            self.config = json.load(config)
+
+        # Save the new values from the changed settings to the config dictionary
+        self.config['BuildFolder'] = self.lineBuildFolder.text()
+        self.config['Defaults']['BuildName'] = self.lineBuildName.text()
+        self.config['Defaults']['Username'] = self.lineUsername.text()
+        self.config['Defaults']['EmailAddress'] = self.lineEmailAddress.text()
+
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
+
+        # Disable the Apply button until another setting is changed
+        self.pushApply.setEnabled(False)
+
+    def accept(self):
+        """Executes when the OK button is pressed
+        If the settings have changed, the apply function is executed before closing the window"""
+
+        if self.pushApply.isEnabled():
+            self.apply()
+
+        self.closeEvent(self.close())
+
     def closeEvent(self, event):
         """Executes when the window is closed"""
         self.window_settings.setValue('Preferences Geometry', self.saveGeometry())
@@ -390,16 +412,6 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         self.pushApply.clicked.connect(self.apply)
 
-        # Setup event listeners for all the setting boxes to detect a change in an entered value
-        self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
-        self.spinGain.valueChanged.connect(self.apply_enable)
-        self.spinBlackLevel.valueChanged.connect(self.apply_enable)
-        self.spinExposureTime.valueChanged.connect(self.apply_enable)
-        self.spinPacketSize.valueChanged.connect(self.apply_enable)
-        self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
-        self.spinFrameDelay.valueChanged.connect(self.apply_enable)
-        self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
-
         # Set the combo box and settings to the previously saved values
         # Combo box settings are saved as their index values in the config.json file
         self.comboPixelFormat.setCurrentIndex(int(self.config['CameraSettings']['PixelFormat']))
@@ -411,14 +423,22 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.spinFrameDelay.setValue(int(self.config['CameraSettings']['FrameDelay']))
         self.spinTriggerTimeout.setValue(int(self.config['CameraSettings']['TriggerTimeout']))
 
-        self.pushApply.setEnabled(False)
+        # Setup event listeners for all the setting boxes to detect a change in an entered value
+        self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
+        self.spinGain.valueChanged.connect(self.apply_enable)
+        self.spinBlackLevel.valueChanged.connect(self.apply_enable)
+        self.spinExposureTime.valueChanged.connect(self.apply_enable)
+        self.spinPacketSize.valueChanged.connect(self.apply_enable)
+        self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
+        self.spinFrameDelay.valueChanged.connect(self.apply_enable)
+        self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
 
     def apply_enable(self):
         """Enable the Apply button on any change of settings"""
         self.pushApply.setEnabled(True)
 
     def apply(self):
-        """Executes when the Apply button is clicked and saves the entered values to the config.json file"""
+        """Executes when the Apply or OK button is clicked and saves the entered values to the config.json file"""
 
         with open('config.json') as config:
             self.config = json.load(config)
@@ -772,6 +792,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         super(SliceConverter, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowFlags(Qt.Window)
         self.setupUi(self)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
@@ -783,10 +804,14 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         with open('build.json') as build:
             self.build = json.load(build)
 
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        # Buttons
         self.pushAddSF.clicked.connect(self.add_files)
         self.pushRemoveSF.clicked.connect(self.remove_files)
-        self.pushDrawContours.clicked.connect(self.draw_contours)
+        self.pushDrawContours.clicked.connect(self.draw_setup)
         self.pushZoomIn.clicked.connect(self.zoom_in)
         self.pushZoomOut.clicked.connect(self.zoom_out)
         self.pushGoSlice.clicked.connect(self.set_slice)
@@ -798,22 +823,32 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushPause.clicked.connect(self.pause)
         self.pushBrowseCB.clicked.connect(self.browse_background)
         self.pushBrowseOF.clicked.connect(self.browse_output)
-        self.graphicsDisplay.mouse_pos.connect(self.update_position)
 
-        # Set a 'default' output folder to store the drawn contours if no build has been started
-        # Otherwise use the contours folder in the build folder
-        if self.build['ImageCapture']['Folder']:
-            self.output_folder = self.build['ImageCapture']['Folder'] + '/contours'
-            self.slice_list = self.build['BuildInfo']['SliceFiles']
-            self.check_files()
+        # Checkboxes
+        self.checkCentrelines.toggled.connect(self.update_display)
+        self.checkFillContours.toggled.connect(self.preview_contours)
+        self.checkBackground.toggled.connect(self.set_background)
+
+        self.listSliceFiles.itemSelectionChanged.connect(self.select_parts)
+        self.graphicsDisplay.mouse_pos.connect(self.update_position)
+        self.graphicsDisplay.zoom_done.connect(self.zoom_in_finished)
+
+        self.contour_dict = dict()
+        self.slice_list = list()
+        self.current_layer = 1
+        self.run_flag = False
+
+        # Check if a build is open by checking for an image folder, otherwise set a 'default' output folder
+        if self.build['BuildInfo']['Folder']:
+            self.output_folder = self.build['BuildInfo']['Folder'] + '/contours'
+            self.slice_list = self.build['SliceConverter']['Files'][:]
         else:
-            self.output_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
+            self.output_folder = os.path.dirname(os.getcwd().replace('\\', '/')) + '/Contours'
 
         self.lineOutputFolder.setText(self.output_folder)
 
-        self.slice_list = list()
-
-        self.run_flag = False
+        # Set up the display with a 'blank' platform
+        self.preview_contours()
 
         self.threadpool = QThreadPool()
 
@@ -834,50 +869,74 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def check_files(self):
         """Checks whether all the selected slice files have been converted from .cli into ASCII contours
         Subsequently converts the files that haven't been converted
-        Also adds the slice files to the listWidget"""
+        Also adds the slice files to the listWidget and assigns a part colour to each part"""
 
         # Sort the slice list and clear the QListWidget
         self.slice_list.sort()
         self.listSliceFiles.clear()
+
+        # Initialize a few lists and values
+        # Part names is a dictionary of the names without the directory part and their corresponding preview part colour
+        # Part colours is same as above except with the part colours that will be used to draw the respective contours
+        self.part_names = dict()
+        self.part_colours = dict()
         self.index_list = list()
         self.slice_counter = 0
         self.max_layers = 1
 
         # Add the slice files to the listWidget while checking if the .cli files have been converted
         for index, item in enumerate(self.slice_list):
-            self.listSliceFiles.addItem(os.path.basename(item))
+            # Set all the preview part colours to black for now
+            self.part_names[os.path.basename(item).replace('.cli', '')] = (255, 0, 0)
+            # self.part_colours
+            self.listSliceFiles.addItem(os.path.basename(item).replace('.cli', ''))
             if os.path.isfile(item.replace('.cli', '_contours.txt')):
                 self.listSliceFiles.item(index).setBackground(QColor('yellow'))
             else:
                 self.index_list.append(index)
                 self.listSliceFiles.item(index).setBackground(QColor('red'))
 
+        # Check if any of the slice files need to be converted at all
         if self.index_list:
+            # Disable all the buttons to prevent the user from doing concurrent things
+            self.toggle_control(1)
             self.run_flag = True
+
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
+        else:
+            self.update_layer_ranges()
+            self.preview_contours()
+            self.pushDrawContours.setEnabled(True)
 
     def remove_files(self):
         """Removes slice files from the slice file list"""
+
+        self.listSliceFiles.blockSignals(True)
 
         # Grab the list of selected items in the QListWidget
         for item in self.listSliceFiles.selectedItems():
             # Delete the corresponding file from both slice file lists using the row index of the file
             del self.slice_list[self.listSliceFiles.row(item)]
+            self.part_names.pop(item.text(), None)
             self.listSliceFiles.takeItem(self.listSliceFiles.row(item))
+
+        # Check if the list is now empty, if so reset to button state 0
+        if not self.slice_list:
+            self.contour_dict = dict()
+            self.graphicsDisplay.reset_image()
+            self.toggle_control(0)
+
+        self.update_layer_ranges()
+        self.preview_contours()
 
     def convert_slice(self, slice_file):
         worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert_cli, slice_file)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
-        worker.signals.result.connect(self.convert_slice_finished)
+        worker.signals.finished.connect(self.convert_slice_finished)
         self.threadpool.start(worker)
 
-    def convert_slice_finished(self, max_layers):
-
-        if max_layers > self.max_layers:
-            self.max_layers = max_layers
-
-        self.labelSliceNumber.setText('0001 / %s' % (self.max_layers).zfill(4))
+    def convert_slice_finished(self):
 
         self.listSliceFiles.item(self.index_list[self.slice_counter]).setBackground(QColor('yellow'))
         self.slice_counter += 1
@@ -885,19 +944,76 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.run_flag and not self.slice_counter == len(self.index_list):
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
         else:
-            self.update_status('None | Conversion finished.')
+            self.pushDrawContours.setEnabled(True)
+            self.update_layer_ranges()
+            self.preview_contours()
 
-    def draw_contours(self):
-        pass
+    def preview_contours(self):
+        """Draws a 'preview' of the selected layer's contours"""
+
+        self.image_contours = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
+
+        # Change whether to draw on a black or white background depending on if the background checkbox is checked
+        if not self.checkBackground.isChecked():
+            self.image_contours[:] = (255, 255, 255)
+            # Draw boundary lines around the rectangle which should represent the platform edges (currently doesn't)
+            cv2.rectangle(self.image_contours, (0, 0), (3470, 2410), (0, 0, 0), 5)
+
+        if self.checkFillContours.isChecked():
+            thickness = -1
+        else:
+            thickness = 3
+
+        if self.contour_dict:
+            for part_name, contour_list in self.contour_dict.items():
+                try:
+                    contour_string = contour_list[self.current_layer].split('C,')[1::]
+                except IndexError:
+                    continue
+
+                contours = list()
+
+                for string in contour_string:
+                    vectors = string.split(',')[:-1]
+                    contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
+
+                cv2.drawContours(self.image_contours, contours, -1, self.part_names[part_name],
+                                 offset=tuple(self.config['ImageCorrection']['Offset']), thickness=thickness)
+
+            self.image_contours = cv2.flip(self.image_contours, 0)
+
+        self.update_display()
+
+    def select_parts(self):
+
+        # Reset the colours of all the parts back to blue
+        for key in self.part_names.keys():
+            self.part_names[key] = (255, 0, 0)
+
+        # Change the selected item colours to green and re-draw the contours
+        for item in self.listSliceFiles.selectedItems():
+            # Change the part colour of the selected item to green
+            self.part_names[item.text()] = (0, 255, 0)
+
+        self.preview_contours()
 
     def zoom_in(self):
-        pass
+        """Sets the display Graphics Viewer's zoom function on"""
+        self.graphicsDisplay.zoom_flag = self.pushZoomIn.isChecked()
+
+    def zoom_in_finished(self):
+        """Disables the checked status of the Zoom In action after successfully performing a zoom action"""
+        self.pushZoomIn.setChecked(False)
+        self.graphicsDisplay.zoom_flag = False
 
     def zoom_out(self):
-        pass
+        """Resets the zoom state of the display Graphics Viewer"""
+        self.graphicsDisplay.reset_image()
 
     def set_slice(self):
-        pass
+        self.current_layer = self.spinSliceNumber.value()
+        self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
+        self.preview_contours()
 
     def set_height(self):
         pass
@@ -917,8 +1033,111 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def pause(self):
         pass
 
+    def draw_setup(self):
+
+        """If the output folder is set to the build's contours folder, show a warning before proceeding"""
+        if self.output_folder == self.build['BuildInfo']['Folder']:
+            draw_confirmation = QMessageBox(self)
+            draw_confirmation.setWindowTitle('Draw Contours')
+            draw_confirmation.setIcon(QMessageBox.Warning)
+            draw_confirmation.setText('Saving drawn contours to the build folder.\n\n'
+                                      'Note that this will completely empty the folder and set the slice files for the'
+                                      'current active build to the newly added ones. Reports will be added and removed'
+                                      'accordingly, but identical reports will remain untouched.\n\n'
+                                      'Would you like to proceed to draw contours?')
+            draw_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            retval = draw_confirmation.exec_()
+
+            # If the user clicked No, the method will end, otherwise it continues
+            if retval == 16384:
+                # Delete all the files in the build's contours folder
+                for filename in os.listdir(self.output_folder):
+                    os.remove(self.output_folder + '/' + filename)
+
+                # Check the new slice file list against the old slice file list for files that can be deleted
+                for filename in list(set(self.build['SliceConverter']['Files']) - set(self.slice_list)):
+
+                    os.remove('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'],
+                                                             os.path.splitext(os.path.basename(filename))[0]))
+            else:
+                return
+
+        # Create the output folder if it doesn't already exist
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
+
+        # UI Progress
+        self.progress_current = 0.0
+        self.progress_previous = None
+        self.update_progress(0)
+        self.increment = 100 / (self.spinRangeHigh.value() + 1 - self.spinRangeLow.value())
+
+        # Create a dictionary of colours (different shades of teal) for each part's contours and save it
+        # These part colours don't affect past reports
+        # At the same time, save a bunch of json files containing an empty dictionary to the build reports folder
+        # These json files are used to store the defect coordinate and pixel size data for each of the parts
+        part_colours = dict()
+
+        for index, part_name in enumerate(self.part_names.keys()):
+            # Create the colours for each of the parts
+            part_colours[part_name] = ((100 + index) % 255, (100 + index) % 255, 0)
+
+            if not os.path.isfile('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name)):
+                with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
+                    json.dump(dict(), report)
+
+        # Set the 'background' part colour to black
+        part_colours['background'] = (0, 0, 0)
+
+        # Save the Slice File and Part Colours lists to the build.json file
+        self.build['SliceConverter']['Files'] = self.slice_list
+        self.build['SliceConverter']['PartColours'] = part_colours
+
+        # Set the starting layer to draw as the entered lower layer range (default is all the contours)
+        self.contour_counter = self.spinRangeLow.value()
+        self.run_flag = True
+
+        # Start the draw loop
+        self.draw_contours(self.contour_counter, True)
+
+    def draw_contours(self, layer, names_flag=False):
+
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contour, self.contour_dict, layer,
+                                          self.build['SliceConverter']['PartColours'], 0, self.output_folder,
+                                          names_flag)
+        worker.signals.finished.connect(self.draw_contours_finished)
+        self.threadpool.start(worker)
+
+    def draw_contours_finished(self):
+
+        if self.run_flag and not self.contour_counter == (self.spinRangeHigh.value() + 1):
+            self.contour_counter += 1
+            self.draw_contours(self.contour_counter)
+        else:
+            pass
+
+    def set_background(self):
+        if self.checkBackground.isChecked():
+            if not self.lineBackground.text():
+                if not self.browse_background():
+                    self.checkBackground.setChecked(False)
+            else:
+                self.preview_contours()
+        else:
+            self.preview_contours()
+
     def browse_background(self):
-        pass
+        """Opens a File Dialog, allowing the user to select an image to be used as the background"""
+
+        filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')[0]
+
+        if filename:
+            self.image_background = cv2.imread(filename)
+            self.lineBackground.setText(filename)
+            self.preview_contours()
+            return True
+        else:
+            return False
 
     def browse_output(self):
         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
@@ -929,13 +1148,89 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.output_folder = folder
             self.lineFolder.setText(self.output_folder)
 
+    def toggle_control(self, state):
+        """Enables or disables the following buttons in one fell swoop depending on the received state"""
+
+        # State 0 - No files added
+        if state == 0:
+            self.pushAddSF.setEnabled(True)
+            self.pushRemoveSF.setEnabled(True)
+            self.frameDisplayControl.setEnabled(False)
+            self.groupDisplayOptions.setEnabled(False)
+            self.groupDrawRange.setEnabled(False)
+            self.groupRotation.setEnabled(False)
+            self.groupTranslation.setEnabled(False)
+            self.pushBrowseOF.setEnabled(True)
+            self.pushPause.setEnabled(False)
+        # State 1 - Files in the middle of being converted
+        elif state == 1:
+            self.pushAddSF.setEnabled(False)
+            self.pushRemoveSF.setEnabled(False)
+            self.frameDisplayControl.setEnabled(False)
+            self.groupDisplayOptions.setEnabled(False)
+            self.groupDrawRange.setEnabled(False)
+            self.groupRotation.setEnabled(False)
+            self.groupTranslation.setEnabled(False)
+            self.pushBrowseOF.setEnabled(False)
+            self.pushPause.setEnabled(True)
+        # State 2 - Files added, contour preview successfully displayed
+        elif state == 2:
+            self.pushAddSF.setEnabled(True)
+            self.pushRemoveSF.setEnabled(True)
+            self.frameDisplayControl.setEnabled(True)
+            self.groupDisplayOptions.setEnabled(True)
+            self.groupDrawRange.setEnabled(True)
+            self.groupRotation.setEnabled(True)
+            self.groupTranslation.setEnabled(True)
+            self.pushBrowseOF.setEnabled(True)
+            self.pushPause.setEnabled(False)
+
     def update_display(self):
-        pass
+
+        # Make a copy of the contour image so that it remains unmodified by the below operations
+        image = self.image_contours.copy()
+
+        if self.checkBackground.isChecked():
+            image = cv2.add(self.image_background, image)
+
+        if self.checkCentrelines.isChecked():
+            cv2.line(image, (0, 1205), (3470, 1205), (0, 0, 0), 3)
+            cv2.line(image, (1735, 0), (1735, 2410), (0, 0, 0), 3)
+
+        self.graphicsDisplay.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        self.listSliceFiles.blockSignals(False)
+        self.toggle_control(2)
+
+    def update_layer_ranges(self):
+        """Updates all parts of the dialog window UI that involves the maximum number of layers"""
+
+        self.update_status('All | Loading contours...')
+
+        self.contour_dict = dict()
+
+        # Load all the contours into memory and save them to a dictionary
+        for index, filename in enumerate(self.slice_list):
+            with open(filename.replace('.cli', '_contours.txt')) as contour_file:
+                self.contour_dict[list(self.part_names.keys())[index]] = contour_file.readlines()
+
+        self.max_layers = 0
+        self.slice_height = 0.000
+
+        # Find the max number of layers and the layer thickness from the first and third line in the contours file
+        for contours in self.contour_dict.values():
+            if int(contours[0]) > self.max_layers:
+                self.max_layers = int(contours[0])
+            slice_height = float(contours[2].split('C,')[0])
+
+        self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
+        self.doubleSliceHeight.setSingleStep(slice_height)
+
+        self.update_status('All | Contours loaded.')
 
     def update_position(self, x, y):
         """Displays the relative position of the mouse cursor over the Layer Preview graphics view"""
-        self.labelXPosition.setText('X     ' + str(x).zfill(3) + ' px')
-        self.labelYPosition.setText('Y     ' + str(y).zfill(3) + ' px')
+        self.labelXPosition.setText('X     ' + str(x).zfill(4) + ' px')
+        self.labelYPosition.setText('Y     ' + str(y).zfill(4) + ' px')
 
     def update_status(self, string):
         string = string.split(' | ')
@@ -947,191 +1242,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def closeEvent(self, event):
         self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
-
-
-# class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
-#     """Opens a Modeless Dialog Window when the Slice Converter button is clicked
-#     Or when Tools -> Slice Converter is clicked
-#     Allows user to convert .cls or .cli files into ASCII encoded scaled contours that OpenCV can draw
-#     """
-#
-#     def __init__(self, parent=None):
-#
-#         # Setup Dialog UI with MainWindow as parent and restore the previous window state
-#         super(SliceConverter, self).__init__(parent)
-#         self.setAttribute(Qt.WA_DeleteOnClose)
-#         self.setupUi(self)
-#         self.window_settings = QSettings('MCAM', 'Defect Monitor')
-#
-#         try:
-#             self.restoreGeometry(self.window_settings.value('Slice Converter Geometry', ''))
-#         except TypeError:
-#             pass
-#
-#         with open('build.json') as build:
-#             self.build = json.load(build)
-#
-#         # Setup event listeners for all the relevant UI components, and connect them to specific functions
-#         self.buttonBrowseSF.clicked.connect(self.browse_slice)
-#         self.buttonBrowseF.clicked.connect(self.browse_folder)
-#         self.buttonStart.clicked.connect(self.start)
-#         self.buttonStop.clicked.connect(self.start_finished)
-#         self.checkDraw.toggled.connect(self.toggle_range)
-#         self.spinRangeLow.valueChanged.connect(self.set_range)
-#
-#         # Create and display a 'default' contours folder to store the drawn part contours
-#         self.contours_folder = os.path.dirname(self.build['WorkingDirectory']) + '/contours'
-#         self.lineFolder.setText(self.contours_folder)
-#
-#         self.threadpool = QThreadPool()
-#
-#     def browse_slice(self):
-#         """Opens a File Dialog, allowing the user to select one or multiple slice files"""
-#
-#         filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Slice Files (*.cli)')[0]
-#
-#         if filenames:
-#             self.slice_list = filenames
-#             self.listSliceFiles.clear()
-#             self.buttonStart.setEnabled(True)
-#             self.update_status('Current Part: None | Waiting to start conversion.')
-#             for item in self.slice_list:
-#                 self.listSliceFiles.addItem(os.path.basename(item))
-#
-#     def browse_folder(self):
-#         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
-#
-#         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
-#
-#         if folder:
-#             self.contours_folder = folder
-#             self.lineFolder.setText(self.contours_folder)
-#
-#     def start(self):
-#         """Executes when the Start/Pause/Resume button is clicked and does one of the following depending on the text"""
-#
-#         with open('build.json') as build:
-#             self.build = json.load(build)
-#
-#         if 'Start' in self.buttonStart.text():
-#             # Disable all buttons to prevent user from doing other tasks
-#             self.buttonStop.setEnabled(True)
-#             self.buttonBrowseSF.setEnabled(False)
-#             self.buttonBrowseF.setEnabled(False)
-#             self.buttonDone.setEnabled(False)
-#             self.checkDraw.setEnabled(False)
-#             self.checkRange.setEnabled(False)
-#             self.spinRangeLow.setEnabled(False)
-#             self.spinRangeHigh.setEnabled(False)
-#             self.update_progress(0)
-#
-#             # Change the Start button into a Pause/Resume button
-#             self.buttonStart.setText('Pause')
-#
-#             # Create a dictionary of colours (different shades of teal) for each part's contours and save it
-#             part_colours = dict()
-#             for index, part_name in enumerate(self.slice_list):
-#                 part_colours[os.path.splitext(os.path.basename(part_name))[0]] = \
-#                     ((100 + index) % 255, (100 + index) % 255, 0)
-#
-#             # Save the slice file list and the draw state to the config.json file
-#             self.build['SliceConverter']['Draw'] = self.checkDraw.isChecked()
-#             self.build['SliceConverter']['Folder'] = self.contours_folder
-#             self.build['SliceConverter']['Files'] = self.slice_list
-#             self.build['SliceConverter']['Run'] = True
-#             self.build['SliceConverter']['Pause'] = False
-#             self.build['SliceConverter']['Build'] = False
-#             self.build['SliceConverter']['Colours'] = part_colours
-#             self.build['SliceConverter']['Range'] = self.checkRange.isChecked()
-#             self.build['SliceConverter']['RangeLow'] = self.spinRangeLow.value()
-#             self.build['SliceConverter']['RangeHigh'] = self.spinRangeHigh.value()
-#
-#             with open('build.json', 'w+') as build:
-#                 json.dump(self.build, build, indent=4, sort_keys=True)
-#
-#             worker = qt_multithreading.Worker(slice_converter.SliceConverter().run_converter)
-#             worker.signals.status.connect(self.update_status)
-#             worker.signals.progress.connect(self.update_progress)
-#             worker.signals.finished.connect(self.start_finished)
-#             self.threadpool.start(worker)
-#
-#         elif 'Pause' in self.buttonStart.text():
-#             self.build['SliceConverter']['Pause'] = True
-#             self.buttonStart.setText('Resume')
-#         elif 'Resume' in self.buttonStart.text():
-#             self.build['SliceConverter']['Pause'] = False
-#             self.buttonStart.setText('Pause')
-#
-#         with open('build.json', 'w+') as build:
-#             json.dump(self.build, build, indent=4, sort_keys=True)
-#
-#     def start_finished(self):
-#         """Executes when the SliceConverter instance has finished"""
-#
-#         with open('build.json') as build:
-#             self.build = json.load(build)
-#
-#         # Stop the conversion thread
-#         self.build['SliceConverter']['Pause'] = False
-#         self.build['SliceConverter']['Run'] = False
-#
-#         with open('build.json', 'w+') as build:
-#             json.dump(self.build, build, indent=4, sort_keys=True)
-#
-#         # Enable/disable respective buttons
-#         self.buttonStart.setText('Start')
-#         self.buttonStop.setEnabled(False)
-#         self.buttonBrowseSF.setEnabled(True)
-#         self.buttonBrowseF.setEnabled(True)
-#         self.buttonDone.setEnabled(True)
-#         self.checkDraw.setEnabled(True)
-#         if self.checkDraw.isChecked():
-#             self.checkRange.setEnabled(True)
-#             self.spinRangeLow.setEnabled(True)
-#             self.spinRangeHigh.setEnabled(True)
-#
-#     def toggle_range(self):
-#         """Toggles the state of the Draw Range checkbox if the Draw Contours checkbox is unchecked"""
-#
-#         if not self.checkDraw.isChecked():
-#             self.checkRange.setChecked(False)
-#
-#     def set_range(self, value):
-#         """Sets the minimum value of the high spinbox to the current value of the low spinbox"""
-#
-#         self.spinRangeHigh.setMinimum(value)
-#
-#     def update_status(self, string):
-#         string = string.split(' | ')
-#         self.labelStatus.setText(string[1])
-#         self.labelStatusSlice.setText(string[0])
-#
-#     def update_progress(self, percentage):
-#         self.progressBar.setValue(percentage)
-#
-#     def closeEvent(self, event):
-#         """Executes when the window is closed"""
-#
-#         with open('build.json') as build:
-#             self.build = json.load(build)
-#
-#         # Check if a conversion is in progress or paused, and block the user from closing the window until stopped
-#         if not self.buttonDone.isEnabled():
-#             run_error = QMessageBox(self)
-#             run_error.setWindowTitle('Error')
-#             run_error.setIcon(QMessageBox.Critical)
-#             run_error.setText('Conversion in progress or paused.\n\n'
-#                               'Please stop or wait for the conversion to finish before exiting.')
-#             run_error.exec_()
-#             event.ignore()
-#         else:
-#             self.build['SliceConverter']['Folder'] = ''
-#             self.build['SliceConverter']['Files'] = []
-#
-#             with open('build.json', 'w+') as build:
-#                 json.dump(self.build, build, indent=4, sort_keys=True)
-#
-#             self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
 
 
 class PartAdjustment(QDialog, dialogPartAdjustment.Ui_dialogPartAdjustment):
@@ -1710,8 +1820,13 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         self.tableCoat.cellDoubleClicked.connect(self.cell_click)
         self.tableScan.cellDoubleClicked.connect(self.cell_click)
 
-        # Save the part name list (with combined and background at the start)
-        self.part_names = ['combined', 'background'] + list(self.build['BuildInfo']['Colours'])[:-2]
+        # Grab the part name list (with combined and background at the start) by polling the reports folder
+        self.part_names = ['combined', 'background']
+        for name in os.listdir(self.build['BuildInfo']['Folder'] + '/reports'):
+            if 'combined' in name or 'background' in name:
+                continue
+            else:
+                self.part_names.append(name.replace('_report.json', ''))
 
         # Add the part names to the combo box
         self.comboParts.addItems(self.part_names)
@@ -1734,8 +1849,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         """Populates both tables with the data from the selected defect report"""
 
         # Read the appropriate report into memory
-        with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'],
-                                                 self.part_names[part])) as report:
+        with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], self.part_names[part])) as report:
             report = json.load(report)
 
         # Completely remove all the data from both tables

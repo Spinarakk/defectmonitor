@@ -108,7 +108,14 @@ class ImageViewer(QGraphicsView):
         if event.button() == Qt.LeftButton:
             self.reset_image()
 
+        QGraphicsView.mouseDoubleClickEvent(self, event)
+
     def mouseMoveEvent(self, event):
         """When the mouse cursor is moved over the graphics view, the position of the cursor within the graphics view
         Will be emitted back to the dialog box if mouseTracking is enabled on the graphics view in question"""
-        self.mouse_pos.emit(event.x(), event.y())
+
+        # Convert the mouse position from being relative to the window to being relative to the image resolution
+        pos = self.mapToScene(event.pos())
+        self.mouse_pos.emit(round(pos.x()), round(pos.y()))
+
+        QGraphicsView.mouseMoveEvent(self, event)

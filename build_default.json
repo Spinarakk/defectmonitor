@@ -1,16 +1,14 @@
 {
     "BuildInfo": {
-        "Colours": {},
-        "Convert": false,
+        "Camera": 0,
         "EmailAddress": "",
         "Folder": "",
-        "Name": "Default",
-        "Platform": 0,
+        "Name": "",
+        "Machine": 0,
         "PlatformDimensions": [
             636.0,
             406.0
         ],
-        "SliceFiles": [],
         "Username": ""
     },
     "DefectDetector": {
@@ -18,11 +16,9 @@
         "Image": "",
         "ImagePrevious": "",
         "Layer": 0,
-        "Mode": "snapshot",
         "Phase": "coat"
     },
     "ImageCapture": {
-        "Folder": "",
         "Layer": 0.5,
         "Phase": 1,
         "Snapshot": 1
@@ -35,16 +31,7 @@
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Build": false,
-        "Colours": {},
-        "Draw": false,
         "Files": [],
-        "Folder": "",
-        "Pause": false,
-	"Range": false,
-	"RangeHigh": 1,
-	"RangeLow": 1,
-        "Run": false
-    },
-    "WorkingDirectory": ""
+        "PartColours": {}
+    }
 }

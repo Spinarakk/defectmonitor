@@ -7,13 +7,309 @@
     <x>0</x>
     <y>0</y>
     <width>758</width>
-    <height>647</height>
+    <height>704</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Slice Converter</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="0" rowspan="6" colspan="3">
+    <widget class="QFrame" name="frameSliceFiles">
+     <property name="minimumSize">
+      <size>
+       <width>50</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QListWidget" name="listSliceFiles">
+        <property name="selectionMode">
+         <enum>QAbstractItemView::ExtendedSelection</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushAddSF">
+        <property name="text">
+         <string>Add Slice Files...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushRemoveSF">
+        <property name="text">
+         <string>Remove Selected Files</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushDrawContours">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Draw Contours</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="8" column="4">
+    <widget class="QGroupBox" name="groupMousePosition">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Mouse Position</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="topMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="labelXPosition">
+        <property name="text">
+         <string>X     0000 px</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelYPosition">
+        <property name="text">
+         <string>Y     0000 px</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="9" column="4">
+    <widget class="QGroupBox" name="groupDrawRange">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Draw Range</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <property name="topMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item>
+       <widget class="QSpinBox" name="spinRangeLow">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>9999</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="spinRangeHigh">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>9999</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="8" column="7" rowspan="2" colspan="4">
+    <widget class="QGroupBox" name="groupStatus">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Status</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <property name="topMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="labelCurrentPart">
+        <property name="text">
+         <string>Current Part</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelStatusPart">
+        <property name="text">
+         <string>None</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelStatus">
+        <property name="text">
+         <string>Add slice files.</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="textVisible">
+         <bool>true</bool>
+        </property>
+        <property name="invertedAppearance">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushPause">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Pause</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="12" column="0" colspan="8">
+    <widget class="QFrame" name="frameOutputFolder">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="labelOutputFolder">
+        <property name="text">
+         <string>Output Folder</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineOutputFolder">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushBrowseOF">
+        <property name="text">
+         <string>Browse...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>Save to Build</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="8" column="5" rowspan="2">
     <widget class="QGroupBox" name="groupRotation">
      <property name="enabled">
@@ -122,6 +418,71 @@
      </layout>
     </widget>
    </item>
+   <item row="8" column="0" rowspan="2" colspan="3">
+    <widget class="QGroupBox" name="groupDisplayOptions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Display Options</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="topMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="checkCentrelines">
+        <property name="text">
+         <string>Centrelines</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkFillContours">
+        <property name="text">
+         <string>Fill Contours</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBackground">
+        <property name="text">
+         <string>Custom Background</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineBackground">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushBrowseCB">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Browse...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="8" column="6" rowspan="2">
     <widget class="QGroupBox" name="groupTranslation">
      <property name="enabled">
@@ -156,10 +517,60 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="3">
+       <widget class="QLabel" name="labelUnits2">
+        <property name="text">
+         <string>px</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="labelY">
+        <property name="text">
+         <string>Y</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QSpinBox" name="spinIncrementalY">
+        <property name="toolTip">
+         <string>-2410 - 2410</string>
+        </property>
+        <property name="minimum">
+         <number>-2410</number>
+        </property>
+        <property name="maximum">
+         <number>2410</number>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="0">
        <widget class="QLabel" name="labelAbsoluteT">
         <property name="text">
          <string>Absolute</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLabel" name="labelUnits1">
+        <property name="text">
+         <string>px</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="spinIncrementalX">
+        <property name="toolTip">
+         <string>-3470 - 3470</string>
+        </property>
+        <property name="minimum">
+         <number>-3470</number>
+        </property>
+        <property name="maximum">
+         <number>3470</number>
         </property>
        </widget>
       </item>
@@ -186,60 +597,10 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QSpinBox" name="spinIncrementalY">
-        <property name="toolTip">
-         <string>-2410 - 2410</string>
-        </property>
-        <property name="minimum">
-         <number>-2410</number>
-        </property>
-        <property name="maximum">
-         <number>2410</number>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="labelIncrementalT">
         <property name="text">
          <string>Incremental</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QSpinBox" name="spinIncrementalX">
-        <property name="toolTip">
-         <string>-3470 - 3470</string>
-        </property>
-        <property name="minimum">
-         <number>-3470</number>
-        </property>
-        <property name="maximum">
-         <number>3470</number>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="labelY">
-        <property name="text">
-         <string>Y</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="3">
-       <widget class="QLabel" name="labelUnits1">
-        <property name="text">
-         <string>px</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="3">
-       <widget class="QLabel" name="labelUnits2">
-        <property name="text">
-         <string>px</string>
         </property>
        </widget>
       </item>
@@ -260,365 +621,11 @@
      </layout>
     </widget>
    </item>
-   <item row="8" column="0" rowspan="2" colspan="3">
-    <widget class="QGroupBox" name="groupDisplayOptions">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="title">
-      <string>Display Options</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item>
-       <widget class="QCheckBox" name="checkCentrelines">
-        <property name="text">
-         <string>Centrelines</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkGridlines">
-        <property name="text">
-         <string>Gridlines</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBackground">
-        <property name="text">
-         <string>Custom Background</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="lineBackground">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushBrowseCB">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Browse...</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="8" column="4">
-    <widget class="QGroupBox" name="groupMousePosition">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="title">
-      <string>Mouse Position</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="labelXPosition">
-        <property name="text">
-         <string>X     0000 px</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="labelYPosition">
-        <property name="text">
-         <string>Y     0000 px</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="9" column="4">
-    <widget class="QGroupBox" name="groupDrawRange">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="title">
-      <string>Draw Range</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_5">
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item>
-       <widget class="QSpinBox" name="spinRangeLow">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>9999</number>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QSpinBox" name="spinRangeHigh">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>9999</number>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="10" column="8" colspan="3">
+   <item row="12" column="8" colspan="3">
     <widget class="QPushButton" name="buttonDone">
      <property name="text">
       <string>Done</string>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="0" rowspan="6" colspan="3">
-    <widget class="QFrame" name="frameSliceFiles">
-     <property name="minimumSize">
-      <size>
-       <width>50</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QListWidget" name="listSliceFiles">
-        <property name="selectionMode">
-         <enum>QAbstractItemView::ExtendedSelection</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushAddSF">
-        <property name="text">
-         <string>Add Slice Files...</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushRemoveSF">
-        <property name="text">
-         <string>Remove Selected Files</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushDrawContours">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Draw Contours</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="10" column="0" colspan="8">
-    <widget class="QFrame" name="frameOutputFolder">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="labelOutputFolder">
-        <property name="text">
-         <string>Output Folder</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="lineOutputFolder">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushBrowseOF">
-        <property name="text">
-         <string>Browse...</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="8" column="7" rowspan="2" colspan="4">
-    <widget class="QGroupBox" name="groupStatus">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="title">
-      <string>Status</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_4">
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="labelCurrentPart">
-        <property name="text">
-         <string>Current Part</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="labelStatusPart">
-        <property name="text">
-         <string>None</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="labelStatus">
-        <property name="text">
-         <string>Add slice files.</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QProgressBar" name="progressBar">
-        <property name="value">
-         <number>0</number>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="textVisible">
-         <bool>true</bool>
-        </property>
-        <property name="invertedAppearance">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushPause">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Pause</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
    <item row="8" column="3">
@@ -670,6 +677,9 @@
       </item>
       <item row="1" column="0">
        <widget class="QFrame" name="frameDisplayControl">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -691,9 +701,6 @@
          </property>
          <item>
           <widget class="QPushButton" name="pushZoomIn">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="text">
             <string>Zoom In</string>
            </property>
@@ -704,9 +711,6 @@
          </item>
          <item>
           <widget class="QPushButton" name="pushZoomOut">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="text">
             <string>Zoom Out</string>
            </property>
@@ -747,9 +751,6 @@
          </item>
          <item>
           <widget class="QSpinBox" name="spinSliceNumber">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="minimum">
             <number>1</number>
            </property>
@@ -760,9 +761,6 @@
          </item>
          <item>
           <widget class="QPushButton" name="pushGoSlice">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="maximumSize">
             <size>
              <width>30</width>
@@ -786,16 +784,13 @@
          </item>
          <item>
           <widget class="QDoubleSpinBox" name="doubleSliceHeight">
-           <property name="enabled">
-            <bool>false</bool>
+           <property name="decimals">
+            <number>3</number>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushGoHeight">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="maximumSize">
             <size>
              <width>30</width>
@@ -813,6 +808,28 @@
      </layout>
     </widget>
    </item>
+   <item row="10" column="0" colspan="11">
+    <widget class="QLabel" name="label">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>25</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>25</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Adding or removing slice files and clicking Draw Contours with the Output Folder set to the active build's folder will add or remove their respective reports. The Defect Detector will need to be rerun for any new slices. Set the Output Folderto a different folder to just draw the contours.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -822,6 +839,39 @@
    <header>ui_elements</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>listSliceFiles</tabstop>
+  <tabstop>graphicsDisplay</tabstop>
+  <tabstop>pushAddSF</tabstop>
+  <tabstop>pushRemoveSF</tabstop>
+  <tabstop>pushDrawContours</tabstop>
+  <tabstop>checkCentrelines</tabstop>
+  <tabstop>checkFillContours</tabstop>
+  <tabstop>checkBackground</tabstop>
+  <tabstop>lineBackground</tabstop>
+  <tabstop>pushBrowseCB</tabstop>
+  <tabstop>pushZoomIn</tabstop>
+  <tabstop>pushZoomOut</tabstop>
+  <tabstop>spinSliceNumber</tabstop>
+  <tabstop>pushGoSlice</tabstop>
+  <tabstop>doubleSliceHeight</tabstop>
+  <tabstop>pushGoHeight</tabstop>
+  <tabstop>spinRangeLow</tabstop>
+  <tabstop>spinRangeHigh</tabstop>
+  <tabstop>spinAngleI</tabstop>
+  <tabstop>spinAngleA</tabstop>
+  <tabstop>pushRotate</tabstop>
+  <tabstop>pushResetR</tabstop>
+  <tabstop>spinIncrementalX</tabstop>
+  <tabstop>spinAbsoluteX</tabstop>
+  <tabstop>spinIncrementalY</tabstop>
+  <tabstop>spinAbsoluteY</tabstop>
+  <tabstop>pushTranslate</tabstop>
+  <tabstop>pushResetT</tabstop>
+  <tabstop>pushPause</tabstop>
+  <tabstop>pushBrowseOF</tabstop>
+  <tabstop>buttonDone</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

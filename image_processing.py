@@ -182,7 +182,7 @@ class DefectDetector:
         # Store some important variable names to be used in later methods
         self.layer = str(self.build['DefectDetector']['Layer']).zfill(4)
         self.phase = self.build['DefectDetector']['Phase']
-        self.part_colours = self.build['BuildInfo']['Colours']
+        self.part_colours = self.build['SliceConverter']['PartColours']
 
         # This is the master defect dictionary which stores all the defect results for all the parts
         self.defects = dict()
@@ -190,7 +190,7 @@ class DefectDetector:
         # Open all the reports and save their dictionaries to the master defect dictionary
         # These dictionaries will be overwritten with new data should the program process the same layer/part
         for name in self.part_colours.keys():
-            with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'], name)) as report:
+            with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], name)) as report:
                 self.defects[name] = json.load(report)
 
             # The dictionary needs to be built up if it doesn't already exist
@@ -230,7 +230,7 @@ class DefectDetector:
 
         # Save all the reports to their respective json files
         for name in self.part_colours.keys():
-            with open('%s/reports/%s_report.json' % (self.build['ImageCapture']['Folder'], name), 'w+') as report:
+            with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], name), 'w+') as report:
                 json.dump(self.defects[name], report, sort_keys=True)
 
         self.progress.emit(100)
@@ -343,7 +343,7 @@ class DefectDetector:
         self.report_defects(image_defects, COLOUR_RED, 'BS')
 
         # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/streaks/%sBS_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+        cv2.imwrite('%s/defects/%s/streaks/%sBS_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                            self.layer), image_defects)
 
     def detect_blade_chatter(self, image, image_defects):
@@ -380,7 +380,7 @@ class DefectDetector:
         self.report_defects(image_defects, COLOUR_BLUE, 'BC')
 
         # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/chatter/%sBC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+        cv2.imwrite('%s/defects/%s/chatter/%sBC_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                            self.layer), image_defects)
 
     def detect_shiny_patch(self, image, image_defects):
@@ -399,7 +399,7 @@ class DefectDetector:
         self.report_defects(image_defects, COLOUR_GREEN, 'SP')
 
         # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/patches/%sSP_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+        cv2.imwrite('%s/defects/%s/patches/%sSP_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                            self.layer), image_defects)
 
     def detect_contrast_outlier(self, image, image_defects):
@@ -451,7 +451,7 @@ class DefectDetector:
 
         # Save the image with the defects on it to the corresponding folder
         cv2.imwrite(
-            '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+            '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                     self.layer), image_defects)
 
     def scan_detection(self, image, image_defects):
@@ -496,7 +496,7 @@ class DefectDetector:
             self.defects['combined'][self.layer][self.phase]['OC'] = float(result)
 
         # Save the image with the defects on it to the corresponding folder
-        cv2.imwrite('%s/defects/%s/pattern/%sOC_%s.png' % (self.build['ImageCapture']['Folder'], self.phase, self.phase,
+        cv2.imwrite('%s/defects/%s/pattern/%sOC_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                            self.layer), image_defects)
 
     def compare_histogram(self, image_current, image_previous):

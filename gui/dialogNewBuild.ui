@@ -2,15 +2,12 @@
 <ui version="4.0">
  <class>dialogNewBuild</class>
  <widget class="QDialog" name="dialogNewBuild">
-  <property name="enabled">
-   <bool>true</bool>
-  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>345</width>
-    <height>324</height>
+    <width>351</width>
+    <height>257</height>
    </rect>
   </property>
   <property name="font">
@@ -34,32 +31,20 @@
    <property name="bottomMargin">
     <number>10</number>
    </property>
-   <item row="9" column="0" rowspan="3" colspan="3">
+   <item row="7" column="0" rowspan="3" colspan="3">
     <widget class="QGroupBox" name="groupNotifications">
      <property name="title">
       <string>Receive Notifications For:</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
       <property name="topMargin">
        <number>3</number>
       </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
       <property name="bottomMargin">
-       <number>6</number>
+       <number>3</number>
       </property>
       <item>
        <widget class="QCheckBox" name="checkMinor">
-        <property name="font">
-         <font>
-          <weight>50</weight>
-          <bold>false</bold>
-         </font>
-        </property>
         <property name="focusPolicy">
          <enum>Qt::ClickFocus</enum>
         </property>
@@ -70,12 +55,6 @@
       </item>
       <item>
        <widget class="QCheckBox" name="checkMajor">
-        <property name="font">
-         <font>
-          <weight>50</weight>
-          <bold>false</bold>
-         </font>
-        </property>
         <property name="focusPolicy">
          <enum>Qt::ClickFocus</enum>
         </property>
@@ -87,154 +66,120 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="5" rowspan="3">
-    <widget class="QFrame" name="frame1">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelMachine">
+     <property name="text">
+      <string>Machine</string>
      </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
+     <property name="buddy">
+      <cstring>comboMachine</cstring>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="spacing">
-       <number>7</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QCheckBox" name="checkConvert">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="toolTip">
-         <string>Check this box to convert the .cls or .cli slice files into contours.</string>
-        </property>
-        <property name="text">
-         <string>Convert</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="verticalSpacer1">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
     </widget>
    </item>
-   <item row="2" column="0" rowspan="4" colspan="2">
-    <widget class="QFrame" name="frame2">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+   <item row="6" column="0">
+    <widget class="QLabel" name="labelEmailAddress">
+     <property name="text">
+      <string>Email Address</string>
      </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
+     <property name="buddy">
+      <cstring>lineEmailAddress</cstring>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>3</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>3</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="labelSliceFile">
-        <property name="font">
-         <font>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Slice File(s)</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="verticalSpacer2">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>11</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QLabel" name="labelBuildFolder">
-        <property name="font">
-         <font>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Build Folder</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
-   <item row="1" column="2" colspan="4">
-    <widget class="QComboBox" name="comboPlatform">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
+   <item row="0" column="0">
+    <widget class="QLabel" name="labelBuildName">
+     <property name="text">
+      <string>Build Name</string>
      </property>
-     <item>
-      <property name="text">
-       <string>Concept Laser Xline 1000R</string>
-      </property>
-     </item>
+     <property name="buddy">
+      <cstring>lineBuildName</cstring>
+     </property>
     </widget>
    </item>
-   <item row="2" column="5">
-    <widget class="QPushButton" name="pushBrowseSF">
+   <item row="7" column="3" rowspan="3">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="labelUsername">
+     <property name="text">
+      <string>Username</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineUsername</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="6">
+    <widget class="QPushButton" name="pushBrowseIF">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Maximum">
+      <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Select the slice files to be used to draw the part contours.</string>
+      <string>Select where the captured images for the current build will be stored.</string>
      </property>
      <property name="text">
-      <string>Browse</string>
+      <string>Browse...</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="4" colspan="2">
+   <item row="0" column="1" colspan="6">
+    <widget class="QLineEdit" name="lineBuildName">
+     <property name="clearButtonEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1" colspan="6">
+    <widget class="QLineEdit" name="lineEmailAddress">
+     <property name="clearButtonEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1" colspan="6">
+    <widget class="QLineEdit" name="lineUsername">
+     <property name="clearButtonEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelCamera">
+     <property name="text">
+      <string>Camera</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="6">
+    <widget class="QComboBox" name="comboCamera">
+     <item>
+      <property name="text">
+       <string>Basler Ace acA3800-10gm GigE</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="9" column="4">
+    <widget class="QPushButton" name="pushCreate">
+     <property name="text">
+      <string>Create</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="4" colspan="3">
     <widget class="QCheckBox" name="checkAddAttachment">
      <property name="enabled">
       <bool>false</bool>
@@ -250,79 +195,7 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="5">
-    <widget class="QPushButton" name="pushCancel">
-     <property name="text">
-      <string>Cancel</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="labelUsername">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Username</string>
-     </property>
-     <property name="buddy">
-      <cstring>lineUsername</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="5">
-    <widget class="QPushButton" name="pushBrowseBF">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Select where the captured images for the current build will be stored.</string>
-     </property>
-     <property name="text">
-      <string>Browse</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="2" colspan="4">
-    <widget class="QLineEdit" name="lineUsername">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Nicholas Lee</string>
-     </property>
-     <property name="maxLength">
-      <number>99</number>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2" rowspan="4" colspan="3">
-    <widget class="QListWidget" name="listSliceFiles">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="horizontalScrollBarPolicy">
-      <enum>Qt::ScrollBarAlwaysOff</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="4">
-    <widget class="QPushButton" name="pushCreate">
-     <property name="text">
-      <string>Create</string>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="4" colspan="2">
+   <item row="7" column="4" colspan="3">
     <widget class="QPushButton" name="pushSendTestEmail">
      <property name="enabled">
       <bool>false</bool>
@@ -332,122 +205,45 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="2" colspan="4">
-    <widget class="QLineEdit" name="lineBuildName">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
+   <item row="9" column="6">
+    <widget class="QPushButton" name="pushCancel">
      <property name="text">
-      <string>Default</string>
-     </property>
-     <property name="maxLength">
-      <number>99</number>
+      <string>Cancel</string>
      </property>
     </widget>
    </item>
-   <item row="9" column="3" rowspan="3">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="3" column="0">
+    <widget class="QLabel" name="labelImageFolder">
+     <property name="text">
+      <string>Image Folder</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
+    </widget>
    </item>
-   <item row="6" column="0" colspan="5">
-    <widget class="QLineEdit" name="lineBuildFolder">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
-     </property>
+   <item row="3" column="1" colspan="5">
+    <widget class="QLineEdit" name="lineImageFolder">
      <property name="readOnly">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="labelBuildName">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Build Name</string>
-     </property>
-     <property name="buddy">
-      <cstring>lineBuildName</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="2" colspan="4">
-    <widget class="QLineEdit" name="lineEmailAddress">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>nicholascklee@gmail.com</string>
-     </property>
-     <property name="maxLength">
-      <number>99</number>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0">
-    <widget class="QLabel" name="labelEmailAddress">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Email Address</string>
-     </property>
-     <property name="buddy">
-      <cstring>lineEmailAddress</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="labelBuildPlatform">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Build Platform</string>
-     </property>
-     <property name="buddy">
-      <cstring>comboPlatform</cstring>
-     </property>
+   <item row="1" column="1" colspan="6">
+    <widget class="QComboBox" name="comboMachine">
+     <item>
+      <property name="text">
+       <string>Concept Laser Xline 1000R</string>
+      </property>
+     </item>
     </widget>
    </item>
   </layout>
  </widget>
  <tabstops>
   <tabstop>lineBuildName</tabstop>
-  <tabstop>comboPlatform</tabstop>
-  <tabstop>listSliceFiles</tabstop>
+  <tabstop>comboMachine</tabstop>
   <tabstop>lineUsername</tabstop>
   <tabstop>lineEmailAddress</tabstop>
   <tabstop>pushSendTestEmail</tabstop>
   <tabstop>checkAddAttachment</tabstop>
-  <tabstop>pushBrowseSF</tabstop>
-  <tabstop>pushBrowseBF</tabstop>
-  <tabstop>pushCancel</tabstop>
  </tabstops>
  <resources/>
  <connections>
