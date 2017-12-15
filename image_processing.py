@@ -179,32 +179,14 @@ class DefectDetector:
         with open('config.json') as config:
             self.config = json.load(config)
 
-        # Store some important variable names to be used in later methods
-        self.layer = str(self.build['DefectDetector']['Layer']).zfill(4)
-        self.phase = self.build['DefectDetector']['Phase']
-        self.part_colours = self.build['SliceConverter']['PartColours']
-
         # This is the master defect dictionary which stores all the defect results for all the parts
         self.defects = dict()
 
-        # Open all the reports and save their dictionaries to the master defect dictionary
-        # These dictionaries will be overwritten with new data should the program process the same layer/part
-        for name in self.part_colours.keys():
-            with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], name)) as report:
-                self.defects[name] = json.load(report)
+        # Load in the combined report (which is guaranteed to exist)
+        with open('%s/reports/combined_report.json' % self.build['BuildInfo']['Folder']) as report:
+            self.defects['combined'] = json.load(report)
 
-            # The dictionary needs to be built up if it doesn't already exist
-            if self.layer not in self.defects[name]:
-                self.defects[name][self.layer] = dict()
-
-            if self.phase not in self.defects[name][self.layer]:
-                self.defects[name][self.layer][self.phase] = dict()
-
-        # Because blade streaks and blade chatter rely on number of occurrences rather than pixel size
-        self.chatter_count = 0
-        self.streak_count = 0
-
-    def run_detector(self, status, progress, notification):
+    def run_detector(self, image_name, status, progress, notification):
         """Initial run method that decides whether to run the coat or scan collection of detection processes"""
 
         # Assign the status, progress and notification signals as instance variables so other methods can use them
@@ -213,8 +195,51 @@ class DefectDetector:
         self.notification = notification
         self.progress.emit(0)
 
+        # Discern the phase from the image name itself as at this point of the code, the name is 100% correct
+        if 'coat' in image_name:
+            self.phase = 'coat'
+        elif 'scan' in image_name:
+            self.phase = 'scan'
+
+        # Discern the layer number from the image name itself
+        self.layer = os.path.splitext(image_name)[0][-4:]
+
+        # Because the layer is saved as a string rather than an integer
+        # The previous layer integer will need to be specially calculated
+        layer_p = str(int(self.layer) - 1).zfill(4)
+
+        # Check if the corresponding previous image (layer - 1) and the contours image exist and load them if they do
+        if os.path.isfile(image_name.replace(self.layer, layer_p)):
+            self.image_previous = cv2.imread(image_name.replace(self.layer, layer_p))
+            self.histogram_flag = True
+        else:
+            self.histogram_flag = False
+
+        if os.path.isfile(image_name.replace('coatF', 'contours').replace('scanF', 'contours')):
+            self.image_contours = cv2.imread(image_name.replace('coatF', 'contours').replace('scanF', 'contours'))
+            self.contours_flag = True
+
+            # Add the part names to the defect dictionary
+            for part_name in self.build['SliceConverter']['PartColours'].keys():
+                self.defects[part_name] = None
+        else:
+            self.contours_flag = False
+
+        # Open all the reports and save their dictionaries to the master defect dictionary
+        # These dictionaries will be overwritten with new data should the program process the same layer/part
+        for part_name in self.defects.keys():
+            with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name)) as report:
+                self.defects[part_name] = json.load(report)
+
+            # The dictionary needs to be built up if it doesn't already exist
+            if self.layer not in self.defects[part_name]:
+                self.defects[part_name][self.layer] = dict()
+
+            if self.phase not in self.defects[part_name][self.layer]:
+                self.defects[part_name][self.layer][self.phase] = dict()
+
         # Load the image to be analyzed into memory
-        image = cv2.imread(self.build['DefectDetector']['Image'])
+        image = cv2.imread(image_name)
 
         # Grab the total number of pixels in the image
         self.total_pixels = image.size / 3
@@ -229,9 +254,9 @@ class DefectDetector:
             self.analyze_scan(image, image_blank)
 
         # Save all the reports to their respective json files
-        for name in self.part_colours.keys():
+        for name, item in self.defects.items():
             with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], name), 'w+') as report:
-                json.dump(self.defects[name], report, sort_keys=True)
+                json.dump(item, report, sort_keys=True)
 
         self.progress.emit(100)
 
@@ -266,9 +291,8 @@ class DefectDetector:
         print('Contrast Outlier\n%s' % (time.time() - t0))
 
         # Histogram comparison with the previous layer if the previous layer's image exists
-        if os.path.isfile(self.build['DefectDetector']['ImagePrevious']):
-            image_previous = cv2.imread(self.build['DefectDetector']['ImagePrevious'])
-            self.compare_histogram(image_coat, image_previous)
+        if self.histogram_flag:
+            self.compare_histogram(image_coat, self.image_previous)
 
         # Compare all the results against the threshold values to see if any are outside of the threshold
 
@@ -299,9 +323,8 @@ class DefectDetector:
         print('Scan Detection\n%s' % (time.time() - t0))
 
         # Histogram comparison with the previous layer if the previous layer's image exists
-        if os.path.isfile(self.build['DefectDetector']['ImagePrevious']):
-            image_previous = cv2.imread(self.build['DefectDetector']['ImagePrevious'])
-            self.compare_histogram(image_scan, image_previous)
+        if self.histogram_flag:
+            self.compare_histogram(image_scan, self.image_previous)
 
         print('Compare & Save\n%s\n' % (time.time() - t0))
 
@@ -337,7 +360,6 @@ class DefectDetector:
                         # Only draw horizontal lines that are not located near the top or bottom of image
                         if abs(y1 - y2) == 0 and 20 < y1 < image_defects.shape[0] - 20:
                             cv2.line(image_defects, (x1, y1), (x2, y2), COLOUR_RED, 2)
-                            self.streak_count += 1
 
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_RED, 'BS')
@@ -374,7 +396,6 @@ class DefectDetector:
                                   (coordinate[0] + template.shape[1], coordinate[1] + template.shape[0]),
                                   COLOUR_BLUE, thickness=3)
                     coordinate_previous = coordinate
-                    self.chatter_count += 1
 
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_BLUE, 'BC')
@@ -484,8 +505,8 @@ class DefectDetector:
         cv2.drawContours(image_defects, contours_list, -1, COLOUR_PURPLE, thickness=cv2.FILLED)
 
         # Compare the detected scan pattern against the drawn contours
-        if os.path.isfile(self.build['DefectDetector']['Contours']):
-            image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
+        if self.contours_flag:
+            image_contours = self.image_contours.copy()
 
             # Convert all the part colours from teal into purple so that it can be compared to the detected scan pattern
             mask = cv2.inRange(image_contours, (100, 100, 0), (255, 255, 0))
@@ -541,30 +562,30 @@ class DefectDetector:
         # TODO Remove timers when not needed
         t0 = time.time()
 
-        # # Only report defects that intersect the part contours if the image exists
-        # if os.path.isfile(self.build['DefectDetector']['Contours']):
-        #     image_contours = cv2.imread(self.build['DefectDetector']['Contours'])
-        #
-        #     for part_name, part_colour in self.part_colours.items():
-        #         # Skip the combined key as it has already been processed
-        #         if 'combined' in part_name:
-        #             continue
-        #
-        #         # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
-        #         size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
-        #                                                                tuple(part_colour), defect_colour)
-        #
-        #         # Convert the pixel size data into a percentage based on the total number of pixels in the image
-        #         if 'SP' in defect_type or 'CO' in defect_type:
-        #             size = round(size / self.total_pixels * 100, 4)
-        #
-        #         if size > 0:
-        #             # Add these to the defect dictionary for the current part, and the combined dictionary
-        #             self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
-        #         else:
-        #             self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
-        #
-        #         print('Report %s\n%s\n' % (part_name, (time.time() - t0)))
+        # Only report defects that intersect the part contours if the image exists
+        if self.contours_flag:
+            image_contours = self.image_contours.copy()
+
+            for part_name, part_colour in self.build['SliceConverter']['PartColours'].items():
+                # Skip the combined key as it has already been processed
+                if 'combined' in part_name:
+                    continue
+
+                # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
+                size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
+                                                                       tuple(part_colour), defect_colour)
+
+                # Convert the pixel size data into a percentage based on the total number of pixels in the image
+                if 'SP' in defect_type or 'CO' in defect_type:
+                    size = round(size / self.total_pixels * 100, 4)
+
+                if size > 0:
+                    # Add these to the defect dictionary for the current part, and the combined dictionary
+                    self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
+                else:
+                    self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
+
+                print('Report %s\n%s\n' % (part_name, (time.time() - t0)))
 
     def compare_threshold(self):
         """Compares the results to the threshold values to check if a notification needs to be raised or not"""

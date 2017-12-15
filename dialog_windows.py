@@ -836,7 +836,12 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.contour_dict = dict()
         self.slice_list = list()
         self.current_layer = 1
-        self.run_flag = False
+        self.convert_run_flag = False
+        self.draw_run_flag = False
+
+        # This value is used to indicate which process is active, used for the pause button
+        # 0 - None / 1 - Convert / 2 - Draw
+        self.active_process = 0
 
         # Check if a build is open by checking for an image folder, otherwise set a 'default' output folder
         if self.build['BuildInfo']['Folder']:
@@ -871,6 +876,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         Subsequently converts the files that haven't been converted
         Also adds the slice files to the listWidget and assigns a part colour to each part"""
 
+        # Stop the selecting of files in the list from doing anything
+        self.listSliceFiles.blockSignals(True)
+
         # Sort the slice list and clear the QListWidget
         self.slice_list.sort()
         self.listSliceFiles.clear()
@@ -900,7 +908,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.index_list:
             # Disable all the buttons to prevent the user from doing concurrent things
             self.toggle_control(1)
-            self.run_flag = True
+            self.convert_run_flag = True
 
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
         else:
@@ -911,6 +919,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def remove_files(self):
         """Removes slice files from the slice file list"""
 
+        # Stop the selecting of files in the list from doing anything
         self.listSliceFiles.blockSignals(True)
 
         # Grab the list of selected items in the QListWidget
@@ -930,6 +939,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.preview_contours()
 
     def convert_slice(self, slice_file):
+
+        self.active_process = 1
+
         worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert_cli, slice_file)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
@@ -941,9 +953,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.listSliceFiles.item(self.index_list[self.slice_counter]).setBackground(QColor('yellow'))
         self.slice_counter += 1
 
-        if self.run_flag and not self.slice_counter == len(self.index_list):
+        if self.convert_run_flag and not self.slice_counter == len(self.index_list):
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
-        else:
+        elif self.slice_counter == len(self.index_list):
             self.pushDrawContours.setEnabled(True)
             self.update_layer_ranges()
             self.preview_contours()
@@ -1030,9 +1042,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def translate_reset(self):
         pass
 
-    def pause(self):
-        pass
-
     def draw_setup(self):
 
         """If the output folder is set to the build's contours folder, show a warning before proceeding"""
@@ -1041,9 +1050,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             draw_confirmation.setWindowTitle('Draw Contours')
             draw_confirmation.setIcon(QMessageBox.Warning)
             draw_confirmation.setText('Saving drawn contours to the build folder.\n\n'
-                                      'Note that this will completely empty the folder and set the slice files for the'
-                                      'current active build to the newly added ones. Reports will be added and removed'
-                                      'accordingly, but identical reports will remain untouched.\n\n'
+                                      'Note that this will completely empty the build\'s contours folder and remove '
+                                      'all of the individual part reports. Part by part defect data will need to be '
+                                      're-calculated after re-drawing all the contours, but the combined report will '
+                                      'remain untouched.\n\n'
                                       'Would you like to proceed to draw contours?')
             draw_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             retval = draw_confirmation.exec_()
@@ -1082,9 +1092,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             # Create the colours for each of the parts
             part_colours[part_name] = ((100 + index) % 255, (100 + index) % 255, 0)
 
-            if not os.path.isfile('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name)):
-                with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
-                    json.dump(dict(), report)
+            if self.output_folder == self.build['BuildInfo']['Folder']:
+                if not os.path.isfile('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name)):
+                    with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
+                        json.dump(dict(), report)
 
         # Set the 'background' part colour to black
         part_colours['background'] = (0, 0, 0)
@@ -1095,12 +1106,15 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Set the starting layer to draw as the entered lower layer range (default is all the contours)
         self.contour_counter = self.spinRangeLow.value()
-        self.run_flag = True
+        self.draw_run_flag = True
 
         # Start the draw loop
         self.draw_contours(self.contour_counter, True)
 
     def draw_contours(self, layer, names_flag=False):
+
+        self.active_process = 2
+        self.update_status('All | Drawing %s of %s.' % (str(layer).zfill(4), str(self.spinRangeHigh.value()).zfill(4)))
 
         worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contour, self.contour_dict, layer,
                                           self.build['SliceConverter']['PartColours'], 0, self.output_folder,
@@ -1110,10 +1124,16 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def draw_contours_finished(self):
 
-        if self.run_flag and not self.contour_counter == (self.spinRangeHigh.value() + 1):
-            self.contour_counter += 1
+        self.contour_counter += 1
+
+        self.progress_current += self.increment
+        if round(self.progress_current) is not self.progress_previous:
+            self.update_progress(round(self.progress_current))
+            self.progress_previous = round(self.progress_current)
+
+        if self.draw_run_flag and not self.contour_counter == (self.spinRangeHigh.value() + 1):
             self.draw_contours(self.contour_counter)
-        else:
+        elif self.contour_counter == (self.spinRangeHigh.value() + 1):
             pass
 
     def set_background(self):
@@ -1138,6 +1158,26 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             return True
         else:
             return False
+
+    def pause(self):
+        """Executes when the Paused/Resume button is pressed
+        Pauses or resumes either the slice conversion or the contour drawing loops"""
+
+        if 'Pause' in self.pushPause.text():
+            self.pushPause.setText('Resume')
+            if self.active_process == 1:
+                self.convert_run_flag = False
+            elif self.active_process == 2:
+                self.draw_run_flag = False
+
+        elif 'Resume' in self.pushPause.text():
+            self.pushResume.setText('Pause')
+            if self.active_process == 1:
+                self.convert_run_flag = True
+                self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
+            elif self.active_process == 2:
+                self.draw_run_flag = True
+                self.draw_contours(self.contour_counter)
 
     def browse_output(self):
         """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
@@ -1198,8 +1238,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             cv2.line(image, (1735, 0), (1735, 2410), (0, 0, 0), 3)
 
         self.graphicsDisplay.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        self.listSliceFiles.blockSignals(False)
         self.toggle_control(2)
+
+        # Allow the selection of files in the list from doing things
+        self.listSliceFiles.blockSignals(False)
 
     def update_layer_ranges(self):
         """Updates all parts of the dialog window UI that involves the maximum number of layers"""
@@ -1224,6 +1266,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
         self.doubleSliceHeight.setSingleStep(slice_height)
+        self.spinRangeHigh.setMaximum(self.max_layers)
+        self.spinRangeHigh.setValue(self.max_layers)
 
         self.update_status('All | Contours loaded.')
 

@@ -134,7 +134,9 @@
             0
         ]
     },
-    "RecentBuilds": [],
+    "RecentBuilds": [
+        "D:/Documents/MCAM/Builds/test.json"
+    ],
     "Threshold": {
         "HistogramCoat": 5000,
         "HistogramScan": 5000,

@@ -145,9 +145,6 @@
       </property>
       <item>
        <widget class="QSpinBox" name="spinRangeLow">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="minimum">
          <number>1</number>
         </property>
@@ -158,9 +155,6 @@
       </item>
       <item>
        <widget class="QSpinBox" name="spinRangeHigh">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="minimum">
          <number>1</number>
         </property>
@@ -297,13 +291,6 @@
        <widget class="QPushButton" name="pushBrowseOF">
         <property name="text">
          <string>Browse...</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButton">
-        <property name="text">
-         <string>Save to Build</string>
         </property>
        </widget>
       </item>

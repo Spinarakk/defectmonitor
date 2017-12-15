@@ -1146,7 +1146,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <property name="tabSpacing">
           <number>6</number>
@@ -1461,22 +1461,22 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="pushProcessParts">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Process Parts</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="pushDefectReports">
              <property name="enabled">
               <bool>false</bool>
              </property>
              <property name="text">
               <string>Defect Reports</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="push3DReconstruction">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>3D Reconstruction</string>
              </property>
             </widget>
            </item>
@@ -1542,6 +1542,7 @@
      </property>
      <addaction name="actionProcessCurrent"/>
      <addaction name="actionProcessAll"/>
+     <addaction name="actionProcessParts"/>
     </widget>
     <widget class="QMenu" name="menuImageCapture">
      <property name="title">
@@ -1871,6 +1872,14 @@
    </property>
    <property name="text">
     <string>Trigger</string>
+   </property>
+  </action>
+  <action name="actionProcessParts">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Process Parts</string>
    </property>
   </action>
  </widget>

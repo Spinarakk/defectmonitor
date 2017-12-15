@@ -102,6 +102,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionFauxTrigger.triggered.connect(lambda: self.run_loop('TRIG'))
         self.actionProcessCurrent.triggered.connect(self.process_current)
         self.actionProcessAll.triggered.connect(self.process_all)
+        self.actionProcessParts.triggered.connect(self.process_parts)
 
         # Menubar -> Settings
         self.actionCameraSettings.triggered.connect(self.camera_settings)
@@ -144,6 +145,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Sidebar Toolbox Defect Processor
         self.pushProcessCurrent.clicked.connect(self.process_current)
         self.pushProcessAll.clicked.connect(self.process_all)
+        self.pushProcessParts.clicked.connect(self.process_parts)
         self.pushDefectReports.clicked.connect(self.defect_reports)
 
         # Layer Selection
@@ -573,41 +575,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def image_converter_closed(self):
         self.IC_dialog = None
 
-    # @staticmethod
-    # def image_converter_function(image_name, status, progress):
-    #     """Applies the distortion, perspective, crop and CLAHE processes to the received image
-    #     Also subsequently saves the image after every process"""
-    #
-    #     image = cv2.imread('%s' % image_name)
-    #     image_name = os.path.splitext(image_name)[0]
-    #
-    #     # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
-    #     progress.emit(0)
-    #     status.emit('Undistorting image...')
-    #     image = image_processing.ImageTransform().distortion_fix(image)
-    #     cv2.imwrite('%s_D.png' % image_name, image)
-    #     progress.emit(25)
-    #     status.emit('Fixing perspective warp...')
-    #     image = image_processing.ImageTransform().perspective_fix(image)
-    #     cv2.imwrite('%s_DP.png' % image_name, image)
-    #     progress.emit(50)
-    #     status.emit('Cropping image to size...')
-    #     image = image_processing.ImageTransform().crop(image)
-    #     cv2.imwrite('%s_DPC.png' % image_name, image)
-    #     progress.emit(75)
-    #     status.emit('Applying CLAHE equalization...')
-    #     image = image_processing.ImageTransform().clahe(image)
-    #     cv2.imwrite('%s_DPCE.png' % image_name, image)
-    #     progress.emit(100)
-    #     status.emit('Image successfully converted and saved to same folder as input image.')
-    #
-    #     return os.path.dirname(image_name).replace('/', '\\')
-    #
-    # @staticmethod
-    # def image_converter_finished(image_folder):
-    #     """Open the folder containing the converted images for the user to view after conversion is finished"""
-    #     subprocess.Popen('explorer %s' % image_folder)
-
     # MENUBAR -> TOOLS -> DEFECT PROCESSOR
 
     def process_current(self):
@@ -660,31 +627,17 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessAll.setText('Process All')
             self.toggle_processing_buttons(1)
 
+    def process_parts(self):
+        pass
+
     def process_settings(self, layer):
         """Saves the settings to be used to process an image for defects to the build.json file
         This method exists as the only difference between the two options is the layer number"""
 
         self.processing_flag = True
 
-        with open('build.json') as build:
-            self.build = json.load(build)
-
         # Grab some pertinent information (for clearer code purposes)
         phase = self.display['FolderNames'][self.tab_index][:-1].lower()
-
-        self.build['DefectDetector']['Image'] = self.display['ImageList'][self.tab_index][layer - 1]
-        self.build['DefectDetector']['Contours'] = self.display['ImageList'][2][layer - 1]
-        self.build['DefectDetector']['Layer'] = layer
-        self.build['DefectDetector']['Phase'] = phase
-
-        # Set the previous image to be compared against the current image if it is not the first layer
-        if layer > 1:
-            self.build['DefectDetector']['ImagePrevious'] = self.display['ImageList'][self.tab_index][layer - 2]
-        else:
-            self.build['DefectDetector']['ImagePrevious'] = ''
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
 
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
@@ -694,7 +647,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.update_status('Running displayed %s image through the Defect Detector...' % phase)
 
-        worker = qt_multithreading.Worker(image_processing.DefectDetector().run_detector)
+        # Send the image name to be processed to the detector
+        worker = qt_multithreading.Worker(image_processing.DefectDetector().run_detector,
+                                          self.display['ImageList'][self.tab_index][layer - 1])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.finished.connect(self.process_finished)
@@ -1584,20 +1539,22 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Get a list of numbers of the supposed layer images in the folder (except the snapshot folder)
             for filename in os.listdir(folder_name):
-                # Only grab the .png images and ignore any other files in the folder
+                # Only grab the .png images and images with coatF, scanF or contour in their name
+                # Ignore any other files and incorrectly named images in the folder
                 if '.png' in filename:
-                    try:
-                        # Check if the last four characters of the filename are numbers, otherwise file is ignored
-                        number = int(os.path.splitext(filename)[0][-4:])
-                    except ValueError:
-                        continue
-                    else:
-                        # Add the number to the list of layer numbers in the display dictionary
-                        self.display['LayerNumbers'][index].append(number)
+                    if 'coatF' in filename or 'scanF' in filename or 'contour' in filename:
+                        try:
+                            # Check if the last four characters of the filename are numbers, otherwise file is ignored
+                            number = int(os.path.splitext(filename)[0][-4:])
+                        except ValueError:
+                            continue
+                        else:
+                            # Add the number to the list of layer numbers in the display dictionary
+                            self.display['LayerNumbers'][index].append(number)
 
-                        # Save the new number as the new max layer if it is higher than the previous saved number
-                        if number > self.display['MaxLayers']:
-                            self.display['MaxLayers'] = number
+                            # Save the new number as the new max layer if it is higher than the previous saved number
+                            if number > self.display['MaxLayers']:
+                                self.display['MaxLayers'] = number
 
         # Iterate through all but the last folder in the list again
         # Repeated as the max layers needs to be determined first before creating a set list of image names

@@ -1,3 +1,8 @@
+December 15
+- Rewrote the Defect Detector QThread to instead use arguments to send the names and values instead of the build.json file
+- Continued validating and fixing the draw contours function within the slice converter
+- Rewrote the Defect Detector function to take into account the number of parts when looking for and creating reports and reporting results
+
 December 14
 - Removed the slice files box from the New Build window and instead moved it to the Slice Converter window
 - Removed keys from the build.json file that are unneeded
