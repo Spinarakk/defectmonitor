@@ -107,10 +107,11 @@ class SliceConverter:
 
         progress.emit(100)
 
+        # TODO remove timers if not needed
         print('Read CLI %s + READ Time\n%s\n' % (part_name, time.time() - t0))
 
-    def draw_contour(self, contour_dict, layer, part_colours, part_transform, folder, names_flag):
-        """Draw all the contours of the selected parts on the same image"""
+    def draw_contours(self, contour_dict, layer, part_colours, part_transform, folder, names_flag):
+        """Draw all the contours of the received parts and of the received layer on the same image"""
 
         # TODO remove timers if not needed
         t0 = time.time()
@@ -162,15 +163,13 @@ class SliceConverter:
         # Flip the whole image vertically to account for the fact that OpenCV's origin is the top left corner
         image_contours = cv2.flip(image_contours, 0)
 
-        # Correct the image using calculated transformation parameters to account for the perspective warp
-        #image_contours = image_processing.ImageTransform().apply_transformation(image_contours, False)
-
         # Save the image to the selected image folder
         cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
 
         # Save the part names image to the contours up one folder after transforming it just like the contours image
         if names_flag:
-            image_names = image_processing.ImageTransform().apply_transformation(image_names, False)
+            image_names = image_processing.ImageFix().apply_transformation(image_names, False)
             cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
+        # TODO remove timers if not needed
         print('Contour %s Time\n%s\n' % (layer, time.time() - t0))

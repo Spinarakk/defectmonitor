@@ -88,12 +88,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
-        self.actionUpdateFolders.triggered.connect(lambda: self.update_folders(True))
-        self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
 
         # Menubar -> Tools
+        self.actionCameraSettings.triggered.connect(self.camera_settings)
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
-        self.actionPartAdjustment.triggered.connect(self.part_adjustment)
+        self.actionAcquireCamera.triggered.connect(self.acquire_camera)
+        self.actionAcquireTrigger.triggered.connect(self.acquire_trigger)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
         self.actionSnapshot.triggered.connect(self.snapshot)
@@ -105,20 +105,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionProcessParts.triggered.connect(self.process_parts)
 
         # Menubar -> Settings
-        self.actionCameraSettings.triggered.connect(self.camera_settings)
         self.actionBuildSettings.triggered.connect(self.build_settings)
-        self.actionAcquireCamera.triggered.connect(self.acquire_camera)
-        self.actionAcquireTrigger.triggered.connect(self.acquire_trigger)
+        self.actionUpdateFolders.triggered.connect(lambda: self.update_folders(True))
+        self.actionUpdateFolders.triggered.connect(lambda: self.update_status('Image folders updated.', 3000))
         self.actionPreferences.triggered.connect(self.preferences)
 
         # Menubar -> Help
-        self.actionViewHelp.triggered.connect(self.view_help)
-        self.actionAbout.triggered.connect(self.view_about)
+        self.actionAbout.triggered.connect(self.about)
 
         # Display Options Group Box
         self.checkEqualization.toggled.connect(self.update_display)
         self.checkGridlines.toggled.connect(self.update_display)
-        self.checkContours.toggled.connect(self.toggle_contours)
+        self.checkContours.toggled.connect(self.update_display)
         self.checkNames.toggled.connect(self.update_display)
 
         # Overlay Defects Group Box
@@ -130,9 +128,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.checkPattern.toggled.connect(self.toggle_defect)
 
         # Sidebar Toolbox Assorted Tools
+        self.pushCameraSettings.clicked.connect(self.camera_settings)
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
         self.pushSliceConverter.clicked.connect(self.slice_converter)
-        self.pushPartAdjustment.clicked.connect(self.part_adjustment)
         self.pushImageConverter.clicked.connect(self.image_converter)
 
         # Sidebar Toolbox Image Capture
@@ -181,7 +179,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.CS_dialog = None  # Camera Settings
         self.CC_dialog = None  # Camera Calibration
         self.SC_dialog = None  # Slice Converter
-        self.PA_dialog = None  # Part Adjustment
         self.IC_dialog = None  # Image Converter
 
         # Initiate an empty config file name to be used for saving purposes
@@ -528,23 +525,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
         self.CC_dialog = None
 
-    def part_adjustment(self):
-        """Opens a Modeless Dialog Window when the Overlay Adjustment button is clicked
-        Or when Tools -> Overlay Adjustment is clicked
-        Allows the user to adjust and transform the overlay image in a variety of ways
-        """
-
-        if self.PA_dialog is None:
-            self.PA_dialog = dialog_windows.PartAdjustment(self)
-            self.PA_dialog.update_part.connect(self.update_display)
-            self.PA_dialog.destroyed.connect(self.part_adjustment_closed)
-            self.PA_dialog.show()
-        else:
-            self.PA_dialog.activateWindow()
-
-    def part_adjustment_closed(self):
-        self.PA_dialog = None
-
     def slice_converter(self):
         """Opens a Modeless Dialog Window when the Slice Converter button is clicked
         Or when Tools -> Slice Converter is clicked
@@ -782,16 +762,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     # MENUBAR -> HELP
 
-    def view_help(self):
-        pass
-
-    def view_about(self):
+    def about(self):
         """Opens a Modal About QMessageBox displaying some pertinent information about the application"""
 
         QMessageBox.about(self, 'About Defect Monitor',
                           '<b>Defect Monitor</b><br><br>Version %s<br> Defect Monitor is a monitoring application '
                           'used to detect defects within the scan and coat layers of a 3D metal printing build.'
-                          '<br><br>Copyright (C) 2017 MCAM.' % self.version)
+                          '<br><br>For assistance with the program, contact Nicholas Lee on 04 1209 8784'
+                          'or at nicholascklee@gmail.com.'% self.version)
+
+        # Copyright message: '<br><br>Copyright (C) 2017 MCAM.'
 
     # LAYER SELECTION
 
@@ -1014,9 +994,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         image = cv2.imread(image_name)
 
         # Apply
-        image = image_processing.ImageTransform().distortion_fix(image)
-        image = image_processing.ImageTransform().perspective_fix(image)
-        image = image_processing.ImageTransform().crop(image)
+        image = image_processing.ImageFix().distortion_fix(image)
+        image = image_processing.ImageFix().perspective_fix(image)
+        image = image_processing.ImageFix().crop(image)
 
         # Save the image using a modified image name
         cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
@@ -1173,7 +1153,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                     contours = cv2.resize(contours, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
                 # Apply the stored transformation values to the overlay image
-                contours = image_processing.ImageTransform().apply_transformation(contours, True)
+                contours = image_processing.ImageFix().apply_transformation(contours, True)
 
                 # Apply the overlay on top of the image
                 image = cv2.add(image, contours)
@@ -1200,7 +1180,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Applies CLAHE to the display image
             if self.checkEqualization.isChecked():
-                image = image_processing.ImageTransform.clahe(image)
+                image = image_processing.ImageFix.clahe(image)
 
             # Convert from OpenCV's BGR format to RGB so that colours are displayed correctly
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -1251,14 +1231,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushGo.setEnabled(True)
             self.pushDisplayUpSeek.setEnabled(False)
             self.pushDisplayDownSeek.setEnabled(False)
-
-    def toggle_contours(self):
-        """Enable or disable the Overlay Adjustment buttons if the corresponding checkbox is checked"""
-
-        self.pushPartAdjustment.setEnabled(self.checkContours.isChecked())
-        self.actionPartAdjustment.setEnabled(self.checkContours.isChecked())
-
-        self.update_display()
 
     def toggle_all(self):
         """Checks or unchecks all the available (enabled) defect checkboxes"""

@@ -11,13 +11,6 @@
         ],
         "Username": ""
     },
-    "DefectDetector": {
-        "Contours": "",
-        "Image": "",
-        "ImagePrevious": "",
-        "Layer": 0,
-        "Phase": "coat"
-    },
     "ImageCapture": {
         "Layer": 0.5,
         "Phase": 1,
@@ -31,7 +24,8 @@
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
+        "Colours": {},
         "Files": [],
-        "PartColours": {}
+        "Transform": {}
     }
 }

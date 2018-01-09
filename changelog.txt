@@ -1,3 +1,13 @@
+January 9
+- Removed the Part Adjustment button and dialog window entirely (deemed unnecessary) along with the associated code
+- Replaced it with a Camera Settings button
+- Moved some actions around
+- Double checked the entire Main Window that everything is correct and included for the "Final" version
+- Slightly rewrote the draw contours code of the SliceConverter to only take one layer and adjusted the Slice Converter dialog window accordingly
+- Removed the absolute value from the translation and rotation boxes in the Slice Converter as they are too hard to calculate and is mostly unnecessary
+- Removed the slice height go button as it was deemed unnecessary to go to height, and instead the height is just displayed
+- It is assumed that all parts will be sliced at the same layer thickness
+
 December 15
 - Rewrote the Defect Detector QThread to instead use arguments to send the names and values instead of the build.json file
 - Continued validating and fixing the draw contours function within the slice converter

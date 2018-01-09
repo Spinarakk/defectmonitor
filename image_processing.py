@@ -15,7 +15,7 @@ COLOUR_BLACK = (0, 0, 0)
 COLOUR_WHITE = (255, 255, 255)
 
 
-class ImageTransform:
+class ImageFix:
     """Module containing methods used to transform or modify any images using a variety of OpenCV functions"""
 
     def __init__(self):
@@ -220,7 +220,7 @@ class DefectDetector:
             self.contours_flag = True
 
             # Add the part names to the defect dictionary
-            for part_name in self.build['SliceConverter']['PartColours'].keys():
+            for part_name in self.build['SliceConverter']['Colours'].keys():
                 self.defects[part_name] = None
         else:
             self.contours_flag = False
@@ -336,7 +336,7 @@ class DefectDetector:
         """Detects any horizontal lines on the image, doesn't work as well in the darker areas"""
 
         # Apply CLAHE equalization to the raw image
-        image = ImageTransform.clahe(image, gray_flag=True)
+        image = ImageFix.clahe(image, gray_flag=True)
 
         # Add a gaussian blur to the CLAHE image
         image = cv2.GaussianBlur(image, (15, 15), 0)
@@ -373,7 +373,7 @@ class DefectDetector:
         Done by matching any chatter against a pre-collected set of blade chatter templates"""
 
         # Apply CLAHE equalization to the raw image
-        image = ImageTransform.clahe(image, gray_flag=True, cliplimit=3.0, tilegridsize=(12, 12))
+        image = ImageFix.clahe(image, gray_flag=True, cliplimit=3.0, tilegridsize=(12, 12))
 
         # Iterate through all the chatter templates in the template folder
         for filename in os.listdir('templates'):
@@ -408,7 +408,7 @@ class DefectDetector:
         """Detects any patches in the image that are above a certain contrast threshold, aka are too shiny"""
 
         # Apply CLAHE equalization to the raw image
-        image = ImageTransform.clahe(image, gray_flag=True)
+        image = ImageFix.clahe(image, gray_flag=True)
 
         # Otsu's Binarization is used to calculate a threshold value to be used to get a proper threshold image
         retval = cv2.threshold(image, 0, 255, cv2.THRESH_OTSU)[0]

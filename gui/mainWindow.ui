@@ -1146,7 +1146,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>0</number>
          </property>
          <property name="tabSpacing">
           <number>6</number>
@@ -1177,6 +1177,13 @@
             <number>0</number>
            </property>
            <item>
+            <widget class="QPushButton" name="pushCameraSettings">
+             <property name="text">
+              <string>Camera Settings</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="pushCameraCalibration">
              <property name="text">
               <string>Camera Calibration</string>
@@ -1187,16 +1194,6 @@
             <widget class="QPushButton" name="pushSliceConverter">
              <property name="text">
               <string>Slice Converter</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushPartAdjustment">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Part Adjustment</string>
              </property>
             </widget>
            </item>
@@ -1238,9 +1235,6 @@
             <widget class="QPushButton" name="pushAcquireCT">
              <property name="enabled">
               <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Simulates the trigger being triggered.</string>
              </property>
              <property name="text">
               <string>Acquire CT</string>
@@ -1529,8 +1523,6 @@
     <addaction name="separator"/>
     <addaction name="actionCalibrationResults"/>
     <addaction name="actionDefectReports"/>
-    <addaction name="separator"/>
-    <addaction name="actionUpdateFolders"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1554,8 +1546,17 @@
      <addaction name="separator"/>
      <addaction name="actionFauxTrigger"/>
     </widget>
-    <addaction name="actionCameraCalibration"/>
-    <addaction name="actionPartAdjustment"/>
+    <widget class="QMenu" name="menuCamera">
+     <property name="title">
+      <string>Camera</string>
+     </property>
+     <addaction name="actionCameraSettings"/>
+     <addaction name="actionCameraCalibration"/>
+     <addaction name="separator"/>
+     <addaction name="actionAcquireCamera"/>
+     <addaction name="actionAcquireTrigger"/>
+    </widget>
+    <addaction name="menuCamera"/>
     <addaction name="separator"/>
     <addaction name="actionSliceConverter"/>
     <addaction name="actionImageConverter"/>
@@ -1567,19 +1568,14 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionViewHelp"/>
-    <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionCameraSettings"/>
     <addaction name="actionBuildSettings"/>
-    <addaction name="separator"/>
-    <addaction name="actionAcquireCamera"/>
-    <addaction name="actionAcquireTrigger"/>
+    <addaction name="actionUpdateFolders"/>
     <addaction name="separator"/>
     <addaction name="actionPreferences"/>
    </widget>
@@ -1608,8 +1604,8 @@
    <addaction name="actionZoomIn"/>
    <addaction name="actionZoomOut"/>
    <addaction name="separator"/>
+   <addaction name="actionCameraSettings"/>
    <addaction name="actionCameraCalibration"/>
-   <addaction name="actionPartAdjustment"/>
    <addaction name="actionSliceConverter"/>
    <addaction name="actionImageConverter"/>
    <addaction name="separator"/>

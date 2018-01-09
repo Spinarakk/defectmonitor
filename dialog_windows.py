@@ -20,7 +20,7 @@ import qt_multithreading
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogCameraCalibration, \
-    dialogCalibrationResults, dialogSliceConverter, dialogPartAdjustment, dialogImageConverter, dialogDefectReports
+    dialogCalibrationResults, dialogSliceConverter, dialogImageConverter, dialogDefectReports
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -815,7 +815,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushZoomIn.clicked.connect(self.zoom_in)
         self.pushZoomOut.clicked.connect(self.zoom_out)
         self.pushGoSlice.clicked.connect(self.set_slice)
-        self.pushGoHeight.clicked.connect(self.set_height)
         self.pushRotate.clicked.connect(self.rotate)
         self.pushResetR.clicked.connect(self.rotate_reset)
         self.pushTranslate.clicked.connect(self.translate)
@@ -885,9 +884,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Initialize a few lists and values
         # Part names is a dictionary of the names without the directory part and their corresponding preview part colour
-        # Part colours is same as above except with the part colours that will be used to draw the respective contours
+        # Part transform is a dictionary of every part's transformation parameters
         self.part_names = dict()
-        self.part_colours = dict()
+        self.part_transform = dict()
         self.index_list = list()
         self.slice_counter = 0
         self.max_layers = 1
@@ -896,7 +895,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         for index, item in enumerate(self.slice_list):
             # Set all the preview part colours to black for now
             self.part_names[os.path.basename(item).replace('.cli', '')] = (255, 0, 0)
-            # self.part_colours
+            self.part_transform[os.path.basename(item).replace('.cli', '')] = [0, 0, 0]
+
             self.listSliceFiles.addItem(os.path.basename(item).replace('.cli', ''))
             if os.path.isfile(item.replace('.cli', '_contours.txt')):
                 self.listSliceFiles.item(index).setBackground(QColor('yellow'))
@@ -963,6 +963,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def preview_contours(self):
         """Draws a 'preview' of the selected layer's contours"""
 
+        # Create a blank black RGB image to draw contours on
         self.image_contours = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
 
         # Change whether to draw on a black or white background depending on if the background checkbox is checked
@@ -989,8 +990,26 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                     vectors = string.split(',')[:-1]
                     contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
 
-                cv2.drawContours(self.image_contours, contours, -1, self.part_names[part_name],
-                                 offset=tuple(self.config['ImageCorrection']['Offset']), thickness=thickness)
+                # Calculate a new offset including the part transformation parameters
+                offset = self.config['ImageCorrection']['Offset'].copy()
+                offset[0] += self.part_transform[part_name][0]
+                offset[1] += self.part_transform[part_name][1]
+
+                image_canvas = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
+
+                cv2.drawContours(image_canvas, contours, -1, self.part_names[part_name],
+                                 offset=tuple(offset), thickness=thickness)
+
+                if not self.part_transform[part_name] == 0:
+                    x, y, w, h = cv2.boundingRect(contours[1])
+                    centre_x = x + w // 2
+                    centre_y = y + h // 2
+                    rotation_matrix = cv2.getRotationMatrix2D((centre_x, centre_y), self.part_transform[part_name][2], 1)
+                    image_canvas = cv2.warpAffine(image_canvas, rotation_matrix, (3470,2410))
+
+                self.image_contours = cv2.add(self.image_contours, image_canvas)
+
+
 
             self.image_contours = cv2.flip(self.image_contours, 0)
 
@@ -1027,20 +1046,44 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
         self.preview_contours()
 
-    def set_height(self):
-        pass
-
     def rotate(self):
-        pass
+        """Applies rotation parameters to the part_transform dictionary for the selected parts"""
+
+        for item in self.listSliceFiles.selectedItems():
+            # Change the rotation parameter of the selected items to the entered ones
+            self.part_transform[item.text()][2] += self.spinAngle.value()
+
+        self.preview_contours()
 
     def rotate_reset(self):
-        pass
+        """Resets the rotation parameters back to 0 for the selected parts"""
+
+        for item in self.listSliceFiles.selectedItems():
+            # Reset the rotation parameter of the selected items
+            self.part_transform[item.text()][2] = 0
+
+        self.preview_contours()
 
     def translate(self):
-        pass
+        """Applies translation parameters to the part_transform dictionary for the selected parts"""
+
+        for item in self.listSliceFiles.selectedItems():
+            # Change the translation parameters of the selected items to the entered ones
+            self.part_transform[item.text()][0] += self.spinX.value()
+            self.part_transform[item.text()][1] += self.spinY.value()
+
+        print(self.part_transform)
+        self.preview_contours()
 
     def translate_reset(self):
-        pass
+        """Resets the translation parameters back to 0 for the selected parts"""
+
+        for item in self.listSliceFiles.selectedItems():
+            # Reset the translation parameters of the selected items
+            self.part_transform[item.text()][0] = 0
+            self.part_transform[item.text()][1] = 0
+
+        self.preview_contours()
 
     def draw_setup(self):
 
@@ -1100,15 +1143,20 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # Set the 'background' part colour to black
         part_colours['background'] = (0, 0, 0)
 
-        # Save the Slice File and Part Colours lists to the build.json file
-        self.build['SliceConverter']['Files'] = self.slice_list
-        self.build['SliceConverter']['PartColours'] = part_colours
-
         # Set the starting layer to draw as the entered lower layer range (default is all the contours)
         self.contour_counter = self.spinRangeLow.value()
         self.draw_run_flag = True
 
+        # Save the list of slice files, part colours and transformations to the build.json file
+        self.build['SliceConverter']['Files'] = self.slice_list
+        self.build['SliceConverter']['Colours'] = part_colours
+        self.build['SliceConverter']['Transform'] = self.part_transform
+
+        with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
+
         # Start the draw loop
+        # The names flag is only set on the first drawn layer so that the names image will only be created once
         self.draw_contours(self.contour_counter, True)
 
     def draw_contours(self, layer, names_flag=False):
@@ -1116,8 +1164,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.active_process = 2
         self.update_status('All | Drawing %s of %s.' % (str(layer).zfill(4), str(self.spinRangeHigh.value()).zfill(4)))
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contour, self.contour_dict, layer,
-                                          self.build['SliceConverter']['PartColours'], 0, self.output_folder,
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, layer,
+                                          self.build['SliceConverter']['Colours'], 0, self.output_folder,
                                           names_flag)
         worker.signals.finished.connect(self.draw_contours_finished)
         self.threadpool.start(worker)
@@ -1265,7 +1313,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             slice_height = float(contours[2].split('C,')[0])
 
         self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
-        self.doubleSliceHeight.setSingleStep(slice_height)
         self.spinRangeHigh.setMaximum(self.max_layers)
         self.spinRangeHigh.setValue(self.max_layers)
 
@@ -1286,225 +1333,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def closeEvent(self, event):
         self.window_settings.setValue('Slice Converter Geometry', self.saveGeometry())
-
-
-class PartAdjustment(QDialog, dialogPartAdjustment.Ui_dialogPartAdjustment):
-    """Opens a Modeless Dialog Window when the Part Adjustment button is clicked
-    Or when Tools -> Part Adjustment is clicked
-    Allows the user to adjust and transform the part contour overlay image in a variety of ways
-    """
-
-    # Signal that will be emitted anytime one of the transformation buttons is pressed
-    update_part = pyqtSignal(bool)
-
-    def __init__(self, parent=None):
-
-        # Setup Dialog UI with MainWindow as parent and restore the previous window state
-        super(PartAdjustment, self).__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setupUi(self)
-        self.window_settings = QSettings('MCAM', 'Defect Monitor')
-
-        try:
-            self.restoreGeometry(self.window_settings.value('Part Adjustment Geometry', ''))
-        except TypeError:
-            pass
-
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Create two copies of the display transform parameters, one used to reset back to
-        self.transform = self.config['ImageCorrection']['TransformDisplay'].copy()
-        self.transform_reset = self.config['ImageCorrection']['TransformDisplay'].copy()
-        self.states = list()
-
-        # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        # General
-        self.pushReset.clicked.connect(self.reset)
-        self.pushUndo.clicked.connect(self.undo)
-        self.pushSave.clicked.connect(self.save)
-
-        # Translation
-        self.pushTranslateUp.clicked.connect(self.translate_up)
-        self.pushTranslateDown.clicked.connect(self.translate_down)
-        self.pushTranslateLeft.clicked.connect(self.translate_left)
-        self.pushTranslateRight.clicked.connect(self.translate_right)
-
-        # Rotation / Flip
-        self.pushRotateACW.clicked.connect(self.rotate_acw)
-        self.pushRotateCW.clicked.connect(self.rotate_cw)
-        self.pushFlipHorizontal.clicked.connect(self.flip_horizontal)
-        self.pushFlipVertical.clicked.connect(self.flip_vertical)
-
-        # Stretch / Pull
-        self.pushResetStretch.clicked.connect(self.stretch_reset)
-        self.pushStretchN.clicked.connect(self.stretch_n)
-        self.pushStretchNE.clicked.connect(self.stretch_ne)
-        self.pushStretchE.clicked.connect(self.stretch_e)
-        self.pushStretchSE.clicked.connect(self.stretch_se)
-        self.pushStretchS.clicked.connect(self.stretch_s)
-        self.pushStretchSW.clicked.connect(self.stretch_sw)
-        self.pushStretchW.clicked.connect(self.stretch_w)
-        self.pushStretchNW.clicked.connect(self.stretch_nw)
-
-        self.pushStretchUpLeft.clicked.connect(self.stretch_ul)
-        self.pushStretchLeftUp.clicked.connect(self.stretch_lu)
-        self.pushStretchUpRight.clicked.connect(self.stretch_ur)
-        self.pushStretchRightUp.clicked.connect(self.stretch_ru)
-        self.pushStretchDownLeft.clicked.connect(self.stretch_dl)
-        self.pushStretchLeftDown.clicked.connect(self.stretch_ld)
-        self.pushStretchDownRight.clicked.connect(self.stretch_dr)
-        self.pushStretchRightDown.clicked.connect(self.stretch_rd)
-
-    def reset(self):
-        self.transform = self.transform_reset.copy()
-        self.apply()
-
-    def undo(self):
-        del self.states[-1]
-        self.transform = self.states[-1]
-        self.apply(True)
-
-    def translate_up(self):
-        self.transform[0] -= self.spinPixels.value()
-        self.apply()
-
-    def translate_down(self):
-        self.transform[0] += self.spinPixels.value()
-        self.apply()
-
-    def translate_left(self):
-        self.transform[1] -= self.spinPixels.value()
-        self.apply()
-
-    def translate_right(self):
-        self.transform[1] += self.spinPixels.value()
-        self.apply()
-
-    def rotate_acw(self):
-        self.transform[2] += self.spinDegrees.value()
-        self.apply()
-
-    def rotate_cw(self):
-        self.transform[2] -= self.spinDegrees.value()
-        self.apply()
-
-    def flip_horizontal(self):
-        self.transform[3] ^= 1
-        self.apply()
-
-    def flip_vertical(self):
-        self.transform[4] ^= 1
-        self.apply()
-
-    def stretch_reset(self):
-        self.transform[5:] = [0] * (len(self.transform) - 5)
-        self.apply()
-
-    def stretch_n(self):
-        self.transform[5] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_ne(self):
-        self.transform[5] -= self.spinPixels.value()
-        self.transform[6] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_e(self):
-        self.transform[6] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_se(self):
-        self.transform[7] += self.spinPixels.value()
-        self.transform[6] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_s(self):
-        self.transform[7] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_sw(self):
-        self.transform[7] += self.spinPixels.value()
-        self.transform[8] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_w(self):
-        self.transform[8] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_nw(self):
-        self.transform[5] -= self.spinPixels.value()
-        self.transform[8] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_ul(self):
-        self.transform[9] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_lu(self):
-        self.transform[10] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_ur(self):
-        self.transform[11] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_ru(self):
-        self.transform[12] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_dl(self):
-        self.transform[13] -= self.spinPixels.value()
-        self.apply()
-
-    def stretch_ld(self):
-        self.transform[14] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_dr(self):
-        self.transform[15] += self.spinPixels.value()
-        self.apply()
-
-    def stretch_rd(self):
-        self.transform[16] += self.spinPixels.value()
-        self.apply()
-
-    def apply(self, undo_flag=False):
-        """Performs the image transformation on the display overlay after saving the new display transform parameters"""
-
-        if not undo_flag:
-            self.states.append(self.transform[:])
-
-        if len(self.states) > 10:
-            del self.states[0]
-
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        self.config['ImageCorrection']['TransformDisplay'] = self.transform
-
-        with open('config.json', 'w+') as config:
-            json.dump(self.config, config, indent=4, sort_keys=True)
-
-        self.update_part.emit(False)
-
-    def save(self):
-        """Adds the current display transform parameters to the current contour transform parameters"""
-
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Add the two transform parameter lists using list comprehension
-        transform_new = [x + y for x, y in zip(self.transform, self.config['ImageCorrection']['TransformContours'])]
-
-        self.config['ImageCorrection']['TransformContours'] = transform_new
-
-        with open('config.json', 'w+') as parameters:
-            json.dump(self.config, parameters, indent=4, sort_keys=True)
-
-    def closeEvent(self, event):
-        """Executes when the window is closed"""
-        self.window_settings.setValue('Part Adjustment Geometry', self.saveGeometry())
 
 
 class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
@@ -1734,7 +1562,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
         progress.emit(0)
         status.emit('Undistorting image...')
-        image = image_processing.ImageTransform().distortion_fix(image)
+        image = image_processing.ImageFix().distortion_fix(image)
 
         if checkboxes[3]:
             if checkboxes[1]:
@@ -1744,7 +1572,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
         progress.emit(25)
         status.emit('Fixing perspective warp...')
-        image = image_processing.ImageTransform().perspective_fix(image)
+        image = image_processing.ImageFix().perspective_fix(image)
 
         if checkboxes[4]:
             if checkboxes[1]:
@@ -1754,7 +1582,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
         progress.emit(50)
         status.emit('Cropping image to size...')
-        image = image_processing.ImageTransform().crop(image)
+        image = image_processing.ImageFix().crop(image)
 
         if checkboxes[5]:
             if checkboxes[0]:
@@ -1766,7 +1594,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
         progress.emit(75)
         status.emit('Applying CLAHE equalization...')
-        image = image_processing.ImageTransform().clahe(image)
+        image = image_processing.ImageFix().clahe(image)
 
         if checkboxes[6]:
             if checkboxes[1]:
