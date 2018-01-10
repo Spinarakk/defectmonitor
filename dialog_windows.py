@@ -814,7 +814,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushDrawContours.clicked.connect(self.draw_setup)
         self.pushZoomIn.clicked.connect(self.zoom_in)
         self.pushZoomOut.clicked.connect(self.zoom_out)
-        self.pushGoSlice.clicked.connect(self.set_slice)
+        self.pushGo.clicked.connect(self.set_slice)
         self.pushRotate.clicked.connect(self.rotate)
         self.pushResetR.clicked.connect(self.rotate_reset)
         self.pushTranslate.clicked.connect(self.translate)
@@ -824,7 +824,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushBrowseOF.clicked.connect(self.browse_output)
 
         # Checkboxes
-        self.checkCentrelines.toggled.connect(self.update_display)
+        self.checkCentrelines.toggled.connect(self.preview_contours)
         self.checkFillContours.toggled.connect(self.preview_contours)
         self.checkBackground.toggled.connect(self.set_background)
 
@@ -837,6 +837,14 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.current_layer = 1
         self.convert_run_flag = False
         self.draw_run_flag = False
+
+        self.part_colours = dict()
+        self.part_transform = dict()
+
+        # Set the column width to as small as possible
+        self.tableTransform.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.tableTransform.resizeColumnsToContents()
+        self.tableTransform.resizeRowsToContents()
 
         # This value is used to indicate which process is active, used for the pause button
         # 0 - None / 1 - Convert / 2 - Draw
@@ -851,10 +859,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.lineOutputFolder.setText(self.output_folder)
 
+        self.threadpool = QThreadPool()
+
         # Set up the display with a 'blank' platform
         self.preview_contours()
-
-        self.threadpool = QThreadPool()
 
     def add_files(self):
         """Adds slice files to the slice file list
@@ -863,58 +871,51 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         filenames = QFileDialog.getOpenFileNames(self, 'Add Slice Files...', '', 'Slice Files (*.cli)')[0]
 
         if filenames:
+            # Stop the selecting of files in the list from doing anything
+            self.listSliceFiles.blockSignals(True)
+
             # Check if any of the selected files are already in the slice list and only add the ones which aren't
             for file in filenames:
                 if file not in self.slice_list:
+                    # Add the new parts to the slice list, colour dictionary and transform dictionary
                     self.slice_list.append(file)
 
-            self.check_files()
+                    # Part colours is a dictionary of each part's preview part colour
+                    # Part transform is a dictionary of each part's transformation parameters
+                    # Set all the preview part colours to blue for now
+                    self.part_colours[os.path.basename(file).replace('.cli', '')] = (255, 0, 0)
+                    self.part_transform[os.path.basename(file).replace('.cli', '')] = [0, 0, 0]
 
-    def check_files(self):
-        """Checks whether all the selected slice files have been converted from .cli into ASCII contours
-        Subsequently converts the files that haven't been converted
-        Also adds the slice files to the listWidget and assigns a part colour to each part"""
+            # Sort the slice list and clear the QListWidget
+            self.slice_list.sort()
+            self.listSliceFiles.clear()
 
-        # Stop the selecting of files in the list from doing anything
-        self.listSliceFiles.blockSignals(True)
+            self.index_list = list()
+            self.slice_counter = 0
+            self.max_layers = 1
 
-        # Sort the slice list and clear the QListWidget
-        self.slice_list.sort()
-        self.listSliceFiles.clear()
+            # Check if all of the selected .cli files have been converted
+            for index, item in enumerate(self.slice_list):
+                # Add the part names to the list window
+                self.listSliceFiles.addItem(os.path.basename(item).replace('.cli', ''))
+                if os.path.isfile(item.replace('.cli', '_contours.txt')):
+                    self.listSliceFiles.item(index).setBackground(QColor('yellow'))
+                else:
+                    self.index_list.append(index)
+                    self.listSliceFiles.item(index).setBackground(QColor('red'))
 
-        # Initialize a few lists and values
-        # Part names is a dictionary of the names without the directory part and their corresponding preview part colour
-        # Part transform is a dictionary of every part's transformation parameters
-        self.part_names = dict()
-        self.part_transform = dict()
-        self.index_list = list()
-        self.slice_counter = 0
-        self.max_layers = 1
-
-        # Add the slice files to the listWidget while checking if the .cli files have been converted
-        for index, item in enumerate(self.slice_list):
-            # Set all the preview part colours to black for now
-            self.part_names[os.path.basename(item).replace('.cli', '')] = (255, 0, 0)
-            self.part_transform[os.path.basename(item).replace('.cli', '')] = [0, 0, 0]
-
-            self.listSliceFiles.addItem(os.path.basename(item).replace('.cli', ''))
-            if os.path.isfile(item.replace('.cli', '_contours.txt')):
-                self.listSliceFiles.item(index).setBackground(QColor('yellow'))
+            # Check if any of the slice files need to be converted at all
+            if self.index_list:
+                # Disable all the buttons to prevent the user from doing concurrent things
+                self.toggle_control(1)
+                self.pushDrawContours.setEnabled(False)
+                self.convert_run_flag = True
+                self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
             else:
-                self.index_list.append(index)
-                self.listSliceFiles.item(index).setBackground(QColor('red'))
-
-        # Check if any of the slice files need to be converted at all
-        if self.index_list:
-            # Disable all the buttons to prevent the user from doing concurrent things
-            self.toggle_control(1)
-            self.convert_run_flag = True
-
-            self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
-        else:
-            self.update_layer_ranges()
-            self.preview_contours()
-            self.pushDrawContours.setEnabled(True)
+                self.toggle_control(2)
+                self.pushDrawContours.setEnabled(True)
+                self.update_layer_ranges()
+                self.preview_contours()
 
     def remove_files(self):
         """Removes slice files from the slice file list"""
@@ -924,15 +925,17 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Grab the list of selected items in the QListWidget
         for item in self.listSliceFiles.selectedItems():
-            # Delete the corresponding file from both slice file lists using the row index of the file
+            # Delete the corresponding file from the slice file list using the row index of the file
             del self.slice_list[self.listSliceFiles.row(item)]
-            self.part_names.pop(item.text(), None)
+
+            # Remove the part name's key from the dictionaries
+            self.part_colours.pop(item.text(), None)
+            self.part_transform.pop(item.text(), None)
             self.listSliceFiles.takeItem(self.listSliceFiles.row(item))
 
         # Check if the list is now empty, if so reset to button state 0
         if not self.slice_list:
             self.contour_dict = dict()
-            self.graphicsDisplay.reset_image()
             self.toggle_control(0)
 
         self.update_layer_ranges()
@@ -956,75 +959,21 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.convert_run_flag and not self.slice_counter == len(self.index_list):
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
         elif self.slice_counter == len(self.index_list):
+            self.toggle_control(2)
             self.pushDrawContours.setEnabled(True)
             self.update_layer_ranges()
             self.preview_contours()
 
-    def preview_contours(self):
-        """Draws a 'preview' of the selected layer's contours"""
-
-        # Create a blank black RGB image to draw contours on
-        self.image_contours = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
-
-        # Change whether to draw on a black or white background depending on if the background checkbox is checked
-        if not self.checkBackground.isChecked():
-            self.image_contours[:] = (255, 255, 255)
-            # Draw boundary lines around the rectangle which should represent the platform edges (currently doesn't)
-            cv2.rectangle(self.image_contours, (0, 0), (3470, 2410), (0, 0, 0), 5)
-
-        if self.checkFillContours.isChecked():
-            thickness = -1
-        else:
-            thickness = 3
-
-        if self.contour_dict:
-            for part_name, contour_list in self.contour_dict.items():
-                try:
-                    contour_string = contour_list[self.current_layer].split('C,')[1::]
-                except IndexError:
-                    continue
-
-                contours = list()
-
-                for string in contour_string:
-                    vectors = string.split(',')[:-1]
-                    contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
-
-                # Calculate a new offset including the part transformation parameters
-                offset = self.config['ImageCorrection']['Offset'].copy()
-                offset[0] += self.part_transform[part_name][0]
-                offset[1] += self.part_transform[part_name][1]
-
-                image_canvas = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
-
-                cv2.drawContours(image_canvas, contours, -1, self.part_names[part_name],
-                                 offset=tuple(offset), thickness=thickness)
-
-                if not self.part_transform[part_name] == 0:
-                    x, y, w, h = cv2.boundingRect(contours[1])
-                    centre_x = x + w // 2
-                    centre_y = y + h // 2
-                    rotation_matrix = cv2.getRotationMatrix2D((centre_x, centre_y), self.part_transform[part_name][2], 1)
-                    image_canvas = cv2.warpAffine(image_canvas, rotation_matrix, (3470,2410))
-
-                self.image_contours = cv2.add(self.image_contours, image_canvas)
-
-
-
-            self.image_contours = cv2.flip(self.image_contours, 0)
-
-        self.update_display()
-
     def select_parts(self):
 
         # Reset the colours of all the parts back to blue
-        for key in self.part_names.keys():
-            self.part_names[key] = (255, 0, 0)
+        for key in self.part_colours.keys():
+            self.part_colours[key] = (255, 0, 0)
 
         # Change the selected item colours to green and re-draw the contours
         for item in self.listSliceFiles.selectedItems():
             # Change the part colour of the selected item to green
-            self.part_names[item.text()] = (0, 255, 0)
+            self.part_colours[item.text()] = (0, 255, 0)
 
         self.preview_contours()
 
@@ -1051,7 +1000,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         for item in self.listSliceFiles.selectedItems():
             # Change the rotation parameter of the selected items to the entered ones
-            self.part_transform[item.text()][2] += self.spinAngle.value()
+            self.part_transform[item.text()][2] += self.spinAngle.value() % 360
 
         self.preview_contours()
 
@@ -1072,7 +1021,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.part_transform[item.text()][0] += self.spinX.value()
             self.part_transform[item.text()][1] += self.spinY.value()
 
-        print(self.part_transform)
         self.preview_contours()
 
     def translate_reset(self):
@@ -1086,8 +1034,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.preview_contours()
 
     def draw_setup(self):
+        """Setup to draw the contours"""
 
-        """If the output folder is set to the build's contours folder, show a warning before proceeding"""
+        #If the output folder is set to the build's contours folder, show a warning before proceeding
         if self.output_folder == self.build['BuildInfo']['Folder']:
             draw_confirmation = QMessageBox(self)
             draw_confirmation.setWindowTitle('Draw Contours')
@@ -1115,6 +1064,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             else:
                 return
 
+        self.pushDrawContours.setEnabled(False)
+        self.toggle_control(1)
+
         # Create the output folder if it doesn't already exist
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
@@ -1131,7 +1083,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # These json files are used to store the defect coordinate and pixel size data for each of the parts
         part_colours = dict()
 
-        for index, part_name in enumerate(self.part_names.keys()):
+        for index, part_name in enumerate(self.part_colours.keys()):
             # Create the colours for each of the parts
             part_colours[part_name] = ((100 + index) % 255, (100 + index) % 255, 0)
 
@@ -1164,9 +1116,13 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.active_process = 2
         self.update_status('All | Drawing %s of %s.' % (str(layer).zfill(4), str(self.spinRangeHigh.value()).zfill(4)))
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, layer,
-                                          self.build['SliceConverter']['Colours'], 0, self.output_folder,
-                                          names_flag)
+        # Create a blank black RGB image to draw the contours on
+        image = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
+
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
+                                          layer, self.build['SliceConverter']['Colours'],
+                                          self.build['SliceConverter']['Transform'], self.output_folder, -1, names_flag,
+                                          True)
         worker.signals.finished.connect(self.draw_contours_finished)
         self.threadpool.start(worker)
 
@@ -1182,7 +1138,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.draw_run_flag and not self.contour_counter == (self.spinRangeHigh.value() + 1):
             self.draw_contours(self.contour_counter)
         elif self.contour_counter == (self.spinRangeHigh.value() + 1):
-            pass
+            self.pushDrawContours.setEnabled(False)
+            self.toggle_control(2)
 
     def set_background(self):
         if self.checkBackground.isChecked():
@@ -1219,7 +1176,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.draw_run_flag = False
 
         elif 'Resume' in self.pushPause.text():
-            self.pushResume.setText('Pause')
+            self.pushPause.setText('Pause')
             if self.active_process == 1:
                 self.convert_run_flag = True
                 self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
@@ -1250,7 +1207,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.groupTranslation.setEnabled(False)
             self.pushBrowseOF.setEnabled(True)
             self.pushPause.setEnabled(False)
-        # State 1 - Files in the middle of being converted
+        # State 1 - Files in the middle of being converted or contours being drawn
         elif state == 1:
             self.pushAddSF.setEnabled(False)
             self.pushRemoveSF.setEnabled(False)
@@ -1273,26 +1230,44 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.pushBrowseOF.setEnabled(True)
             self.pushPause.setEnabled(False)
 
-    def update_display(self):
-
-        # Make a copy of the contour image so that it remains unmodified by the below operations
-        image = self.image_contours.copy()
+    def preview_contours(self):
+        """Draw a 'preview' of the selected layer's contours"""
 
         if self.checkBackground.isChecked():
-            image = cv2.add(self.image_background, image)
+            image = self.image_background.copy()
+        else:
+            image = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
+            image[:] = (255, 255, 255)
+            cv2.rectangle(image, (0, 0), image.shape[:2][::-1], (0, 0, 0), 5)
+
+        # Check if the Fill Contours checkbox is checked to figure out how to draw the contours
+        if self.checkFillContours.isChecked():
+            thickness = -1
+        else:
+            thickness = 3
+
+        layer = self.spinSliceNumber.value()
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
+                                          layer, self.part_colours, self.part_transform, self.output_folder, thickness,
+                                          False, False)
+        worker.signals.result.connect(self.update_display)
+        self.threadpool.start(worker)
+
+    def update_display(self, image):
+        """Display the preview contours on the graphics viewer"""
 
         if self.checkCentrelines.isChecked():
-            cv2.line(image, (0, 1205), (3470, 1205), (0, 0, 0), 3)
-            cv2.line(image, (1735, 0), (1735, 2410), (0, 0, 0), 3)
+            cv2.line(image, (0, image.shape[0] // 2), (image.shape[1], image.shape[0] // 2), (0, 0, 0), 3)
+            cv2.line(image, (image.shape[1] // 2, 0), (image.shape[1] // 2, image.shape[0]), (0, 0, 0), 3)
 
         self.graphicsDisplay.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        self.toggle_control(2)
-
+        self.update_table()
         # Allow the selection of files in the list from doing things
         self.listSliceFiles.blockSignals(False)
 
     def update_layer_ranges(self):
-        """Updates all parts of the dialog window UI that involves the maximum number of layers"""
+        """Updates all parts of the dialog window UI that involves the maximum number of layers
+        Additionally populates the contour dictionary which will be used to draw the contours"""
 
         self.update_status('All | Loading contours...')
 
@@ -1301,7 +1276,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # Load all the contours into memory and save them to a dictionary
         for index, filename in enumerate(self.slice_list):
             with open(filename.replace('.cli', '_contours.txt')) as contour_file:
-                self.contour_dict[list(self.part_names.keys())[index]] = contour_file.readlines()
+                self.contour_dict[list(sorted(self.part_colours.keys()))[index]] = contour_file.readlines()
 
         self.max_layers = 0
         self.slice_height = 0.000
@@ -1317,6 +1292,20 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.spinRangeHigh.setValue(self.max_layers)
 
         self.update_status('All | Contours loaded.')
+
+    def update_table(self):
+        """Updates the Transformation Table with the translation and rotation parameters of each part"""
+
+        # Set the number of rows to the number of parts
+        self.tableTransform.setRowCount(len(self.part_transform))
+        row = 0
+
+        # Populate the table
+        for name, value in sorted(self.part_transform.items()):
+            self.tableTransform.setItem(row, 0, QTableWidgetItem(name))
+            for index in range(3):
+                self.tableTransform.setItem(row, index + 1, QTableWidgetItem(str(value[index])))
+            row += 1
 
     def update_position(self, x, y):
         """Displays the relative position of the mouse cursor over the Layer Preview graphics view"""

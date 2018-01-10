@@ -1,3 +1,11 @@
+January 10
+- Implemented the translation and rotation of the preview contours (and subsequently the drawn ones)
+- Figured out a smarter way of rotating the contour points directly instead of the drawn contours after the fact
+- Rewrote a faster way of drawing on either a white background or a set image
+- Now works as intended and at a reasonable speed
+- Fixed bug with adding and removing files and dictionary sorting
+- The Draw Contours button now draws the contours as expected
+
 January 9
 - Removed the Part Adjustment button and dialog window entirely (deemed unnecessary) along with the associated code
 - Replaced it with a Camera Settings button

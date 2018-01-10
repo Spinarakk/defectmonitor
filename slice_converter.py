@@ -4,6 +4,7 @@ import time
 import cv2
 import numpy as np
 import json
+from operator import add
 
 # Import related modules
 import image_processing
@@ -110,23 +111,12 @@ class SliceConverter:
         # TODO remove timers if not needed
         print('Read CLI %s + READ Time\n%s\n' % (part_name, time.time() - t0))
 
-    def draw_contours(self, contour_dict, layer, part_colours, part_transform, folder, names_flag):
+    def draw_contours(self, contour_dict, image, layer, colours, transform, folder, thickness, names_flag, save_flag):
         """Draw all the contours of the received parts and of the received layer on the same image"""
 
-        # TODO remove timers if not needed
-        t0 = time.time()
-
-        # Grab a few values to be used to draw contours and polygons
-        # 3 at the end of the resolution indicates an RGB image
-        image_resolution = tuple(self.config['ImageCorrection']['ImageResolution'] + [3])
-        offset = tuple(self.config['ImageCorrection']['Offset'])
-
         if names_flag:
-            # Create a blank black RGB image to write the part names on
-            image_names = np.zeros(image_resolution, np.uint8)
-
-        # Create a blank black RGB image to draw contours on
-        image_contours = np.zeros(image_resolution, np.uint8)
+            # Copy a blank black RGB image using the received image's size to write the part names on
+            image_names = np.zeros(image.shape, np.uint8)
 
         # Iterate through all the parts
         for part_name, contour_list in contour_dict.items():
@@ -142,34 +132,51 @@ class SliceConverter:
             # Clear the contours list
             contours = list()
 
-            # Since there might be multiple contours in the one layer
+            # Since there might be multiple contours for a given part
             for string in contour_string:
                 # Convert the string of numbers into a list of vectors using the comma delimiter
                 vectors = string.split(',')[:-1]
                 # Convert the above list of vectors into a numpy array of vectors and append it to the contours list
                 contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
 
-            cv2.drawContours(image_contours, contours, -1, part_colours[part_name], offset=offset, thickness=cv2.FILLED)
+            # Offset the offset by the transform parameters for the current part
+            offset = tuple(map(add, self.config['ImageCorrection']['Offset'], transform[part_name][:2]))
 
-            # For the first layer, find the centre of the contours and put the part names on a blank image
+            # Block of code responsible for rotation of the current part if an angle has been specified
+            if transform[part_name][2]:
+                # Calculate the centre of the largest contour using contour moments (also offset by translation)
+                moments = cv2.moments(max(contours, key=cv2.contourArea))
+                centre = (int(moments['m10'] // moments['m00']), int(moments['m01'] // moments['m00']))
+
+                # Calculate the rotation matrix and rotate the part around it's centre axis
+                rotation_matrix = cv2.getRotationMatrix2D(centre, transform[part_name][2], 1)
+
+                # Rotate each of the contours (in place)
+                for index, item in enumerate(contours):
+                    contours[index] = cv2.transform(item, rotation_matrix)
+
+            # Draw all the contours on the received image
+            cv2.drawContours(image, contours, -1, colours[part_name], offset=offset, thickness=thickness)
+
+            # If set, find the centre of the largest contours and put the part names on a blank image
             if names_flag:
-                # The first contour is generally the largest one, regardless the exact position isn't important
-                moments = cv2.moments(contours[0])
-                centre_x = int(moments['m10'] / moments['m00'])
-                centre_y = abs(image_resolution[0] - int(moments['m01'] / moments['m00']))
-                cv2.putText(image_names, part_name, (centre_x, centre_y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
+                moments = cv2.moments(max(contours, key=cv2.contourArea))
+                # The Y value is subtracted from the height to 'flip' the coordinates without flipping the text itself
+                centre = (int(moments['m10'] // moments['m00']),
+                          abs(image.shape[0] - int(moments['m01'] // moments['m00'])))
+                centre = tuple(map(add, centre, offset))
+                cv2.putText(image_names, part_name, centre, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
 
         # Flip the whole image vertically to account for the fact that OpenCV's origin is the top left corner
-        image_contours = cv2.flip(image_contours, 0)
+        image = cv2.flip(image, 0)
 
-        # Save the image to the selected image folder
-        cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image_contours)
-
-        # Save the part names image to the contours up one folder after transforming it just like the contours image
         if names_flag:
-            image_names = image_processing.ImageFix().apply_transformation(image_names, False)
             cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
-        # TODO remove timers if not needed
-        print('Contour %s Time\n%s\n' % (layer, time.time() - t0))
+        # Save the image to the selected image folder
+        if save_flag:
+            cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image)
+        else:
+            return image
+
+
