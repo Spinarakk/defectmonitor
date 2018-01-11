@@ -1,15 +1,15 @@
 {
     "BuildInfo": {
         "Camera": 0,
-        "EmailAddress": "",
-        "Folder": "",
+        "EmailAddress": "nicholascklee@gmail.com",
+        "Folder": "D:/Documents/MCAM/Builds/2018-01-11 [14''53'22] Default",
         "Machine": 0,
-        "Name": "",
+        "Name": "Default",
         "PlatformDimensions": [
-            636.0,
-            406.0
+            636,
+            406
         ],
-        "Username": ""
+        "Username": "Nicholas Lee"
     },
     "ImageCapture": {
         "Layer": 0.5,
@@ -18,346 +18,36 @@
     },
     "Notifications": {
         "Attachment": "",
-        "Major": true,
-        "Minor": true,
+        "Major": false,
+        "Minor": false,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
         "Colours": {
-            "A1_6": [
+            "Part 01": [
                 100,
                 100,
                 0
             ],
-            "A2_7": [
+            "Part 02": [
                 101,
                 101,
                 0
             ],
-            "A3_8": [
+            "Part 03": [
                 102,
                 102,
                 0
             ],
-            "B1_5": [
+            "Part 04": [
                 103,
                 103,
                 0
             ],
-            "B2_6": [
+            "Part 05": [
                 104,
                 104,
-                0
-            ],
-            "B3_7": [
-                105,
-                105,
-                0
-            ],
-            "C1_2": [
-                106,
-                106,
-                0
-            ],
-            "C2": [
-                107,
-                107,
-                0
-            ],
-            "C3_3": [
-                108,
-                108,
-                0
-            ],
-            "Contour1-1_16": [
-                110,
-                110,
-                0
-            ],
-            "Contour10-1_28": [
-                128,
-                128,
-                0
-            ],
-            "Contour10_20": [
-                127,
-                127,
-                0
-            ],
-            "Contour11-1_11": [
-                130,
-                130,
-                0
-            ],
-            "Contour11_3": [
-                129,
-                129,
-                0
-            ],
-            "Contour12-1_27": [
-                132,
-                132,
-                0
-            ],
-            "Contour12_19": [
-                131,
-                131,
-                0
-            ],
-            "Contour13-1_10": [
-                134,
-                134,
-                0
-            ],
-            "Contour13_2": [
-                133,
-                133,
-                0
-            ],
-            "Contour14-1_26": [
-                136,
-                136,
-                0
-            ],
-            "Contour14_18": [
-                135,
-                135,
-                0
-            ],
-            "Contour15": [
-                137,
-                137,
-                0
-            ],
-            "Contour15-1_9": [
-                138,
-                138,
-                0
-            ],
-            "Contour16-1_25": [
-                140,
-                140,
-                0
-            ],
-            "Contour16_17": [
-                139,
-                139,
-                0
-            ],
-            "Contour1_8": [
-                109,
-                109,
-                0
-            ],
-            "Contour2-1_32": [
-                112,
-                112,
-                0
-            ],
-            "Contour2_24": [
-                111,
-                111,
-                0
-            ],
-            "Contour3-1_15": [
-                114,
-                114,
-                0
-            ],
-            "Contour3_7": [
-                113,
-                113,
-                0
-            ],
-            "Contour4-1_31": [
-                116,
-                116,
-                0
-            ],
-            "Contour4_23": [
-                115,
-                115,
-                0
-            ],
-            "Contour5-1_14": [
-                118,
-                118,
-                0
-            ],
-            "Contour5_6": [
-                117,
-                117,
-                0
-            ],
-            "Contour6-1_30": [
-                120,
-                120,
-                0
-            ],
-            "Contour6_22": [
-                119,
-                119,
-                0
-            ],
-            "Contour7-1_13": [
-                122,
-                122,
-                0
-            ],
-            "Contour7_5": [
-                121,
-                121,
-                0
-            ],
-            "Contour8-1_29": [
-                124,
-                124,
-                0
-            ],
-            "Contour8_21": [
-                123,
-                123,
-                0
-            ],
-            "Contour9-1_12": [
-                126,
-                126,
-                0
-            ],
-            "Contour9_4": [
-                125,
-                125,
-                0
-            ],
-            "Cubic 10_17": [
-                150,
-                150,
-                0
-            ],
-            "Cubic 11_15": [
-                151,
-                151,
-                0
-            ],
-            "Cubic 12_13": [
-                152,
-                152,
-                0
-            ],
-            "Cubic 13_9": [
-                153,
-                153,
-                0
-            ],
-            "Cubic 14_7": [
-                154,
-                154,
-                0
-            ],
-            "Cubic 15_5": [
-                155,
-                155,
-                0
-            ],
-            "Cubic 16_18": [
-                156,
-                156,
-                0
-            ],
-            "Cubic 17_16": [
-                157,
-                157,
-                0
-            ],
-            "Cubic 18_14": [
-                158,
-                158,
-                0
-            ],
-            "Cubic 1_3": [
-                141,
-                141,
-                0
-            ],
-            "Cubic 2_2": [
-                142,
-                142,
-                0
-            ],
-            "Cubic 3": [
-                143,
-                143,
-                0
-            ],
-            "Cubic 4_12": [
-                144,
-                144,
-                0
-            ],
-            "Cubic 5_11": [
-                145,
-                145,
-                0
-            ],
-            "Cubic 6_10": [
-                146,
-                146,
-                0
-            ],
-            "Cubic 7_8": [
-                147,
-                147,
-                0
-            ],
-            "Cubic 8_6": [
-                148,
-                148,
-                0
-            ],
-            "Cubic 9_4": [
-                149,
-                149,
-                0
-            ],
-            "D1": [
-                159,
-                159,
-                0
-            ],
-            "D2_4": [
-                160,
-                160,
-                0
-            ],
-            "D3_3": [
-                161,
-                161,
-                0
-            ],
-            "E1_2": [
-                162,
-                162,
-                0
-            ],
-            "E2_5": [
-                163,
-                163,
-                0
-            ],
-            "E3_4": [
-                164,
-                164,
-                0
-            ],
-            "Spot damage_1": [
-                165,
-                165,
-                0
-            ],
-            "Spot damage_2_2": [
-                166,
-                166,
                 0
             ],
             "background": [
@@ -367,406 +57,34 @@
             ]
         },
         "Files": [
-            "D:/Documents/MCAM/Slice Files/26-10-2017/A1_6.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/A2_7.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/A3_8.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/B1_5.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/B2_6.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/B3_7.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/C1_2.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/C2.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/C3_3.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour1-1_16.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour10-1_28.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour10_20.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour11-1_11.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour11_3.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour12-1_27.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour12_19.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour13-1_10.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour13_2.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour14-1_26.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour14_18.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour15-1_9.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour15.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour16-1_25.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour16_17.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour1_8.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour2-1_32.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour2_24.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour3-1_15.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour3_7.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour4-1_31.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour4_23.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour5-1_14.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour5_6.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour6-1_30.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour6_22.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour7-1_13.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour7_5.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour8-1_29.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour8_21.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour9-1_12.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Contour9_4.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 10_17.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 11_15.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 12_13.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 13_9.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 14_7.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 15_5.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 16_18.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 17_16.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 18_14.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 1_3.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 2_2.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 3.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 4_12.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 5_11.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 6_10.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 7_8.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 8_6.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Cubic 9_4.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/D1.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/D2_4.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/D3_3.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/E1_2.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/E2_5.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/E3_4.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Spot damage_1.cli",
-            "D:/Documents/MCAM/Slice Files/26-10-2017/Spot damage_2_2.cli"
+            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 01.cli",
+            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 02.cli",
+            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 03.cli",
+            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 04.cli",
+            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 05.cli"
         ],
         "Transform": {
-            "A1_6": [
+            "Part 01": [
                 0,
                 0,
                 0
             ],
-            "A2_7": [
+            "Part 02": [
                 0,
                 0,
                 0
             ],
-            "A3_8": [
+            "Part 03": [
                 0,
                 0,
                 0
             ],
-            "B1_5": [
+            "Part 04": [
                 0,
                 0,
                 0
             ],
-            "B2_6": [
-                0,
-                0,
-                0
-            ],
-            "B3_7": [
-                0,
-                0,
-                0
-            ],
-            "C1_2": [
-                0,
-                0,
-                0
-            ],
-            "C2": [
-                0,
-                0,
-                0
-            ],
-            "C3_3": [
-                0,
-                0,
-                0
-            ],
-            "Contour1-1_16": [
-                0,
-                0,
-                0
-            ],
-            "Contour10-1_28": [
-                0,
-                0,
-                0
-            ],
-            "Contour10_20": [
-                0,
-                0,
-                0
-            ],
-            "Contour11-1_11": [
-                0,
-                0,
-                0
-            ],
-            "Contour11_3": [
-                0,
-                0,
-                0
-            ],
-            "Contour12-1_27": [
-                0,
-                0,
-                0
-            ],
-            "Contour12_19": [
-                0,
-                0,
-                0
-            ],
-            "Contour13-1_10": [
-                0,
-                0,
-                0
-            ],
-            "Contour13_2": [
-                0,
-                0,
-                0
-            ],
-            "Contour14-1_26": [
-                0,
-                0,
-                0
-            ],
-            "Contour14_18": [
-                0,
-                0,
-                0
-            ],
-            "Contour15": [
-                0,
-                0,
-                0
-            ],
-            "Contour15-1_9": [
-                0,
-                0,
-                0
-            ],
-            "Contour16-1_25": [
-                0,
-                0,
-                0
-            ],
-            "Contour16_17": [
-                0,
-                0,
-                0
-            ],
-            "Contour1_8": [
-                0,
-                0,
-                0
-            ],
-            "Contour2-1_32": [
-                0,
-                0,
-                0
-            ],
-            "Contour2_24": [
-                0,
-                0,
-                0
-            ],
-            "Contour3-1_15": [
-                0,
-                0,
-                0
-            ],
-            "Contour3_7": [
-                0,
-                0,
-                0
-            ],
-            "Contour4-1_31": [
-                0,
-                0,
-                0
-            ],
-            "Contour4_23": [
-                0,
-                0,
-                0
-            ],
-            "Contour5-1_14": [
-                0,
-                0,
-                0
-            ],
-            "Contour5_6": [
-                0,
-                0,
-                0
-            ],
-            "Contour6-1_30": [
-                0,
-                0,
-                0
-            ],
-            "Contour6_22": [
-                0,
-                0,
-                0
-            ],
-            "Contour7-1_13": [
-                0,
-                0,
-                0
-            ],
-            "Contour7_5": [
-                0,
-                0,
-                0
-            ],
-            "Contour8-1_29": [
-                0,
-                0,
-                0
-            ],
-            "Contour8_21": [
-                0,
-                0,
-                0
-            ],
-            "Contour9-1_12": [
-                0,
-                0,
-                0
-            ],
-            "Contour9_4": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 10_17": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 11_15": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 12_13": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 13_9": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 14_7": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 15_5": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 16_18": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 17_16": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 18_14": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 1_3": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 2_2": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 3": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 4_12": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 5_11": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 6_10": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 7_8": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 8_6": [
-                0,
-                0,
-                0
-            ],
-            "Cubic 9_4": [
-                0,
-                0,
-                0
-            ],
-            "D1": [
-                0,
-                0,
-                0
-            ],
-            "D2_4": [
-                0,
-                0,
-                0
-            ],
-            "D3_3": [
-                0,
-                0,
-                0
-            ],
-            "E1_2": [
-                0,
-                0,
-                0
-            ],
-            "E2_5": [
-                0,
-                0,
-                0
-            ],
-            "E3_4": [
-                0,
-                0,
-                0
-            ],
-            "Spot damage_1": [
-                0,
-                0,
-                0
-            ],
-            "Spot damage_2_2": [
+            "Part 05": [
                 0,
                 0,
                 0

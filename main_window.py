@@ -539,6 +539,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.SC_dialog.activateWindow()
 
     def slice_converter_closed(self):
+        if self.display_flag:
+            self.update_folders(True)
+
         self.SC_dialog = None
 
     def image_converter(self):
@@ -567,7 +570,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # The widgetDisplay's tab is saved at this instance so that changing the tab doesn't affect the process
         self.tab_index = self.widgetDisplay.currentIndex()
-        self.toggle_processing_buttons(1)
+        self.toggle_processing_buttons(0)
         self.process_settings(self.sliderDisplay.value())
 
     def process_all(self):
@@ -605,7 +608,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushProcessAll.setStyleSheet('')
             self.pushProcessAll.setText('Process All')
             self.actionProcessAll.setText('Process All')
-            self.toggle_processing_buttons(1)
+            self.toggle_processing_buttons(0)
 
     def process_parts(self):
         pass
@@ -621,7 +624,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Vary the status message to display depending on which button was pressed
         if self.all_flag:
-            self.toggle_processing_buttons(3)
+            self.toggle_processing_buttons(2)
             self.defect_counter += 1
             self.update_status('Running %s layer %s through the Defect Detector...' % (phase, str(layer).zfill(4)))
         else:
@@ -661,25 +664,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def toggle_processing_buttons(self, state):
         """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
 
-        # State 1 is when the current tab of images CANNOT be processed, or when a Process Current is running
-        if state == 1:
-            self.pushProcessCurrent.setEnabled(False)
-            self.actionProcessCurrent.setEnabled(False)
-            self.pushProcessAll.setEnabled(False)
-            self.actionProcessAll.setEnabled(False)
-        # State 2 is when the current image CAN be processed
-        elif state == 2:
-            self.pushProcessCurrent.setEnabled(True)
-            self.actionProcessCurrent.setEnabled(True)
-            self.pushProcessAll.setEnabled(True)
-            self.actionProcessAll.setEnabled(True)
-        # State 3 is when a Process All is running
+        # State 0 is when the current tab of images CANNOT be processed, or when a Process Current is running
+        # State 1 is when the current image CAN be processed
+        # State 2 is when a Process All is running
         # Or when the current image CANNOT be processed but the tab still has other images that CAN
-        elif state == 3:
-            self.pushProcessCurrent.setEnabled(False)
-            self.actionProcessCurrent.setEnabled(False)
-            self.pushProcessAll.setEnabled(True)
-            self.actionProcessAll.setEnabled(True)
+        self.pushProcessCurrent.setEnabled(state == 1)
+        self.actionProcessCurrent.setEnabled(state == 1)
+        self.pushProcessAll.setEnabled(state != 0)
+        self.actionProcessAll.setEnabled(state != 0)
+        self.pushProcessParts.setEnabled(state != 0)
+        self.actionProcessParts.setEnabled(state != 0)
 
     # MENUBAR -> SETTINGS
 
@@ -1059,7 +1053,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                 # Enable the Defect Processor toolbar and actions if on coat or scan tab
                 if not self.processing_flag and index < 2:
-                    self.toggle_processing_buttons(2)
+                    self.toggle_processing_buttons(1)
             else:
                 # Set the stack tab to the information label and display the missing layer information
                 label.setText('%s Layer %s Image does not exist.' % (phase.capitalize(), layer))
@@ -1072,7 +1066,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
                 # Enable the Defect Processor toolbar and actions
                 if not self.processing_flag and index < 2:
-                    self.toggle_processing_buttons(3)
+                    self.toggle_processing_buttons(2)
                 return
 
             # Check if the Part Contours, Part Names and Gridlines images exist, otherwise disable their checkboxes
@@ -1152,9 +1146,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 if contours.shape[:2] != image.shape[:2]:
                     contours = cv2.resize(contours, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
-                # Apply the stored transformation values to the overlay image
-                contours = image_processing.ImageFix().apply_transformation(contours, True)
-
                 # Apply the overlay on top of the image
                 image = cv2.add(image, contours)
 
@@ -1207,30 +1198,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
 
         # State 0 - No images in folder
-        if state < 2:
-            self.actionZoomIn.setEnabled(False)
-            self.actionZoomIn.setChecked(False)
-            self.actionZoomOut.setEnabled(False)
-            self.actionExportImage.setEnabled(False)
-            self.frameSlider.setEnabled(False)
-            self.pushGo.setEnabled(False)
-
-            # State 1 - Image not found, have images in folder
-            if state == 1:
-                self.frameSlider.setEnabled(True)
-                self.pushDisplayUpSeek.setEnabled(True)
-                self.pushDisplayDownSeek.setEnabled(True)
-                self.pushGo.setEnabled(True)
-
+        # State 1 - Image not found, have images in folder
         # State 2 - Image found
-        elif state == 2:
-            self.actionZoomIn.setEnabled(True)
-            self.actionZoomOut.setEnabled(True)
-            self.actionExportImage.setEnabled(True)
-            self.frameSlider.setEnabled(True)
-            self.pushGo.setEnabled(True)
-            self.pushDisplayUpSeek.setEnabled(False)
-            self.pushDisplayDownSeek.setEnabled(False)
+        self.actionZoomIn.setEnabled(state == 2)
+        self.actionZoomOut.setEnabled(state == 2)
+        self.actionExportImage.setEnabled(state == 2)
+        self.frameSlider.setEnabled(state > 0)
+        self.pushGo.setEnabled(state > 0)
+        self.pushDisplayUpSeek.setEnabled(state == 1)
+        self.pushDisplayDownSeek.setEnabled(state == 1)
+
+        if state < 2:
+            self.actionZoomIn.setChecked(False)
 
     def toggle_all(self):
         """Checks or unchecks all the available (enabled) defect checkboxes"""

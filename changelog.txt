@@ -1,3 +1,12 @@
+January 11
+- Changed the layout of the Transform table in the Slice Converter
+- Finalized the layout of the Slice Converter window
+- Added a warning when the user tries to exit out of the Slice Converter window properly terminating any running processes before safely exiting
+- Double checked the button states for all the running processes in the Slice Converter window
+- Removed more redundant and unused code
+- Added Contour thickness and Centreline thickness (for the Slice Converter preview window) to the preferences window
+- Fixed up the proper functionality for the Slice Converter window when a build has been created
+
 January 10
 - Implemented the translation and rotation of the preview contours (and subsequently the drawn ones)
 - Figured out a smarter way of rotating the contour points directly instead of the drawn contours after the fact

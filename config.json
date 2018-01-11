@@ -28,7 +28,7 @@
         "Username": "Nicholas Lee"
     },
     "Gridlines": {
-        "Size": 99,
+        "Size": 100,
         "Thickness": 2
     },
     "ImageCorrection": {
@@ -94,49 +94,15 @@
             122
         ],
         "RMS": 1.6641703202,
-        "ScaleFactor": 5.3333333333,
-        "TransformContours": [
-            20,
-            -10,
-            0,
-            0,
-            0,
-            -80,
-            0,
-            35,
-            0,
-            0,
-            -55,
-            10,
-            0,
-            -5,
-            5,
-            0,
-            10
-        ],
-        "TransformDisplay": [
-            -20,
-            25,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        ]
+        "ScaleFactor": 5.3333333333
     },
     "RecentBuilds": [
         "D:/Documents/MCAM/Builds/test.json"
     ],
+    "SliceConverter": {
+        "CentrelineT": 3,
+        "ContourT": 3
+    },
     "Threshold": {
         "HistogramCoat": 5000,
         "HistogramScan": 5000,

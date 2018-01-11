@@ -25,9 +25,6 @@ class SliceConverter:
     def convert_cli(self, filename, status, progress):
         """Reads the .cli file and converts the contents from binary into an organised ASCII contour list"""
 
-        # TODO remove timers if not needed
-        t0 = time.time()
-
         # UI Progress and Status Messages
         progress_previous = None
         part_name = os.path.splitext(os.path.basename(filename))[0]
@@ -108,9 +105,6 @@ class SliceConverter:
 
         progress.emit(100)
 
-        # TODO remove timers if not needed
-        print('Read CLI %s + READ Time\n%s\n' % (part_name, time.time() - t0))
-
     def draw_contours(self, contour_dict, image, layer, colours, transform, folder, thickness, names_flag, save_flag):
         """Draw all the contours of the received parts and of the received layer on the same image"""
 
@@ -162,10 +156,9 @@ class SliceConverter:
             if names_flag:
                 moments = cv2.moments(max(contours, key=cv2.contourArea))
                 # The Y value is subtracted from the height to 'flip' the coordinates without flipping the text itself
-                centre = (int(moments['m10'] // moments['m00']),
-                          abs(image.shape[0] - int(moments['m01'] // moments['m00'])))
-                centre = tuple(map(add, centre, offset))
-                cv2.putText(image_names, part_name, centre, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
+                centre = (int(moments['m10'] // moments['m00']) + offset[0],
+                          abs(image.shape[0] - (int(moments['m01'] // moments['m00'] + offset[1]))))
+                cv2.putText(image_names, part_name, centre, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
         # Flip the whole image vertically to account for the fact that OpenCV's origin is the top left corner
         image = cv2.flip(image, 0)
