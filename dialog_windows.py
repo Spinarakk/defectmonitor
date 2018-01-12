@@ -35,8 +35,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        # Load from the build.json file
-        with open('build.json') as build:
+        # Load from the default build.json file
+        with open('build_default.json') as build:
             self.build = json.load(build)
 
         # Load from the config.json file
@@ -81,8 +81,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.lineImageFolder.setText(self.build['BuildInfo']['Folder'])
             self.lineUsername.setText(self.build['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
-            self.checkMinor.setChecked(self.build['Notifications']['Minor'])
-            self.checkMajor.setChecked(self.build['Notifications']['Major'])
 
         # If this dialog window was opened as a result of the Build Settings... action, then the following is executed
         # Disable a few of the buttons to disallow changing of the slice files and build folder
@@ -137,14 +135,14 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.build['BuildInfo']['Username'] = self.lineUsername.text()
                 self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.text()
                 if self.checkAddAttachment.isChecked():
-                    self.build['Notifications']['Attachment'] = 'test_image.jpg'
+                    attachment = 'test_image.jpg'
                 else:
-                    self.build['Notifications']['Attachment'] = ''
+                    attachment = ''
 
                 with open('build.json', 'w+') as build:
                     json.dump(self.build, build, indent=4, sort_keys=True)
 
-                worker = qt_multithreading.Worker(extra_functions.Notifications().test_message)
+                worker = qt_multithreading.Worker(extra_functions.Notifications().test_message, attachment)
                 worker.signals.finished.connect(self.send_test_finished)
                 self.threadpool.start(worker)
             else:
@@ -200,8 +198,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.build['BuildInfo']['Machine'] = self.comboMachine.currentIndex()
         self.build['BuildInfo']['Camera'] = self.comboCamera.currentIndex()
         self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
-        self.build['Notifications']['Minor'] = self.checkMinor.isChecked()
-        self.build['Notifications']['Major'] = self.checkMajor.isChecked()
 
         # Save the selected platform dimensions to the config.json file
         if self.comboMachine.currentIndex() == 0:
@@ -264,6 +260,9 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         super(Preferences, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+
+        # Disallow the user from resizing the dialog window
+        self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -284,10 +283,10 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinThickness.setValue(self.config['Gridlines']['Thickness'])
         self.spinContourT.setValue(self.config['SliceConverter']['ContourT'])
         self.spinCentrelineT.setValue(self.config['SliceConverter']['CentrelineT'])
+        self.spinIdleTimeout.setValue(self.config['IdleTimeout'])
         self.lineBuildName.setText(self.config['Defaults']['BuildName'])
         self.lineUsername.setText(self.config['Defaults']['Username'])
         self.lineEmailAddress.setText(self.config['Defaults']['EmailAddress'])
-
 
         # Set the maximum range of the grid size spinbox
         self.spinSize.setMaximum(int(self.config['ImageCorrection']['ImageResolution'][0] / 2))
@@ -299,6 +298,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinThickness.valueChanged.connect(self.apply_enable)
         self.spinContourT.valueChanged.connect(self.apply_enable)
         self.spinCentrelineT.valueChanged.connect(self.apply_enable)
+        self.spinIdleTimeout.valueChanged.connect(self.apply_enable)
         self.lineBuildName.textChanged.connect(self.apply_enable)
         self.lineUsername.textChanged.connect(self.apply_enable)
         self.lineEmailAddress.textChanged.connect(self.apply_enable)
@@ -361,6 +361,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.config['BuildFolder'] = self.lineBuildFolder.text()
         self.config['SliceConverter']['ContourT'] = self.spinContourT.value()
         self.config['SliceConverter']['CentrelineT'] = self.spinCentrelineT.value()
+        self.config['IdleTimeout'] = self.spinIdleTimeout.value()
         self.config['Defaults']['BuildName'] = self.lineBuildName.text()
         self.config['Defaults']['Username'] = self.lineUsername.text()
         self.config['Defaults']['EmailAddress'] = self.lineEmailAddress.text()
@@ -397,6 +398,9 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         super(CameraSettings, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+
+        # Disallow the user from resizing the dialog window
+        self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -1083,7 +1087,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.draw_run_flag and not self.contour_counter == (self.spinRangeHigh.value() + 1):
             self.draw_contours(self.contour_counter)
         elif self.contour_counter == (self.spinRangeHigh.value() + 1):
-            self.pushDrawContours.setEnabled(False)
+            self.draw_run_flag = False
+            self.pushDrawContours.setEnabled(True)
             self.toggle_control(2)
 
     def set_background(self):

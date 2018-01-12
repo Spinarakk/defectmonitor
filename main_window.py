@@ -22,7 +22,6 @@ uic.compileUiDir('gui')
 import dialog_windows
 import image_capture
 import image_processing
-import slice_converter
 import extra_functions
 import qt_multithreading
 
@@ -54,7 +53,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.setWindowIcon(QIcon('gui/logo.ico'))
 
         # Set the version number here
-        self.version = '0.9.0'
+        self.version = '0.9.5'
 
         # Load default build settings from the hidden non-user accessible build_default.json file
         with open('build_default.json') as build:
@@ -67,11 +66,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Verify that the stored Build folder exists, and create a new default one if it doesn't
         if not os.path.isdir(self.config['BuildFolder']):
             self.config['BuildFolder'] = os.path.dirname(os.getcwd().replace('\\', '/')) + '/Builds'
-            os.makedirs(self.config['BuildFolder'])
+            if not os.path.isdir(self.config['BuildFolder']):
+                os.makedirs(self.config['BuildFolder'])
 
         # Save the default build to the current working build.json file (using w+ in case file doesn't exist)
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
+
+        # Save the config settings to account for any new build folders
+        with open('config.json', 'w+') as config:
+            json.dump(self.config, config, indent=4, sort_keys=True)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Menubar -> File
@@ -654,13 +658,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessAll.setText('Process All')
             self.update_status('Defect Detection finished successfully.', 10000)
 
-    def send_notification(self, layer, phase):
-        """Sends an email notification if a detected defect goes above the set threshold values
-        Only works if a current build is in running and if the appropriate checkboxes were checked"""
-
-        if self.build['Notifications']['Major']:
-            worker = qt_multithreading.Worker(extra_functions.Notifications.major_defect_message)
-
     def toggle_processing_buttons(self, state):
         """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
 
@@ -752,6 +749,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.P_dialog.activateWindow()
 
     def preferences_closed(self):
+        with open('config.json') as config:
+            self.config = json.load(config)
+
         self.P_dialog = None
 
     # MENUBAR -> HELP
@@ -762,8 +762,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         QMessageBox.about(self, 'About Defect Monitor',
                           '<b>Defect Monitor</b><br><br>Version %s<br> Defect Monitor is a monitoring application '
                           'used to detect defects within the scan and coat layers of a 3D metal printing build.'
-                          '<br><br>For assistance with the program, contact Nicholas Lee on 04 1209 8784'
-                          'or at nicholascklee@gmail.com.'% self.version)
+                          '<br><br>For assistance with the program or to report bugs/errors/crashes, please contact '
+                          'Nicholas Lee at nicholascklee@gmail.com (preferred) or at 04 1209 8784.'% self.version)
 
         # Copyright message: '<br><br>Copyright (C) 2017 MCAM.'
 
@@ -779,8 +779,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Executes when Tools -> Image Capture -> Snapshot is clicked or when the Snapshot button is clicked
         Captures and saves a snapshot image by using a worker thread to perform the snapshot function"""
 
-        self.actionSnapshot.setEnabled(False)
         self.pushSnapshot.setEnabled(False)
+        self.actionSnapshot.setEnabled(False)
 
         # Capture a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_snapshot)
@@ -819,15 +819,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.build = json.load(build)
 
             # Enable / disable certain UI elements to prevent concurrent processes
+            self.toggle_build_buttons(1)
             self.update_status('Running build.')
-            self.actionSnapshot.setEnabled(False)
-            self.pushSnapshot.setEnabled(False)
-            self.actionFauxTrigger.setEnabled(True)
-            self.pushStop.setEnabled(True)
-            self.actionAcquireCamera.setEnabled(False)
-            self.actionAcquireTrigger.setEnabled(False)
-            self.pushAcquireCT.setEnabled(False)
-            self.checkResume.setEnabled(False)
 
             # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
             # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
@@ -859,7 +852,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Change the RUN button/action into a PAUSE/RESUME button/action
             self.pushRun.setStyleSheet('QPushButton {color: #ffaa00;}')
             self.pushRun.setText('PAUSE')
-            self.actionRun.setText('PAUSE')
+            self.actionRun.setText('Pause')
 
             # Start the capture run process
             self.run_loop('')
@@ -867,7 +860,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         elif 'PAUSE' in self.pushRun.text():
             self.pushRun.setStyleSheet('QPushButton {color: $00aa00;}')
             self.pushRun.setText('RESUME')
-            self.actionRun.setText('RESUME')
+            self.actionRun.setText('Resume')
             self.timer_stopwatch.stop()
             self.update_status('Current build paused.')
             self.update_status_camera('Paused')
@@ -877,7 +870,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         elif 'RESUME' in self.pushRun.text():
             self.pushRun.setStyleSheet('QPushButton {color: #ffaa00;}')
             self.pushRun.setText('PAUSE')
-            self.actionRun.setText('PAUSE')
+            self.actionRun.setText('Pause')
             self.timer_stopwatch.start(1000)
             self.run_exit()
             self.update_status('Current build resumed.')
@@ -941,28 +934,47 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Enable / disable certain UI elements
         # Disabling the Pause button stops the trigger polling loop
+        self.toggle_build_buttons(0)
         self.update_status('Build stopped.', 3000)
         self.update_status_camera('Found')
         self.update_status_trigger(self.trigger_port)
-        self.pushRun.setEnabled(True)
-        self.actionRun.setEnabled(True)
-        self.pushStop.setEnabled(False)
-        self.actionAcquireCamera.setEnabled(True)
-        self.actionAcquireTrigger.setEnabled(True)
-        self.pushAcquireCT.setEnabled(True)
-        self.checkResume.setEnabled(True)
-        self.actionFauxTrigger.setEnabled(False)
-        self.actionSnapshot.setEnabled(True)
-        self.pushSnapshot.setEnabled(True)
 
         # Reset the Pause/Resume button back to its default RUN state (including the text colour)
         self.pushRun.setStyleSheet('QPushButton {color: #008080;}')
         self.pushRun.setText('RUN')
-        self.actionRun.setText('RUN')
+        self.actionRun.setText('Run')
 
         # Stop the stopwatch timer and close the serial port
         self.timer_stopwatch.stop()
         self.serial_trigger.close()
+
+    def toggle_build_buttons(self, state):
+        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
+
+        # State 0 is when a build is not being run
+        # State 1 is when a build is being run
+        self.actionNew.setEnabled(state == 0)
+        self.actionOpen.setEnabled(state == 0)
+        self.menuRecentBuilds.setEnabled(state == 0)
+        self.pushCameraSettings.setEnabled(state == 0)
+        self.actionCameraSettings.setEnabled(state == 0)
+        self.pushCameraCalibration.setEnabled(state == 0)
+        self.actionCameraCalibration.setEnabled(state == 0)
+        self.pushSliceConverter.setEnabled(state == 0)
+        self.actionSliceConverter.setEnabled(state == 0)
+        self.pushImageConverter.setEnabled(state == 0)
+        self.actionImageConverter.setEnabled(state == 0)
+        self.actionBuildSettings.setEnabled(state == 0)
+        self.actionPreferences.setEnabled(state == 0)
+        self.checkResume.setEnabled(state == 0)
+
+        self.pushAcquireCT.setEnabled(state == 0)
+        self.actionAcquireCamera.setEnabled(state == 0)
+        self.actionAcquireTrigger.setEnabled(state == 0)
+        self.pushSnapshot.setEnabled(state == 0)
+        self.actionSnapshot.setEnabled(state == 0)
+        self.actionFauxTrigger.setEnabled(state == 1)
+        self.pushStop.setEnabled(state == 1)
 
     def reset_idle(self):
         """Resets the stopwatch idle counter whenever an image has been captured"""
@@ -973,7 +985,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def fix_image(self, image_name):
         """Use the received image name to load the image in order to fix it, then process it"""
 
-        self.image_name = image_name
+        self.image_name = image_name.replace('R_', 'F_').replace('raw', 'fixed')
 
         self.update_status('Applying image fixes...')
         worker = qt_multithreading.Worker(self.fix_image_function, image_name)
@@ -993,7 +1005,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         image = image_processing.ImageFix().crop(image)
 
         # Save the image using a modified image name
-        cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
+        cv2.imwrite(image_name, image)
 
     def fix_image_finished(self):
         """Executes when the fix image function method is finished"""
@@ -1565,10 +1577,24 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.sliderDisplay.setTickInterval(math.ceil(max_layers // 50))
 
     def update_time(self):
-        """Updates the timers at the bottom right of the Main Window with an incremented formatted timestamp"""
+        """Updates the timers at the bottom right of the Main Window with an incremented formatted timestamp
+        Also checks that the stopwatch idle hasn't exceeded a predefined idle time limit and if so, send a notification"""
 
         self.stopwatch_elapsed += 1
         self.stopwatch_idle += 1
+
+        # If the idle time exceeds the stored idle timeout, display an error popup and send a notification
+        if self.stopwatch_idle > self.config['IdleTimeout']:
+            idle_error = QMessageBox(self)
+            idle_error.setWindowTitle('Error')
+            idle_error.setIcon(QMessageBox.Critical)
+            idle_error.setText('An image has not been taken in the last %s minutes.\nThe machine might have '
+                               'malfunctioned, and error might have occured or the user has forgotten to stop the '
+                               'image taking process. An email notification has been sent to %s at %s.\nThe image '
+                               'capturing process will continue indefinitely regardless.' %
+                               (self.config['IdleTimeout'], self.build['BuildInfo']['Username'],
+                                self.build['BuildInfo']['EmailAddress']))
+            idle_error.show()
 
         self.labelElapsedTime.setText(self.format_time(self.stopwatch_elapsed))
         self.labelIdleTime.setText(self.format_time(self.stopwatch_idle))

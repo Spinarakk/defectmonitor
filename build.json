@@ -2,7 +2,7 @@
     "BuildInfo": {
         "Camera": 0,
         "EmailAddress": "nicholascklee@gmail.com",
-        "Folder": "D:/Documents/MCAM/Builds/2018-01-11 [14''53'22] Default",
+        "Folder": "D:/Documents/MCAM/Builds/2018-01-12 [15''04'07] Default",
         "Machine": 0,
         "Name": "Default",
         "PlatformDimensions": [
@@ -18,77 +18,12 @@
     },
     "Notifications": {
         "Attachment": "",
-        "Major": false,
-        "Minor": false,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
-        "Colours": {
-            "Part 01": [
-                100,
-                100,
-                0
-            ],
-            "Part 02": [
-                101,
-                101,
-                0
-            ],
-            "Part 03": [
-                102,
-                102,
-                0
-            ],
-            "Part 04": [
-                103,
-                103,
-                0
-            ],
-            "Part 05": [
-                104,
-                104,
-                0
-            ],
-            "background": [
-                0,
-                0,
-                0
-            ]
-        },
-        "Files": [
-            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 01.cli",
-            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 02.cli",
-            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 03.cli",
-            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 04.cli",
-            "D:/Documents/MCAM/Defect Monitor Test Slice Files/Part 05.cli"
-        ],
-        "Transform": {
-            "Part 01": [
-                0,
-                0,
-                0
-            ],
-            "Part 02": [
-                0,
-                0,
-                0
-            ],
-            "Part 03": [
-                0,
-                0,
-                0
-            ],
-            "Part 04": [
-                0,
-                0,
-                0
-            ],
-            "Part 05": [
-                0,
-                0,
-                0
-            ]
-        }
+        "Colours": {},
+        "Files": [],
+        "Transform": {}
     }
 }

@@ -1211,7 +1211,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>98</width>
             <height>110</height>
            </rect>
           </property>
@@ -1414,7 +1414,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>136</width>
+            <width>98</width>
             <height>110</height>
            </rect>
           </property>
@@ -1684,19 +1684,6 @@
     <string>Slice Converter</string>
    </property>
   </action>
-  <action name="actionPartAdjustment">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Part Adjustment</string>
-   </property>
-  </action>
-  <action name="actionViewHelp">
-   <property name="text">
-    <string>View Help</string>
-   </property>
-  </action>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
@@ -1732,25 +1719,6 @@
     <string>Clear Builds</string>
    </property>
   </action>
-  <action name="actionClose">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Close</string>
-   </property>
-  </action>
-  <action name="actionAdvancedMode">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Advanced Mode</string>
-   </property>
-  </action>
   <action name="actionProcessCurrent">
    <property name="enabled">
     <bool>false</bool>
@@ -1765,11 +1733,6 @@
    </property>
    <property name="text">
     <string>Process All</string>
-   </property>
-  </action>
-  <action name="actionProcessSelected">
-   <property name="text">
-    <string>Process Selected...</string>
    </property>
   </action>
   <action name="actionUpdateFolders">
@@ -1791,30 +1754,6 @@
    </property>
    <property name="text">
     <string>Defect Reports</string>
-   </property>
-  </action>
-  <action name="actionHistogramComparison">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Histogram Comparison</string>
-   </property>
-  </action>
-  <action name="actionReport_Generation">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Report Generation</string>
-   </property>
-  </action>
-  <action name="actionDefectGraphs">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Defect Graphs</string>
    </property>
   </action>
   <action name="actionPreferences">

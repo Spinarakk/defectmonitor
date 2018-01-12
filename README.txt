@@ -2,8 +2,8 @@ Defect Monitor
 MCAM 3D Printer Software
 
 Installation
-- Python
-    - Latest Version
+- Python 3.6.3
+    - Camera only works on versions predating 3.6.3
     - Add python.exe to PATH
     - https://www.python.org/downloads/
 - Basler Pylon

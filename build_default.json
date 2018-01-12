@@ -18,8 +18,6 @@
     },
     "Notifications": {
 	"Attachment": "",
-        "Major": true,
-        "Minor": true,
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },

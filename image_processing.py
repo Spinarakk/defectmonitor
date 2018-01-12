@@ -101,13 +101,12 @@ class DefectDetector:
         with open('%s/reports/combined_report.json' % self.build['BuildInfo']['Folder']) as report:
             self.defects['combined'] = json.load(report)
 
-    def run_detector(self, image_name, status, progress, notification):
+    def run_detector(self, image_name, status, progress):
         """Initial run method that decides whether to run the coat or scan collection of detection processes"""
 
-        # Assign the status, progress and notification signals as instance variables so other methods can use them
+        # Assign the status and progress signals as instance variables so other methods can use them
         self.status = status
         self.progress = progress
-        self.notification = notification
         self.progress.emit(0)
 
         # Discern the phase from the image name itself as at this point of the code, the name is 100% correct
@@ -178,74 +177,44 @@ class DefectDetector:
     def analyze_coat(self, image_coat, image_blank):
         """Analyzes the coat image for any potential defects as listed in the order below"""
 
-        # TODO Remove timers when not needed
-        t0 = time.time()
-
         # Blade streak defects will be drawn in red
         self.detect_blade_streak(image_coat, image_blank.copy())
         self.progress.emit(20)
-
-        print('Blade Streak\n%s' % (time.time() - t0))
 
         # Blade chatter defects will be drawn in blue
         self.detect_blade_chatter(image_coat, image_blank.copy())
         self.progress.emit(40)
 
-        print('Blade Chatter\n%s' % (time.time() - t0))
-
         # Bright spot defects will be drawn in green
         self.detect_shiny_patch(image_coat, image_blank.copy())
         self.progress.emit(60)
-
-        print('Shiny Patch\n%s' % (time.time() - t0))
 
         # Contrast difference defects will be drawn in yellow
         self.detect_contrast_outlier(image_coat, image_blank.copy())
         self.progress.emit(80)
 
-        print('Contrast Outlier\n%s' % (time.time() - t0))
-
         # Histogram comparison with the previous layer if the previous layer's image exists
         if self.histogram_flag:
             self.compare_histogram(image_coat, self.image_previous)
 
-        # Compare all the results against the threshold values to see if any are outside of the threshold
-
-        print('Compare & Save\n%s\n' % (time.time() - t0))
-
     def analyze_scan(self, image_scan, image_blank):
         """Analyzes the scan image for any potential defects as listed in the order below"""
-
-        # TODO remove timers if not needed
-        t0 = time.time()
 
         # Blade streak defects will be drawn in red
         self.detect_blade_streak(image_scan, image_blank.copy())
         self.progress.emit(25)
 
-        print('Blade Streak\n%s' % (time.time() - t0))
-
         # Blade chatter defects will be drawn in blue
         self.detect_blade_chatter(image_scan, image_blank.copy())
         self.progress.emit(50)
 
-        print('Blade Chatter\n%s' % (time.time() - t0))
-
         # Scan pattern will be drawn in purple
-        self.scan_detection(image_scan, image_blank.copy())
+        self.detect_scan_pattern(image_scan, image_blank.copy())
         self.progress.emit(75)
-
-        print('Scan Detection\n%s' % (time.time() - t0))
 
         # Histogram comparison with the previous layer if the previous layer's image exists
         if self.histogram_flag:
             self.compare_histogram(image_scan, self.image_previous)
-
-        print('Compare & Save\n%s\n' % (time.time() - t0))
-
-    def check_results(self):
-        """Checks the results of the defect analysis and sends a notification if any don't meet the threshold values"""
-        pass
 
     def detect_blade_streak(self, image, image_defects):
         """Detects any horizontal lines on the image, doesn't work as well in the darker areas"""
@@ -390,7 +359,7 @@ class DefectDetector:
             '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                     self.layer), image_defects)
 
-    def scan_detection(self, image, image_defects):
+    def detect_scan_pattern(self, image, image_defects):
         """Detects any scan patterns on the image and draws them as filled contours"""
 
         # Try to detect the edges using Laplacian after converting to grayscale and blurring the image
@@ -474,9 +443,6 @@ class DefectDetector:
         else:
             self.defects['combined'][self.layer][self.phase][defect_type] = [0, 0]
 
-        # TODO Remove timers when not needed
-        t0 = time.time()
-
         # Only report defects that intersect the part contours if the image exists
         if self.contours_flag:
             image_contours = self.image_contours.copy()
@@ -499,28 +465,6 @@ class DefectDetector:
                     self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
                 else:
                     self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
-
-                print('Report %s\n%s\n' % (part_name, (time.time() - t0)))
-
-    def compare_threshold(self):
-        """Compares the results to the threshold values to check if a notification needs to be raised or not"""
-
-        # Grabs the data for clearer code purposes
-        data = self.defects['combined'][self.layer][self.phase]
-
-        if 'coat' in self.phase:
-            # Grab the threshold values from the config.json file
-            threshold = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
-                         self.config['Threshold']['PixelSize'], self.config['Threshold']['PixelSize'],
-                         self.config['Threshold']['HistogramCoat']]
-
-            # Format the appropriate data into a list
-            data_coat = [data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0], data['HC']]
-
-        elif 'scan' in self.phase:
-            threshold = [self.config['Threshold']['Occurrences'], self.config['Threshold']['Occurrences'],
-                         self.config['Threshold']['HistogramScan'], self.config['Threshold']['Overlay']]
-            data_scan = [data['BS'][1], data['BC'][1], data['HC'], data['OC']]
 
     @staticmethod
     def find_coordinates(image_defects, image_overlay, part_colour, defect_colour):
@@ -558,16 +502,3 @@ class DefectDetector:
                 occurrences += 1
 
         return size, coordinates, occurrences
-
-    @staticmethod
-    def defect_size(image):
-        """Returns the number of pixels that fall between the set range of colours"""
-        return cv2.countNonZero(cv2.inRange(image, np.array([0, 0, 200]), np.array([100, 100, 255])))
-
-    @staticmethod
-    def overlay_defects(image, image_defects, defect_colour):
-        """Applies any solid defect pixel colours (depending on the defect being overlaid) to the first image"""
-        image_mask = cv2.inRange(image_defects, defect_colour, defect_colour)
-        if cv2.countNonZero(image_mask) > 0:
-            image[np.nonzero(image_mask)] = defect_colour
-        return image

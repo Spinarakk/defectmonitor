@@ -1,3 +1,11 @@
+January 12
+- Fixed a couple of issues regarding running the program on a separate machine
+- Determined that something in Python 3.6.4 breaks the pylon camera opening
+- Removed most notification features
+- Removed the Receive Notifications for group box from the New Build window and the code
+- Implemented a timer check during the run process which will check if the idle time has gone over a predefined time limit and sends a notification to the user if so (along with the most recent image)
+- Cleaned up more code
+
 January 11
 - Changed the layout of the Transform table in the Slice Converter
 - Finalized the layout of the Slice Converter window
