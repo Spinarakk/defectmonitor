@@ -14,44 +14,57 @@ class Notifications:
 
     def __init__(self):
 
-        with open('build.json') as build:
-            self.build = json.load(build)
+        with open('config.json') as config:
+            self.config = json.load(config)
 
         self.notification = MIMEMultipart()
-        self.notification['From'] = self.build['Notifications']['Sender']
-        self.notification['To'] = self.build['BuildInfo']['EmailAddress']
+        self.notification['From'] = self.config['Notifications']['Sender']
 
-    def test_message(self, attachment_name):
+    def test_notification(self, username, address, attachment_name):
         """Construct the message and attachment to be sent when the Send Test Email button is clicked"""
 
+        self.notification['To'] = address
         self.notification['Subject'] = 'Test Email Notification'
 
         # Construct the full message here
-        message = 'This is a test email to check if the entered email address is valid.'
+        message = 'This is a test email addressed to %s to check if the entered email address is valid.' % username
 
         if attachment_name:
             self.attach_attachment(attachment_name)
 
-        self.send_notification(message)
+        self.send_notification(message, address)
 
-    def idle_message(self, attachment_name, timeout):
-        """Construct the message and attachment to be send when an Idle Timeout is triggered"""
+    def idle_notification(self, build_name, phase, layer, address, attachment_name, timeout):
+        """Construct the message and attachment to be sent when an Idle Timeout is triggered"""
 
-        self.notification['Subject'] = 'Build %s Idle Error' % self.build['BuildInfo']['Name']
+        self.notification['To'] = address
+        self.notification['Subject'] = 'Build %s Idle Error' % build_name
 
-        phase = ['Coat', 'Scan']
+        phases = ['Coat', 'Scan']
 
         # Construct the full message here
-        message = 'Defect Monitor has failed to capture an image in the last %s minutes.\nThis could be the result of ' \
+        notification = 'Defect Monitor has failed to capture an image in the last %s minutes.\nThis could be the result of ' \
                   'a machine malfunction, a part error, a camera issue, the magnetic trigger not working correctly or ' \
                   'the build has finished and because the user hadn\'t added any slice files, the final layer number ' \
                   'is unknown.\nAttached is the latest captured image, which appears to be %s Layer %s.' % \
-                  (timeout, phase[self.build['ImageCapture']['Phase']], self.build['ImageCapture']['Layer'])
+                  (timeout, phases[phase], layer)
 
         if attachment_name:
             self.attach_attachment(attachment_name)
 
-        self.send_notification(message)
+        self.send_notification(notification, address)
+
+    def camera_notification(self, address):
+        """Construct the message to be sent when an error in the camera is detected"""
+
+        self.notification['To'] = address
+        self.notification['Subject'] = 'Camera Error'
+
+        notification = 'An error with the camera has been detected.\nThe camera has possibly shut down and is unable ' \
+                       'to be detected by the computer.\nTry disconnecting and reconnecting the yellow ethernet cable' \
+                       'connected to the POE switch.'
+
+        self.send_notification(notification, address)
 
     def attach_attachment(self, name):
         """Attach the attachment to the notification email"""
@@ -62,15 +75,15 @@ class Notifications:
         part.add_header('Content-Disposition', 'attachment; filename= %s' % os.path.basename(name))
         self.notification.attach(part)
 
-    def send_notification(self, message):
+    def send_notification(self, notification, address):
         """Send the email after attaching the corresponding message"""
 
-        self.notification.attach(MIMEText(message, 'plain'))
+        self.notification.attach(MIMEText(notification, 'plain'))
 
         # Connect to the gmail server, login to the default sender email and send the message
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(self.build['Notifications']['Sender'], self.build['Notifications']['Password'])
-        server.sendmail(self.build['Notifications']['Sender'], self.build['BuildInfo']['EmailAddress'],
+        server.login(self.config['Notifications']['Sender'], self.config['Notifications']['Password'])
+        server.sendmail(self.config['Notifications']['Sender'], address,
                         self.notification.as_string())
         server.quit()

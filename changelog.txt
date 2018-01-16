@@ -1,3 +1,16 @@
+January 18
+- Rewrote the code for the Camera Calibration dialog window
+- Within the Camera Calibration window, the browse folder button has been replaced with Add Images and Remove Images buttons which work like in the Slice Converter
+- If the images aren't correct, they'll be ignored when running the calibration
+- Took new pictures of the checkerboard image for calibration purposes
+
+January 16
+- Moved a few of the functions around, most prominantly the multithreading functions
+- Created a camera stress test dialog window to repeatedly capture and save images with the camera
+- Added additional notification option to send error notification to developer if camera or switch has been disconnected during build
+- Added setting the notification sending email address and password to the Preferences dialog window
+- Turned some of the dialog windows into modal windows mostly to prevent the user from messing up save files
+
 January 12
 - Fixed a couple of issues regarding running the program on a separate machine
 - Determined that something in Python 3.6.4 breaks the pylon camera opening

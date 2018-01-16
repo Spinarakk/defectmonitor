@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>270</width>
+    <width>264</width>
     <height>251</height>
    </rect>
   </property>
@@ -87,16 +87,6 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="labelGain">
-     <property name="toolTip">
-      <string>Sets the selected gain control in device specific units.</string>
-     </property>
-     <property name="text">
-      <string>Gain</string>
-     </property>
-    </widget>
-   </item>
    <item row="6" column="0" colspan="2">
     <widget class="QLabel" name="labelFrameDelay">
      <property name="toolTip">
@@ -129,46 +119,6 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="labelPixelFormat">
-     <property name="toolTip">
-      <string>Sets the format of the pixel data transmitted for acquired images.</string>
-     </property>
-     <property name="text">
-      <string>Pixel Format</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="labelTriggerTimeout">
-     <property name="toolTip">
-      <string>Sets how long (in seconds) until the trigger can be triggered again. Timeout starts upon saving the image.</string>
-     </property>
-     <property name="text">
-      <string>Trigger Timeout</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="labelPacketSize">
-     <property name="toolTip">
-      <string>Sets the packet size in bytes for the selected stream channel.</string>
-     </property>
-     <property name="text">
-      <string>Packet Size</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="labelInterPacketDelay">
-     <property name="toolTip">
-      <string>Sets the inter-packet delay (in ticks) for the selected stream channel.</string>
-     </property>
-     <property name="text">
-      <string>Inter-Packet Delay</string>
-     </property>
-    </widget>
-   </item>
    <item row="7" column="2" colspan="2">
     <widget class="QSpinBox" name="spinTriggerTimeout">
      <property name="toolTip">
@@ -192,16 +142,6 @@
      </property>
      <property name="value">
       <number>0</number>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="labelExposureTime">
-     <property name="toolTip">
-      <string>Directly sets the camera's exposure time in microseconds.</string>
-     </property>
-     <property name="text">
-      <string>Exposure Time</string>
      </property>
     </widget>
    </item>
@@ -240,16 +180,6 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="labelBlackLevel">
-     <property name="toolTip">
-      <string>Sets the value of the selected black level control.</string>
-     </property>
-     <property name="text">
-      <string>Black Level</string>
-     </property>
-    </widget>
-   </item>
    <item row="2" column="2" colspan="2">
     <widget class="QSpinBox" name="spinBlackLevel">
      <property name="toolTip">
@@ -276,6 +206,76 @@
      </property>
      <property name="value">
       <number>51</number>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
+    <widget class="QLabel" name="labelInterPacketDelay">
+     <property name="toolTip">
+      <string>Sets the inter-packet delay (in ticks) for the selected stream channel.</string>
+     </property>
+     <property name="text">
+      <string>Inter-Packet Delay</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <widget class="QLabel" name="labelTriggerTimeout">
+     <property name="toolTip">
+      <string>Sets how long (in seconds) until the trigger can be triggered again. Timeout starts upon saving the image.</string>
+     </property>
+     <property name="text">
+      <string>Trigger Timeout</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="2">
+    <widget class="QLabel" name="labelPacketSize">
+     <property name="toolTip">
+      <string>Sets the packet size in bytes for the selected stream channel.</string>
+     </property>
+     <property name="text">
+      <string>Packet Size</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <widget class="QLabel" name="labelExposureTime">
+     <property name="toolTip">
+      <string>Directly sets the camera's exposure time in microseconds.</string>
+     </property>
+     <property name="text">
+      <string>Exposure Time</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QLabel" name="labelBlackLevel">
+     <property name="toolTip">
+      <string>Sets the value of the selected black level control.</string>
+     </property>
+     <property name="text">
+      <string>Black Level</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="QLabel" name="labelGain">
+     <property name="toolTip">
+      <string>Sets the selected gain control in device specific units.</string>
+     </property>
+     <property name="text">
+      <string>Gain</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QLabel" name="labelPixelFormat">
+     <property name="toolTip">
+      <string>Sets the format of the pixel data transmitted for acquired images.</string>
+     </property>
+     <property name="text">
+      <string>Pixel Format</string>
      </property>
     </widget>
    </item>

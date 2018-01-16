@@ -52,10 +52,6 @@ class Worker(QRunnable):
         if 'convert_image_function' in str(self.function):
             kwargs['naming_error'] = self.signals.naming_error
 
-        # run_detector
-        if 'run_detector' in str(self.function):
-            kwargs['notification'] = self.signals.notification
-
         # calibrate
         if 'calibrate' in str(self.function):
             kwargs['colour'] = self.signals.colour

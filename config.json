@@ -3,7 +3,7 @@
     "CameraCalibration": {
         "Apply": false,
         "Chessboard": false,
-        "DownscalingRatio": 1,
+        "DownscalingRatio": 2,
         "Folder": "D:/Documents/University Work/2017 Final Year Project/Kinect/Calibration",
         "Height": 7,
         "HomographyImage": "D:/Documents/MCAM/Calibration/image_homography.png",
@@ -97,8 +97,12 @@
         "RMS": 1.6641703202,
         "ScaleFactor": 5.3333333333
     },
+    "Notifications": {
+        "Password": "Amaero2017",
+        "Sender": "donotreply.amaero@gmail.com"
+    },
     "RecentBuilds": [
-        "D:/Documents/MCAM/Builds/test.json"
+        "D:/Documents/MCAM/Builds/Default.json"
     ],
     "SliceConverter": {
         "CentrelineT": 3,

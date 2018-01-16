@@ -33,6 +33,20 @@ class ImageFix:
         else:
             self.parameters = self.parameters['ImageCorrection']
 
+    def fix_image(self, image_name):
+        """Fixes the received image for distortion, perspective and crops it to the correct size, and saves it"""
+
+        # Load the image into memory
+        image = cv2.imread(image_name)
+
+        # Apply the following fixes
+        image = self.distortion_fix(image)
+        image = self.perspective_fix(image)
+        image = self.crop(image)
+
+        # Save the image using a modified image name
+        cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
+
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
 

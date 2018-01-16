@@ -382,7 +382,7 @@ class Ui_dialogSliceConverter(object):
         self.labelStatus.setText(_translate("dialogSliceConverter", "Add slice files."))
         self.pushPause.setText(_translate("dialogSliceConverter", "Pause"))
         self.pushAddSF.setText(_translate("dialogSliceConverter", "Add Slice Files..."))
-        self.pushRemoveSF.setText(_translate("dialogSliceConverter", "Remove Selected Files"))
+        self.pushRemoveSF.setText(_translate("dialogSliceConverter", "Remove Slice Files"))
         self.pushDrawContours.setText(_translate("dialogSliceConverter", "Draw Contours"))
         self.groupDisplayOptions.setTitle(_translate("dialogSliceConverter", "Display Options"))
         self.checkCentrelines.setText(_translate("dialogSliceConverter", "Centrelines"))

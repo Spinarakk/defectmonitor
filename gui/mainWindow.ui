@@ -1555,6 +1555,8 @@
      <addaction name="separator"/>
      <addaction name="actionAcquireCamera"/>
      <addaction name="actionAcquireTrigger"/>
+     <addaction name="separator"/>
+     <addaction name="actionStressTest"/>
     </widget>
     <addaction name="menuCamera"/>
     <addaction name="separator"/>
@@ -1815,6 +1817,14 @@
    </property>
    <property name="text">
     <string>Process Parts</string>
+   </property>
+  </action>
+  <action name="actionStressTest">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stress Test</string>
    </property>
   </action>
  </widget>

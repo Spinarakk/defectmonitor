@@ -3,6 +3,8 @@ import os
 import cv2
 import numpy as np
 import json
+import time
+import shutil
 from datetime import datetime
 from validate_email import validate_email
 
@@ -13,6 +15,7 @@ from PyQt5.QtWidgets import *
 
 # Import related modules
 import slice_converter
+import image_capture
 import image_processing
 import extra_functions
 import camera_calibration
@@ -20,7 +23,7 @@ import qt_multithreading
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogCameraCalibration, \
-    dialogCalibrationResults, dialogSliceConverter, dialogImageConverter, dialogDefectReports
+    dialogCalibrationResults, dialogStressTest, dialogSliceConverter, dialogImageConverter, dialogDefectReports
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
@@ -28,24 +31,27 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     Allows the user to setup a new build and change settings
     """
 
-    def __init__(self, parent=None, open_flag=False, settings_flag=False):
+    def __init__(self, parent=None, build_name='', settings_flag=False):
 
         # Setup Dialog UI with MainWindow as parent
         super(NewBuild, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
-        # Load from the default build.json file
-        with open('build_default.json') as build:
+        # Flag to prevent additional image folders from being created
+        self.open_flag = bool(build_name)
+        self.settings_flag = settings_flag
+
+        # Load from the default build.json file unless window was opened by Open or Settings
+        if not build_name:
+            build_name = 'build_default.json'
+
+        with open(build_name) as build:
             self.build = json.load(build)
 
         # Load from the config.json file
         with open('config.json') as config:
             self.config = json.load(config)
-
-        # Flag to prevent additional image folders from being created
-        self.open_flag = open_flag
-        self.settings_flag = settings_flag
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Buttons
@@ -117,8 +123,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_confirmation = QMessageBox(self)
         send_confirmation.setWindowTitle('Send Test Email')
         send_confirmation.setIcon(QMessageBox.Question)
-        send_confirmation.setText('Are you sure you want to send a test email notification to %s?\n\n'
-                                  'Note: This will save your entered Username and Email Address to the config file.' %
+        send_confirmation.setText('Are you sure you want to send a test email notification to %s?' %
                                   self.lineEmailAddress.text())
         send_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         retval = send_confirmation.exec_()
@@ -131,19 +136,15 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.pushCreate.setEnabled(False)
                 self.pushCancel.setEnabled(False)
 
-                # Save pertinent information that is required to send a notification email
-                self.build['BuildInfo']['Username'] = self.lineUsername.text()
-                self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.text()
+                # Check if a test image is to be sent or not
                 if self.checkAddAttachment.isChecked():
-                    attachment = 'test_image.jpg'
+                    attachment = 'test_platform.png'
                 else:
                     attachment = ''
 
-                with open('build.json', 'w+') as build:
-                    json.dump(self.build, build, indent=4, sort_keys=True)
-
-                worker = qt_multithreading.Worker(extra_functions.Notifications().test_message, attachment)
-                worker.signals.finished.connect(self.send_test_finished)
+                worker = qt_multithreading.Worker(extra_functions.Notifications().test_notification,
+                                                  self.lineUsername.text(), self.lineEmailAddress.text(), attachment)
+                worker.signals.finished.connect(self.send_test_email_finished)
                 self.threadpool.start(worker)
             else:
                 # Opens a message box indicating that the entered email address is invalid
@@ -153,7 +154,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
                 invalid_email_error.exec_()
 
-    def send_test_finished(self):
+    def send_test_email_finished(self):
         """Open a message box with a send test confirmation message"""
 
         self.pushCreate.setEnabled(True)
@@ -205,9 +206,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         # If a New Build is being created (rather than Open Build or Settings), create folders to store images
         if not self.open_flag and not self.settings_flag:
-            # Save the created image folder's name to the build.json file
-            self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
-
             # Create respective sub-directories for images (and reports)
             os.makedirs('%s/raw/coat' % self.lineImageFolder.text())
             os.makedirs('%s/raw/scan' % self.lineImageFolder.text())
@@ -284,6 +282,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinContourT.setValue(self.config['SliceConverter']['ContourT'])
         self.spinCentrelineT.setValue(self.config['SliceConverter']['CentrelineT'])
         self.spinIdleTimeout.setValue(self.config['IdleTimeout'])
+        self.lineSenderAddress.setText(self.config['Notifications']['Sender'])
+        self.linePassword.setText(self.config['Notifications']['Password'])
         self.lineBuildName.setText(self.config['Defaults']['BuildName'])
         self.lineUsername.setText(self.config['Defaults']['Username'])
         self.lineEmailAddress.setText(self.config['Defaults']['EmailAddress'])
@@ -299,6 +299,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinContourT.valueChanged.connect(self.apply_enable)
         self.spinCentrelineT.valueChanged.connect(self.apply_enable)
         self.spinIdleTimeout.valueChanged.connect(self.apply_enable)
+        self.lineSenderAddress.textChanged.connect(self.apply_enable)
+        self.linePassword.textChanged.connect(self.apply_enable)
         self.lineBuildName.textChanged.connect(self.apply_enable)
         self.lineUsername.textChanged.connect(self.apply_enable)
         self.lineEmailAddress.textChanged.connect(self.apply_enable)
@@ -362,6 +364,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.config['SliceConverter']['ContourT'] = self.spinContourT.value()
         self.config['SliceConverter']['CentrelineT'] = self.spinCentrelineT.value()
         self.config['IdleTimeout'] = self.spinIdleTimeout.value()
+        self.config['Notifications']['Sender'] = self.lineSenderAddress.text()
+        self.config['Notifications']['Password'] = self.linePassword.text()
         self.config['Defaults']['BuildName'] = self.lineBuildName.text()
         self.config['Defaults']['Username'] = self.lineUsername.text()
         self.config['Defaults']['EmailAddress'] = self.lineEmailAddress.text()
@@ -379,7 +383,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         if self.pushApply.isEnabled():
             self.apply()
 
-        self.closeEvent(self.close())
+        # Close the dialog window and return True
+        self.done(1)
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
@@ -387,7 +392,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
 
 
 class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
-    """Opens a Modeless Dialog Window when Tools -> Camera -> Settings is clicked
+    """Opens a Modal Dialog Window when Tools -> Camera -> Settings is clicked
     Or when the Camera Settings button in the Image Capture Dialog Window is clicked
     Allows the user to change camera settings which will be sent to the camera before images are taken
     """
@@ -400,7 +405,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setupUi(self)
 
         # Disallow the user from resizing the dialog window
-        self.setFixedSize(self.size())
+        #self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -479,7 +484,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
 
 
 class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
-    """Opens a Modeless Dialog Window when the Camera Calibration button is clicked
+    """Opens a Modal Dialog Window when the Camera Calibration button is clicked
     Or when Tools -> Camera -> Calibration is clicked
     Allows the user to select a folder of chessboard images to calculate the camera's intrinsic values for calibration
     """
@@ -503,7 +508,6 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.config = json.load(config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
-        self.pushBrowseF.clicked.connect(self.browse_folder)
         self.pushBrowseHI.clicked.connect(self.browse_homography)
         self.pushBrowseTI.clicked.connect(self.browse_test_image)
         self.pushStart.clicked.connect(self.start)
@@ -516,7 +520,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.spinHeight.setValue(self.config['CameraCalibration']['Height'])
         self.spinRatio.setValue(self.config['CameraCalibration']['DownscalingRatio'])
 
-        # Set and display previously saved image path names if they exist, else leave empty strings
+        # Set and display previously saved image path names if they exist, otherwise leave empty strings
         if os.path.isfile(self.config['CameraCalibration']['HomographyImage']):
             self.lineHomographyImage.setText(os.path.basename(self.config['CameraCalibration']['HomographyImage']))
         if os.path.isfile(self.config['CameraCalibration']['TestImage']):
@@ -581,7 +585,8 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         """
 
         # Enable or disable relevant UI elements to prevent concurrent processes
-        self.pushBrowseF.setEnabled(False)
+        self.pushAdd.setEnabled(False)
+        self.pushRemove.setEnabled(False)
         self.pushBrowseHI.setEnabled(False)
         self.pushBrowseTI.setEnabled(False)
         self.pushStart.setEnabled(False)
@@ -618,7 +623,8 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.apply_settings()
 
         # Enable or disable relevant UI elements to prevent concurrent processes
-        self.pushBrowseF.setEnabled(True)
+        self.pushAdd.setEnabled(True)
+        self.pushRemove.setEnabled(True)
         self.pushBrowseHI.setEnabled(True)
         self.pushBrowseTI.setEnabled(True)
         self.pushStart.setEnabled(True)
@@ -789,7 +795,118 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
 
 
+class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
+    """Opens a Modal Dialog Window when Tools -> Camera -> Stress Test is clicked
+    Allows the user to stress test the attached camera by repeatedly capturing images indefinitely"""
+
+    def __init__(self, parent=None):
+
+        super(StressTest, self).__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setupUi(self)
+        self.setFixedSize(self.size())
+        self.window_settings = QSettings('MCAM', 'Defect Monitor')
+
+        try:
+            self.restoreGeometry(self.window_settings.value('Stress Test Geometry', ''))
+        except TypeError:
+            pass
+
+        self.pushStart.clicked.connect(self.start_test)
+        self.threadpool = QThreadPool()
+
+    def start_test(self):
+
+        if 'Start' in self.pushStart.text():
+            # Disable UI elements to prevent concurrent processes
+            self.spinInterval.setEnabled(False)
+            self.pushDone.setEnabled(False)
+
+            # Create a temporary folder within the root directory to store the captured images
+            self.folder = os.getcwd().replace('\\', '/') + '/stress'
+            if not os.path.isdir(self.folder):
+                os.makedirs(self.folder)
+
+            self.layer = 1
+            self.interval = self.spinInterval.value()
+
+            self.pushStart.setText('Stop')
+
+            # Reset the elapsed time, initialize display time to 0 and create and start the QTimer
+            self.stopwatch_elapsed = 0
+            self.update_time()
+            self.timer_stopwatch = QTimer()
+            self.timer_stopwatch.timeout.connect(self.update_time)
+            self.timer_stopwatch.start(1000)
+
+            self.test_loop()
+        elif 'Stop' in self.pushStart.text():
+            self.pushStart.setText('Start')
+            self.pushStart.setEnabled(False)
+
+    def test_loop(self):
+        worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_snapshot, self.layer, self.folder)
+        worker.signals.status_camera.connect(self.update_status)
+        worker.signals.finished.connect(self.test_done)
+        self.threadpool.start(worker)
+
+    def test_done(self):
+
+        self.labelNumber.setText(str(self.layer).zfill(4))
+        self.layer += 1
+
+        self.timer_interval = QTimer()
+        self.timer_interval.timeout.connect(self.test_interval)
+        self.timer_interval.start(1000)
+
+    def test_interval(self):
+        self.update_status('Timeout: %ss' % self.interval)
+        self.interval -= 1
+
+        if 'Start' in self.pushStart.text():
+            self.timer_stopwatch.stop()
+            self.timer_interval.stop()
+            self.test_exit()
+            return
+
+        if self.interval < 0:
+            self.timer_interval.stop()
+            self.interval = self.spinInterval.value()
+            self.test_loop()
+
+    def test_exit(self):
+        self.pushStart.setEnabled(True)
+        self.spinInterval.setEnabled(True)
+        self.pushDone.setEnabled(True)
+
+        # Delete the entire temporary folder and all its contents
+        shutil.rmtree('stress')
+
+        self.update_status('Waiting')
+
+    def update_time(self):
+        self.stopwatch_elapsed += 1
+        seconds = str(self.stopwatch_elapsed % 60).zfill(2)
+        minutes = str(self.stopwatch_elapsed % 3600 // 60).zfill(2)
+        hours = str(self.stopwatch_elapsed // 3600).zfill(2)
+        self.labelElapsedTime.setText('%s:%s:%s' % (hours, minutes, seconds))
+
+    def update_status(self, string):
+        if 'Error' in string:
+            self.start_test()
+
+        self.labelStatus.setText(string)
+
+    def closeEvent(self, event):
+        """Executes when the window is closed"""
+
+        self.window_settings.setValue('Stress Test Geometry', self.saveGeometry())
+
+
 class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
+    """Opens a Modal Dialog Window when the Slice Converter button is clicked
+    Or when Tools -> Slice Converter is clicked
+    Allows the user to convert .cli files into ASCII encoded scaled contours and draws them using OpenCV"""
 
     def __init__(self, parent=None):
 
@@ -1370,7 +1487,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
 
 class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
-    """Opens a Modeless Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
+    """Opens a Modal Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
     Allows the user to batch convert a bunch of images to their fixed state"""
 
     def __init__(self, parent=None):

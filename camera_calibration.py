@@ -216,8 +216,8 @@ class Calibration:
         self.status.emit('Determining homography matrix...')
 
         # Set the number of chessboard corners in the homography image here
-        width = 9
-        height = 7
+        width = 15
+        height = 10
 
         # Determine the resolution of the image after downscaling and downscale it
         resolution_scaled = (image.shape[1] // self.ratio, image.shape[0] // self.ratio)

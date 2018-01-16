@@ -1,15 +1,15 @@
 {
     "BuildInfo": {
         "Camera": 0,
-        "EmailAddress": "nicholascklee@gmail.com",
-        "Folder": "D:/Documents/MCAM/Builds/2018-01-12 [15''04'07] Default",
+        "EmailAddress": "",
+        "Folder": "",
         "Machine": 0,
-        "Name": "Default",
+        "Name": "",
         "PlatformDimensions": [
-            636,
-            406
+            636.0,
+            406.0
         ],
-        "Username": "Nicholas Lee"
+        "Username": ""
     },
     "ImageCapture": {
         "Layer": 0.5,

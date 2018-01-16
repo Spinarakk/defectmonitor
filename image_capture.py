@@ -71,7 +71,6 @@ class ImageCapture:
         self.current_layer = self.build['ImageCapture']['Layer']
         self.current_phase = self.build['ImageCapture']['Phase']
         self.snapshot_layer = self.build['ImageCapture']['Snapshot']
-        self.phases = ['coat', 'scan']
 
         # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
         self.pixel_format_list = ['Mono8', 'Mono12', 'Mono12Packed']
@@ -93,13 +92,19 @@ class ImageCapture:
         self.camera.properties['AcquisitionFrameRateEnable'] = 'False'
         self.camera.properties['AcquisitionFrameCount'] = 1
 
-    def acquire_image_snapshot(self, status_camera, name):
+        self.phases = ['coat', 'scan']
+
+    def acquire_image_snapshot(self, layer, folder, status_camera, name):
         """Acquire a snapshot image from the camera"""
 
         status_camera.emit('Capturing')
 
         # Acquire and open the camera and apply the entered settings to it
-        self.acquire_camera()
+        retval = self.acquire_camera()
+        if not retval:
+            status_camera.emit('Error')
+            return
+
         self.camera.open()
         self.apply_settings()
 
@@ -110,14 +115,13 @@ class ImageCapture:
             status_camera.emit('Error')
         else:
             # Construct the image name using the current layer
-            image_name = '%s/raw/snapshot/snapshotR_%s.png' % (self.build['BuildInfo']['Folder'],
-                                                           str(self.snapshot_layer).zfill(4))
+            image_name = '%s/snapshotR_%s.png' % (folder, str(layer).zfill(4))
 
             # Save the raw image to the snapshot folder
             cv2.imwrite(image_name, image)
 
             # Increment the capture counter
-            self.snapshot_layer += 1
+            #self.snapshot_layer += 1
 
             # Emit a status message and the image name to the Main Window, which will continue to process the image
             status_camera.emit('Image Saved')
@@ -125,7 +129,7 @@ class ImageCapture:
         finally:
             # Close the camera and save any changed counters to the build.json file
             self.camera.close()
-            self.save_settings()
+            #self.save_settings()
 
     def acquire_image_run(self, status_camera, status_trigger, name):
         """Acquire an image from the camera when trigger is detected, and sleep for a certain amount of time"""

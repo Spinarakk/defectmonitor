@@ -98,6 +98,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionCameraCalibration.triggered.connect(self.camera_calibration)
         self.actionAcquireCamera.triggered.connect(self.acquire_camera)
         self.actionAcquireTrigger.triggered.connect(self.acquire_trigger)
+        self.actionStressTest.triggered.connect(self.stress_test)
         self.actionSliceConverter.triggered.connect(self.slice_converter)
         self.actionImageConverter.triggered.connect(self.image_converter)
         self.actionSnapshot.triggered.connect(self.snapshot)
@@ -177,14 +178,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.processing_flag = False
         self.all_flag = False
 
-        # Instantiate dialog variables that cannot have multiple windows for existence validation purposes
-        self.DR_dialog = None  # Defect Reports
-        self.P_dialog = None   # Preferences
-        self.CS_dialog = None  # Camera Settings
-        self.CC_dialog = None  # Camera Calibration
-        self.SC_dialog = None  # Slice Converter
-        self.IC_dialog = None  # Image Converter
-
         # Initiate an empty config file name to be used for saving purposes
         self.build_name = None
         self.trigger_port = False
@@ -232,11 +225,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Allows the user to setup a new build and change settings
         """
 
-        # Create a new build dialog variable and execute it as a modal window
-        NB_dialog = dialog_windows.NewBuild(self)
-
-        # Executes the build setup if the OK button is clicked, otherwise nothing happens
-        if NB_dialog.exec_():
+        # Execute the new build dialog variable as a modal window
+        if dialog_windows.NewBuild(self).exec_():
             self.setup_build(False, False)
 
     def open_build(self):
@@ -275,21 +265,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if filename:
-            # Load from the selected build file and overwrite the contents of the working build dictionary
-            with open(filename) as build:
-                self.build = json.load(build)
-
-            with open('build.json', 'w+') as build:
-                json.dump(self.build, build, indent=4, sort_keys=True)
-
             self.build_name = filename
 
-            OB_dialog = dialog_windows.NewBuild(self, open_flag=True)
-
-            if OB_dialog.exec_():
+            # Send and load the selected build's settings within the Open Build dialog window
+            if dialog_windows.NewBuild(self, build_name=filename).exec_():
                 # Add the opened build name to the Recent Builds drop-down menu
                 self.add_recent_build(self.build_name)
-
                 self.setup_build(False, True)
 
     def setup_build(self, settings_flag=False, load_flag=False):
@@ -496,71 +477,46 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Opens a Modeless Dialog Window when the Defect Reports button is clicked
         Displays the results of the reports as processed by the Defect Detector"""
 
-        if self.DR_dialog is None:
-            self.DR_dialog = dialog_windows.DefectReports(self)
-            self.DR_dialog.tab_focus.connect(self.tab_focus)
-            self.DR_dialog.destroyed.connect(self.defect_reports_closed)
-            self.DR_dialog.show()
-        else:
-            self.DR_dialog.activateWindow()
+        try:
+            self.DR_dialog.close()
+        except AttributeError:
+            pass
 
-    def defect_reports_closed(self):
-        self.DR_dialog = None
+        self.DR_dialog = dialog_windows.DefectReports(self)
+        self.DR_dialog.tab_focus.connect(self.tab_focus)
+        self.DR_dialog.show()
 
     # MENUBAR -> TOOLS
 
     def camera_calibration(self):
-        """Opens a Modeless Dialog Window when the Camera Calibration button is clicked
+        """Opens a Modal Dialog Window when the Camera Calibration button is clicked
         Or when Tools -> Camera -> Calibration is clicked
-        Allows the user to select a folder of chessboard images to calculate intrinsic values for calibration
-        """
+        Allows the user to select a folder of chessboard images to calculate intrinsic values for calibration"""
 
-        # Check if the dialog window is already open, if not, create a new window and open it
-        # Otherwise focus is given back to the open window
-        # Signal listen for if the window is closed (destroyed), and sets the window to None if so
-        if self.CC_dialog is None:
-            self.CC_dialog = dialog_windows.CameraCalibration(self)
-            self.CC_dialog.destroyed.connect(self.camera_calibration_closed)
-            self.CC_dialog.show()
-        else:
-            self.CC_dialog.activateWindow()
+        dialog_windows.CameraCalibration(self).exec_()
 
-    def camera_calibration_closed(self):
-        """When the Dialog Window is closed, its object is set to None to allow another window to be opened"""
-        self.CC_dialog = None
+    def stress_test(self):
+        """Opens a Modal Dialog Window when Tools -> Camera -> Stress Test is clicked
+        Allows the user to stress test the attached camera by repeatedly capturing images indefinitely"""
+
+        dialog_windows.StressTest(self).exec_()
 
     def slice_converter(self):
-        """Opens a Modeless Dialog Window when the Slice Converter button is clicked
+        """Opens a Modal Dialog Window when the Slice Converter button is clicked
         Or when Tools -> Slice Converter is clicked
-        Allows user to convert .cls or .cli files into ASCII encoded scaled contours that OpenCV can draw
-        """
+        Allows the user to convert .cli files into ASCII encoded scaled contours and draws them using OpenCV"""
 
-        if self.SC_dialog is None:
-            self.SC_dialog = dialog_windows.SliceConverter(self)
-            self.SC_dialog.destroyed.connect(self.slice_converter_closed)
-            self.SC_dialog.show()
-        else:
-            self.SC_dialog.activateWindow()
+        dialog_windows.SliceConverter(self).exec_()
 
-    def slice_converter_closed(self):
+        # Update the folders and display if the Slice Converter window is closed
         if self.display_flag:
             self.update_folders(True)
 
-        self.SC_dialog = None
-
     def image_converter(self):
-        """Opens a Modeless Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
+        """Opens a Modal Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
         Allows the user to batch convert a bunch of images to their fixed state"""
 
-        if self.IC_dialog is None:
-            self.IC_dialog = dialog_windows.ImageConverter(self)
-            self.IC_dialog.destroyed.connect(self.image_converter_closed)
-            self.IC_dialog.show()
-        else:
-            self.IC_dialog.activateWindow()
-
-    def image_converter_closed(self):
-        self.IC_dialog = None
+        dialog_windows.ImageConverter(self).exec_()
 
     # MENUBAR -> TOOLS -> DEFECT PROCESSOR
 
@@ -675,28 +631,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     # MENUBAR -> SETTINGS
 
     def camera_settings(self):
-        """Opens a Modeless Dialog Window when Tools -> Camera -> Settings is clicked
+        """Opens a Modal Dialog Window when Tools -> Camera -> Settings is clicked
         Allows the user to change camera settings which will be sent to the camera before images are taken
         """
 
-        if self.CS_dialog is None:
-            self.CS_dialog = dialog_windows.CameraSettings(self)
-            self.CS_dialog.destroyed.connect(self.camera_settings_closed)
-            self.CS_dialog.show()
-        else:
-            self.CS_dialog.activateWindow()
-
-    def camera_settings_closed(self):
-        self.CS_dialog = None
+        dialog_windows.CameraSettings(self).exec_()
 
     def build_settings(self):
         """Opens a Modal Window when Settings -> Build Settings is clicked
         Allows the user to change the current build's settings
         """
 
-        BS_dialog = dialog_windows.NewBuild(self, open_flag=True, settings_flag=True)
-
-        if BS_dialog.exec_():
+        if dialog_windows.NewBuild(self, build_name='build.json', settings_flag=True).exec_():
             self.setup_build(True, False)
 
     def acquire_camera(self):
@@ -705,19 +651,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.update_status_camera('Acquiring...')
 
-        if bool(image_capture.ImageCapture().acquire_camera()):
+        state = bool(image_capture.ImageCapture().acquire_camera())
+        self.actionSnapshot.setEnabled(state)
+        self.pushSnapshot.setEnabled(state)
+        self.actionStressTest.setEnabled(state)
+        self.pushRun.setEnabled(state and bool(self.trigger_port))
+        self.actionRun.setEnabled(state and bool(self.trigger_port))
+
+        # Status Messages
+        if state:
             self.update_status_camera('Found')
-            self.actionSnapshot.setEnabled(True)
-            self.pushSnapshot.setEnabled(True)
-            if bool(self.trigger_port):
-                self.pushRun.setEnabled(True)
-                self.actionRun.setEnabled(True)
         else:
             self.update_status_camera('Not Found')
-            self.actionSnapshot.setEnabled(False)
-            self.pushSnapshot.setEnabled(False)
-            self.pushRun.setEnabled(False)
-            self.actionRun.setEnabled(False)
 
     def acquire_trigger(self):
         """Executes after setting up a new build or loading a build, or when Settings -> Acquire Camera is clicked
@@ -741,18 +686,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Opens a Modeless Dialog Window when Settings -> Preferences is clicked
         Allows the user to change certain settings pertaining to the functionality of the program itself"""
 
-        if self.P_dialog is None:
-            self.P_dialog = dialog_windows.Preferences(self)
-            self.P_dialog.destroyed.connect(self.preferences_closed)
-            self.P_dialog.show()
-        else:
-            self.P_dialog.activateWindow()
-
-    def preferences_closed(self):
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        self.P_dialog = None
+        if dialog_windows.Preferences(self).exec_():
+            # Reload config settings if the user had changed settings
+            with open('config.json') as config:
+                self.config = json.load(config)
 
     # MENUBAR -> HELP
 
@@ -778,9 +715,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def snapshot(self):
         """Executes when Tools -> Image Capture -> Snapshot is clicked or when the Snapshot button is clicked
         Captures and saves a snapshot image by using a worker thread to perform the snapshot function"""
-
+        
+        # Disable certain UI elements to prevent concurrent processes
         self.pushSnapshot.setEnabled(False)
         self.actionSnapshot.setEnabled(False)
+        self.pushAcquireCt.setEnabled(False)
+        self.actionAcquireCamera.setEnabled(False)
+        self.actionAcquireTrigger.setEnabled(False)
+        self.actionStressTest.setEnabled(False)
+        self.pushRun.setEnabled(False)
+        self.actionRun.setEnabled(False)
 
         # Capture a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_snapshot)
@@ -790,7 +734,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.threadpool.start(worker)
 
     def snapshot_finished(self):
+        # Re-enable disabled UI elements
         self.pushSnapshot.setEnabled(True)
+        self.actionSnapshot.setEnabled(True)
+        self.pushAcquireCt.setEnabled(True)
+        self.actionAcquireCamera.setEnabled(True)
+        self.actionAcquireTrigger.setEnabled(True)
+        self.actionStressTest.setEnabled(True)
+        self.pushRun.setEnabled(True)
+        self.actionRun.setEnabled(True)
 
     def run_build(self):
         """Executes when the Run button is clicked
@@ -971,6 +923,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.pushAcquireCT.setEnabled(state == 0)
         self.actionAcquireCamera.setEnabled(state == 0)
         self.actionAcquireTrigger.setEnabled(state == 0)
+        self.actionStressTest.setEnabled(state == 0)
         self.pushSnapshot.setEnabled(state == 0)
         self.actionSnapshot.setEnabled(state == 0)
         self.actionFauxTrigger.setEnabled(state == 1)
@@ -988,24 +941,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.image_name = image_name.replace('R_', 'F_').replace('raw', 'fixed')
 
         self.update_status('Applying image fixes...')
-        worker = qt_multithreading.Worker(self.fix_image_function, image_name)
+        worker = qt_multithreading.Worker(image_processing.ImageFix().fix_image, image_name)
         worker.signals.finished.connect(self.fix_image_finished)
         self.threadpool.start(worker)
-
-    @staticmethod
-    def fix_image_function(image_name):
-        """Function that will be passed to the QThreadPool to be executed"""
-
-        # Load the image into memory
-        image = cv2.imread(image_name)
-
-        # Apply
-        image = image_processing.ImageFix().distortion_fix(image)
-        image = image_processing.ImageFix().perspective_fix(image)
-        image = image_processing.ImageFix().crop(image)
-
-        # Save the image using a modified image name
-        cv2.imwrite(image_name, image)
 
     def fix_image_finished(self):
         """Executes when the fix image function method is finished"""

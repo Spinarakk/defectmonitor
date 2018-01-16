@@ -747,6 +747,9 @@ class Ui_mainWindow(object):
         self.actionProcessParts = QtWidgets.QAction(mainWindow)
         self.actionProcessParts.setEnabled(False)
         self.actionProcessParts.setObjectName("actionProcessParts")
+        self.actionStressTest = QtWidgets.QAction(mainWindow)
+        self.actionStressTest.setEnabled(False)
+        self.actionStressTest.setObjectName("actionStressTest")
         self.menuRecentBuilds.addSeparator()
         self.menuRecentBuilds.addAction(self.actionClearBuilds)
         self.menuFile.addAction(self.actionNew)
@@ -777,6 +780,8 @@ class Ui_mainWindow(object):
         self.menuCamera.addSeparator()
         self.menuCamera.addAction(self.actionAcquireCamera)
         self.menuCamera.addAction(self.actionAcquireTrigger)
+        self.menuCamera.addSeparator()
+        self.menuCamera.addAction(self.actionStressTest)
         self.menuTools.addAction(self.menuCamera.menuAction())
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionSliceConverter)
@@ -944,5 +949,6 @@ class Ui_mainWindow(object):
         self.actionStop.setText(_translate("mainWindow", "Stop"))
         self.actionFauxTrigger.setText(_translate("mainWindow", "Trigger"))
         self.actionProcessParts.setText(_translate("mainWindow", "Process Parts"))
+        self.actionStressTest.setText(_translate("mainWindow", "Stress Test"))
 
 from ui_elements import ImageViewer
