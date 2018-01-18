@@ -60,8 +60,12 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.pushCreate.clicked.connect(self.create)
 
         # Lines
-        self.lineBuildName.textChanged.connect(self.change_folder)
-        self.lineEmailAddress.textChanged.connect(self.enable_button)
+        if not self.open_flag:
+            # Only enable this signal if a new build is being created
+            self.lineBuildName.textChanged.connect(self.change_folder)
+
+        self.lineUsername.textChanged.connect(self.enable_test)
+        self.lineEmailAddress.textChanged.connect(self.enable_test)
 
         # Set default placeholder text in some of the fields
         self.lineBuildName.setPlaceholderText(self.config['Defaults']['BuildName'])
@@ -81,9 +85,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         if self.open_flag:
             self.setWindowTitle('Open Build')
             self.pushCreate.setText('Load')
-            self.pushBrowseIF.setEnabled(False)
             self.lineBuildName.setText(self.build['BuildInfo']['Name'])
-            self.lineBuildName.blockSignals(True)
             self.lineImageFolder.setText(self.build['BuildInfo']['Folder'])
             self.lineUsername.setText(self.build['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
@@ -116,6 +118,15 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         else:
             self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.placeholderText()))
 
+    def enable_test(self):
+        """(Re-)Enables the Send Test Email button if the username and email address boxes have changed and not empty"""
+
+        # Check if both the username and email addresses boxes have text in them, and if the email address is valid
+        flag = bool(self.lineUsername.text()) and validate_email(self.lineEmailAddress.text())
+
+        self.pushSendTestEmail.setEnabled(flag)
+        self.checkAddAttachment.setEnabled(flag)
+
     def send_test_email(self):
         """Sends a test notification email to the entered email address"""
 
@@ -123,36 +134,29 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_confirmation = QMessageBox(self)
         send_confirmation.setWindowTitle('Send Test Email')
         send_confirmation.setIcon(QMessageBox.Question)
-        send_confirmation.setText('Are you sure you want to send a test email notification to %s?' %
-                                  self.lineEmailAddress.text())
+        send_confirmation.setText('Are you sure you want to send a test email notification to %s at %s?' %
+                                  (self.lineUsername.text(), self.lineEmailAddress.text()))
         send_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         retval = send_confirmation.exec_()
 
         # If the user clicked Yes
+        # The email address doesn't need to be validated as it needs to be valid to enter this method in the first place
         if retval == 16384:
-            if validate_email(self.lineEmailAddress.text()):
-                # Disable the Send Test Email button to prevent SPAM and other buttons until the thread is finished
-                self.pushSendTestEmail.setEnabled(False)
-                self.pushCreate.setEnabled(False)
-                self.pushCancel.setEnabled(False)
+            # Disable the Send Test Email button to prevent SPAM and other buttons until the thread is finished
+            self.pushSendTestEmail.setEnabled(False)
+            self.pushCreate.setEnabled(False)
+            self.pushCancel.setEnabled(False)
 
-                # Check if a test image is to be sent or not
-                if self.checkAddAttachment.isChecked():
-                    attachment = 'test_platform.png'
-                else:
-                    attachment = ''
-
-                worker = qt_multithreading.Worker(extra_functions.Notifications().test_notification,
-                                                  self.lineUsername.text(), self.lineEmailAddress.text(), attachment)
-                worker.signals.finished.connect(self.send_test_email_finished)
-                self.threadpool.start(worker)
+            # Check if a test image is to be sent or not
+            if self.checkAddAttachment.isChecked():
+                attachment = 'test_platform.png'
             else:
-                # Opens a message box indicating that the entered email address is invalid
-                invalid_email_error = QMessageBox(self)
-                invalid_email_error.setWindowTitle('Error')
-                invalid_email_error.setIcon(QMessageBox.Critical)
-                invalid_email_error.setText('Invalid email address. Please enter a valid email address.')
-                invalid_email_error.exec_()
+                attachment = ''
+
+            worker = qt_multithreading.Worker(extra_functions.Notifications().test_notification,
+                                              self.lineUsername.text(), self.lineEmailAddress.text(), attachment)
+            worker.signals.finished.connect(self.send_test_email_finished)
+            self.threadpool.start(worker)
 
     def send_test_email_finished(self):
         """Open a message box with a send test confirmation message"""
@@ -164,20 +168,11 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_test_confirmation.setWindowTitle('Send Test Email')
         send_test_confirmation.setIcon(QMessageBox.Information)
         send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
-                                       (self.lineEmailAddress.text(), self.lineUsername.text()))
+                                       (self.lineUsername.text(), self.lineEmailAddress.text()))
         send_test_confirmation.exec_()
 
-    def enable_button(self):
-        """(Re-)Enables the Send Test Email button if the email address box is changed and not empty"""
-
-        self.pushSendTestEmail.setEnabled(bool(self.lineEmailAddress.text()))
-        self.checkAddAttachment.setEnabled(bool(self.lineEmailAddress.text()))
-
     def create(self):
-        """Executes when the Create button is clicked
-        First checks if all the required boxes have been filled, otherwise a MessageBox will be opened
-        Saves important selection options to the config.json file and closes the window
-        """
+        """Saves important selection options to the build.json file and closes the window"""
 
         # Save all the entered information to the config.json file
         # If the user didn't enter anything into the following fields, save the placeholder text instead
@@ -196,13 +191,17 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         else:
             self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.placeholderText()
 
-        self.build['BuildInfo']['Machine'] = self.comboMachine.currentIndex()
-        self.build['BuildInfo']['Camera'] = self.comboCamera.currentIndex()
         self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
 
-        # Save the selected platform dimensions to the config.json file
-        if self.comboMachine.currentIndex() == 0:
-            self.build['BuildInfo']['PlatformDimensions'] = [636, 406]
+        # Check if the entered email address is valid (by checking the state of the Add Test Attachment button
+        if not validate_email(self.build['BuildInfo']['EmailAddress']):
+            # Open an error message box and exit the method
+            missing_folder_error = QMessageBox(self)
+            missing_folder_error.setWindowTitle('Error')
+            missing_folder_error.setIcon(QMessageBox.Critical)
+            missing_folder_error.setText('Invalid email address. Please enter a valid email address.')
+            missing_folder_error.exec_()
+            return
 
         # If a New Build is being created (rather than Open Build or Settings), create folders to store images
         if not self.open_flag and not self.settings_flag:
@@ -230,17 +229,20 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 json.dump(dict(), report)
         else:
             # Check if the folder containing the images exist if a build was opened
-            if not os.path.isdir(self.build['BuildInfo']['Folder']):
+            if not os.path.isdir(self.lineImageFolder.text()):
                 missing_folder_error = QMessageBox(self)
                 missing_folder_error.setWindowTitle('Error')
                 missing_folder_error.setIcon(QMessageBox.Critical)
-                missing_folder_error.setText('Image folder not found.\n\nBuild cancelled.')
+                missing_folder_error.setText('Image folder not found.\n\nPlease reselect the correct image folder.\n\n'
+                                             'Note that selecting the wrong folder will result in incorrect behavior.')
                 missing_folder_error.exec_()
 
-                # Close the New Build window, return to the Main Window and do nothing
-                self.done(0)
+                # Call the browse_folder method, allowing the user to reselect the correct image folder
+                self.browse_folder()
                 return
 
+
+        # Save the newly created (or loaded) build
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
 
@@ -892,10 +894,12 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
         self.labelElapsedTime.setText('%s:%s:%s' % (hours, minutes, seconds))
 
     def update_status(self, string):
-        if 'Error' in string:
-            self.start_test()
 
         self.labelStatus.setText(string)
+
+        if 'Error' in string:
+            self.start_test()
+            extra_functions.Notifications().camera_notification('nicholascklee@gmail.com')
 
     def closeEvent(self, event):
         """Executes when the window is closed"""

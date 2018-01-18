@@ -717,32 +717,27 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Captures and saves a snapshot image by using a worker thread to perform the snapshot function"""
         
         # Disable certain UI elements to prevent concurrent processes
-        self.pushSnapshot.setEnabled(False)
-        self.actionSnapshot.setEnabled(False)
-        self.pushAcquireCt.setEnabled(False)
-        self.actionAcquireCamera.setEnabled(False)
-        self.actionAcquireTrigger.setEnabled(False)
-        self.actionStressTest.setEnabled(False)
-        self.pushRun.setEnabled(False)
-        self.actionRun.setEnabled(False)
+        self.toggle_snapshot_buttons(False)
 
         # Capture a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_snapshot)
         worker.signals.status_camera.connect(self.update_status_camera)
         worker.signals.name.connect(self.fix_image)
-        worker.signals.finished.connect(self.snapshot_finished)
+        worker.signals.finished.connect(lambda: self.toggle_snapshot_buttons(True))
         self.threadpool.start(worker)
 
-    def snapshot_finished(self):
-        # Re-enable disabled UI elements
-        self.pushSnapshot.setEnabled(True)
-        self.actionSnapshot.setEnabled(True)
-        self.pushAcquireCt.setEnabled(True)
-        self.actionAcquireCamera.setEnabled(True)
-        self.actionAcquireTrigger.setEnabled(True)
-        self.actionStressTest.setEnabled(True)
-        self.pushRun.setEnabled(True)
-        self.actionRun.setEnabled(True)
+    def toggle_snapshot_buttons(self, state):
+        """Enables or disables the following buttons/actions in one fell swoop depending on the received state
+        Used for when a snapshot is being captured"""
+
+        self.pushSnapshot.setEnabled(state)
+        self.actionSnapshot.setEnabled(state)
+        self.pushAcquireCt.setEnabled(state)
+        self.actionAcquireCamera.setEnabled(state)
+        self.actionAcquireTrigger.setEnabled(state)
+        self.actionStressTest.setEnabled(state)
+        self.pushRun.setEnabled(state)
+        self.actionRun.setEnabled(state)
 
     def run_build(self):
         """Executes when the Run button is clicked
@@ -771,7 +766,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.build = json.load(build)
 
             # Enable / disable certain UI elements to prevent concurrent processes
-            self.toggle_build_buttons(1)
+            self.toggle_run_buttons(1)
             self.update_status('Running build.')
 
             # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
@@ -886,7 +881,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Enable / disable certain UI elements
         # Disabling the Pause button stops the trigger polling loop
-        self.toggle_build_buttons(0)
+        self.toggle_run_buttons(0)
         self.update_status('Build stopped.', 3000)
         self.update_status_camera('Found')
         self.update_status_trigger(self.trigger_port)
@@ -900,8 +895,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.timer_stopwatch.stop()
         self.serial_trigger.close()
 
-    def toggle_build_buttons(self, state):
-        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
+    def toggle_run_buttons(self, state):
+        """Enables or disables the following buttons/actions in one fell swoop depending on the received state
+        Used for when a build is being run/paused/stopped"""
 
         # State 0 is when a build is not being run
         # State 1 is when a build is being run

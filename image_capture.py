@@ -131,7 +131,7 @@ class ImageCapture:
             self.camera.close()
             #self.save_settings()
 
-    def acquire_image_run(self, status_camera, status_trigger, name):
+    def acquire_image_run(self, layer, phase, folder, status_camera, status_trigger, name):
         """Acquire an image from the camera when trigger is detected, and sleep for a certain amount of time"""
 
         status_camera.emit('Capturing...')

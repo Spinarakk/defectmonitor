@@ -3,23 +3,13 @@
         "Camera": 0,
         "EmailAddress": "",
         "Folder": "",
-        "Machine": 0,
         "Name": "",
-        "PlatformDimensions": [
-            636.0,
-            406.0
-        ],
         "Username": ""
     },
     "ImageCapture": {
         "Layer": 0.5,
         "Phase": 1,
         "Snapshot": 1
-    },
-    "Notifications": {
-        "Attachment": "",
-        "Password": "Amaero2017",
-        "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
         "Colours": {},
