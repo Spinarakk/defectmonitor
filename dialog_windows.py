@@ -847,7 +847,7 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
             self.pushStart.setEnabled(False)
 
     def test_loop(self):
-        worker = qt_multithreading.Worker(image_capture.ImageCapture().acquire_image_snapshot, self.layer, self.folder)
+        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder)
         worker.signals.status_camera.connect(self.update_status)
         worker.signals.finished.connect(self.test_done)
         self.threadpool.start(worker)

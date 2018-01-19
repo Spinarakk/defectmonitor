@@ -37,7 +37,7 @@ class Worker(QRunnable):
 
         # Add any signal keywords to the kwargs here depending on the sent function
         # acquire_image_snapshot / aquire_image_run
-        if 'acquire_image' in str(self.function):
+        if 'capture' in str(self.function):
             kwargs['name'] = self.signals.name
             kwargs['status_camera'] = self.signals.status_camera
             if 'run' in str(self.function):

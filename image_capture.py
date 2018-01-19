@@ -61,16 +61,8 @@ class ImageCapture:
         The strings are saved in their respective lists and the index is used to call the respective one
         """
 
-        with open('build.json') as build:
-            self.build = json.load(build)
-
         with open('config.json') as config:
             self.config = json.load(config)
-
-        # For current_phase, 0 corresponds to Coat, 1 corresponds to Scan
-        self.current_layer = self.build['ImageCapture']['Layer']
-        self.current_phase = self.build['ImageCapture']['Phase']
-        self.snapshot_layer = self.build['ImageCapture']['Snapshot']
 
         # Settings for combo box selections are saved and accessed as a list of strings which can be modified here
         self.pixel_format_list = ['Mono8', 'Mono12', 'Mono12Packed']
@@ -94,95 +86,97 @@ class ImageCapture:
 
         self.phases = ['coat', 'scan']
 
-    def acquire_image_snapshot(self, layer, folder, status_camera, name):
-        """Acquire a snapshot image from the camera"""
+    def setup_camera(self, status_camera, layer):
+        """Acquire and open the camera and apply the saved settings to it
+        Contains error checking at every camera stage to make sure that the camera is able to be used"""
+
+        if not self.acquire_camera():
+            status_camera.emit('Error 1')
+            print('Layer: %s\nCamera failed to be acquired.' % str(layer).zfill(4))
+            return False
+
+        try:
+            self.camera.open()
+        except:
+            status_camera.emit('Error 2')
+            print('Layer: %s\nCamera failed to be opened.' % str(layer).zfill(4))
+            return False
+        else:
+            self.apply_settings()
+
+        return True
+
+    def capture_snapshot(self, layer, folder, status_camera, name):
+        """Capture and save a snapshot image from the camera"""
 
         status_camera.emit('Capturing')
 
-        # Acquire and open the camera and apply the entered settings to it
-        retval = self.acquire_camera()
-        if not retval:
-            status_camera.emit('Error')
-            return
-
-        self.camera.open()
-        self.apply_settings()
+        # Setup the camera while checking for any errors
+        self.setup_camera(status_camera, layer)
 
         # Grab the image from the camera, error checking in case image capture fails
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            status_camera.emit('Error')
+            # Emit error messages, close the camera and return a false result
+            status_camera.emit('Error 3')
+            print('Layer: %s\nImage failed to be captured.' % str(layer).zfill(4))
+            self.camera.close()
+            return False
         else:
-            # Construct the image name using the current layer
+            # Construct the image name using the received layer and folder
             image_name = '%s/snapshotR_%s.png' % (folder, str(layer).zfill(4))
 
             # Save the raw image to the snapshot folder
             cv2.imwrite(image_name, image)
 
-            # Increment the capture counter
-            #self.snapshot_layer += 1
-
-            # Emit a status message and the image name to the Main Window, which will continue to process the image
+            # Emit a status message and the image name to the Main Window, which will continue to fix the image
             status_camera.emit('Image Saved')
             name.emit(image_name)
-        finally:
-            # Close the camera and save any changed counters to the build.json file
-            self.camera.close()
-            #self.save_settings()
 
-    def acquire_image_run(self, layer, phase, folder, status_camera, status_trigger, name):
-        """Acquire an image from the camera when trigger is detected, and sleep for a certain amount of time"""
+            # Close the camera and return a true result
+            self.camera.close()
+            return True
+
+    def capture_run(self, layer, phase, folder, status_camera, status_trigger, name):
+        """Capture and  an image from the camera when trigger is detected, and sleep for a certain amount of time"""
 
         status_camera.emit('Capturing...')
         status_trigger.emit('Detected')
 
-        # Acquire and open the camera and apply the entered settings to it
-        self.acquire_camera()
-        self.camera.open()
-        self.apply_settings()
+        # Setup the camera while checking for any errors
+        self.setup_camera(status_camera, layer)
 
         # Grab the image from the camera, error checking in case image capture fails
         try:
             image = next(self.camera.grab_images(1))
         except RuntimeError:
-            time.sleep(1)
-            image = next(self.camera.grab_images(1))
+            # Emit error messages, close the camera and return a false result
+            status_camera.emit('Error 3')
+            print('Layer: %s\nImage failed to be captured.' % str(layer).zfill(4))
+            self.camera.close()
+            return False
+        else:
+            # Construct the image name using the received layer, phase and folder
+            image_name = '%s/%s/%sR_%s.png' % (folder, self.phases[phase], self.phases[phase],
+                                               str(layer).zfill(4))
 
-        # Construct the image name using the current layer and phase
-        image_name = '%s/raw/%s/%sR_%s.png' % (self.build['BuildInfo']['Folder'], self.phases[self.current_phase],
-                                               self.phases[self.current_phase], str(int(self.current_layer)).zfill(4))
+            # Save the raw image to the corresponding folder
+            cv2.imwrite(image_name, image)
 
-        # Save the raw image to the appropriate folder
-        cv2.imwrite(image_name, image)
+            # Emit a status message and the image name to the Main Window, which will continue to process the image
+            status_camera.emit('Image Saved')
 
-        # Emit a status message and the image name to the Main Window, which will continue to process the image
-        status_camera.emit('Image Saved')
+            # Do not process the first scan image however
+            if layer >= 1:
+                name.emit(image_name)
 
-        # Do not process the first scan image however
-        if self.current_layer >= 1:
-            name.emit(image_name)
+            # Loop used to delay triggering for additional images for however many seconds
+            # Also displays remaining timeout on the status bar
+            for seconds in range(self.config['CameraSettings']['TriggerTimeout'], 0, -1):
+                status_trigger.emit('Timeout: %ss' % seconds)
+                time.sleep(1)
 
-        # Loop used to delay triggering for additional images for however many seconds
-        # Also displays remaining timeout on the status bar
-        for seconds in range(self.config['CameraSettings']['TriggerTimeout'], 0, -1):
-            status_trigger.emit('Timeout: %ss' % seconds)
-            time.sleep(1)
-
-        # Increment the layer (by 1) every second image, and toggle the phase
-        self.current_layer += 0.5
-        self.current_phase = (self.current_phase + 1) % 2
-
-        # Close the camera and save any changed counters to the build.json file
-        self.camera.close()
-        self.save_settings()
-
-    def save_settings(self):
-        """Save the current build's layer numbers to the build.json file"""
-
-        self.build['ImageCapture']['Layer'] = self.current_layer
-        self.build['ImageCapture']['Phase'] = self.current_phase
-        self.build['ImageCapture']['Snapshot'] = self.snapshot_layer
-
-        with open('build.json', 'w+') as build:
-            json.dump(self.build, build, indent=4, sort_keys=True)
+            # Close the camera and return a true result
+            self.camera.close()
+            return True

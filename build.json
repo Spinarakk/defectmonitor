@@ -1,15 +1,14 @@
 {
     "BuildInfo": {
-        "Camera": 0,
-        "EmailAddress": "",
-        "Folder": "",
-        "Name": "",
-        "Username": ""
+        "EmailAddress": "nicholascklee@gmail.com",
+        "Folder": "D:/Documents/MCAM/Builds/2018-01-19 [12''45'34] Default",
+        "Name": "Default",
+        "Username": "Nicholas Lee"
     },
     "ImageCapture": {
         "Layer": 0.5,
         "Phase": 1,
-        "Snapshot": 1
+        "Snapshot": 4
     },
     "SliceConverter": {
         "Colours": {},
