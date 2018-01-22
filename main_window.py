@@ -382,7 +382,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
-    def save_build(self, status_flag=True):
+    def save_build(self):
         """Saves the current build to the config.json file when File -> Save is clicked
         Executes save_as_build instead if this is the first time the build is being saved
         """
@@ -395,9 +395,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             with open(self.build_name, 'w+') as build:
                 json.dump(self.build, build, indent=4, sort_keys=True)
 
-            # For saving quietly
-            if status_flag:
-                self.update_status('Build saved to %s.' % os.path.basename(self.build_name), 5000)
+            self.update_status('Build saved to %s.' % os.path.basename(self.build_name), 5000)
         else:
             self.save_as_build()
 
@@ -424,18 +422,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         # Open a folder select dialog, allowing the user to choose a location and input a name
-        image_name = QFileDialog.getSaveFileName(self, 'Export Image', '', 'Image (*.png)')[0]
+        filename = QFileDialog.getSaveFileName(self, 'Export Image', '', 'Image (*.png)')[0]
 
         # Checking if user has chosen to save the image or clicked cancel
-        if image_name:
+        if filename:
             # Save the currently displayed image which is saved as an entry in the display dictionary
-            cv2.imwrite(image_name, self.display['DisplayImage'][self.widgetDisplay.currentIndex()])
+            cv2.imwrite(filename, self.display['DisplayImage'][self.widgetDisplay.currentIndex()])
 
-            # Open a message box with a save confirmation message
+            # Open a message box with an export confirmation message
             export_confirmation = QMessageBox(self)
             export_confirmation.setWindowTitle('Export Image')
             export_confirmation.setIcon(QMessageBox.Information)
-            export_confirmation.setText('The image has been saved as %s.' % image_name)
+            export_confirmation.setText('The image has been exported at %s.' % filename)
             export_confirmation.exec_()
 
     def exit_program(self):

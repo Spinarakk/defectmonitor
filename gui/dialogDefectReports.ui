@@ -6,22 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>420</width>
-    <height>695</height>
+    <width>453</width>
+    <height>662</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Defect Reports</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <widget class="QLabel" name="labelParts">
-     <property name="text">
-      <string>Part Selection</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="2">
+   <item row="2" column="1" colspan="4">
     <widget class="QGroupBox" name="groupThresholdValues">
      <property name="title">
       <string>Threshold Values</string>
@@ -196,10 +189,10 @@
          <item row="4" column="0" colspan="2">
           <widget class="QPushButton" name="pushSet">
            <property name="toolTip">
-            <string>Click to set modified threshold values and/or reload the reports.</string>
+            <string>Click to set modified threshold values and reload the reports (including hidden data).</string>
            </property>
            <property name="text">
-            <string>Set / Reload</string>
+            <string>Set Thresholds / Reload Data</string>
            </property>
           </widget>
          </item>
@@ -209,14 +202,27 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QLabel" name="labelInformation">
+   <item row="5" column="4">
+    <widget class="QPushButton" name="pushDone">
      <property name="text">
-      <string>Double click on a row's cell to display that layer's defect image.</string>
+      <string>Done</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="3" column="1" colspan="4">
+    <widget class="QLabel" name="labelInformation">
+     <property name="text">
+      <string>Double click on a row's cell to jump to that layer's defect image with the defects overlayed.</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" colspan="4">
+    <widget class="QComboBox" name="comboParts"/>
+   </item>
+   <item row="4" column="1" colspan="4">
     <widget class="QTabWidget" name="widgetReports">
      <property name="currentIndex">
       <number>0</number>
@@ -354,25 +360,45 @@
      </widget>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="QPushButton" name="pushPrint">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
+   <item row="0" column="1">
+    <widget class="QLabel" name="labelParts">
      <property name="text">
-      <string>Print Report</string>
+      <string>Part Selection</string>
      </property>
     </widget>
    </item>
    <item row="5" column="1">
-    <widget class="QPushButton" name="pushDone">
+    <widget class="QPushButton" name="pushExportAll">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="toolTip">
+      <string>Export all the data (including all the parts) to a .csv file.</string>
+     </property>
      <property name="text">
-      <string>Done</string>
+      <string>Export All Data</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="QComboBox" name="comboParts"/>
+   <item row="5" column="2">
+    <widget class="QPushButton" name="pushExportVisible">
+     <property name="toolTip">
+      <string>Export the currently visible table data to a .csv file.</string>
+     </property>
+     <property name="text">
+      <string>Export Visible Data</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="3">
+    <widget class="QPushButton" name="pushHideSelected">
+     <property name="toolTip">
+      <string>Hide the selected layers from the currently displayed table.</string>
+     </property>
+     <property name="text">
+      <string>Hide Selected Rows</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -386,7 +412,7 @@
   <tabstop>pushSet</tabstop>
   <tabstop>widgetReports</tabstop>
   <tabstop>tableCoat</tabstop>
-  <tabstop>pushPrint</tabstop>
+  <tabstop>pushExportAll</tabstop>
   <tabstop>pushDone</tabstop>
   <tabstop>tableScan</tabstop>
  </tabstops>

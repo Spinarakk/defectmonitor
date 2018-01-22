@@ -1,5 +1,5 @@
 {
-    "BuildFolder": "D:/Documents/MCAM/Builds",
+    "BuildFolder": "C:/Users/Spinarakk/Documents/MCAM/Builds",
     "CameraCalibration": {
         "Apply": false,
         "Chessboard": false,
@@ -102,7 +102,7 @@
         "Sender": "donotreply.amaero@gmail.com"
     },
     "RecentBuilds": [
-        "D:/Documents/MCAM/Builds/Default.json"
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json"
     ],
     "SliceConverter": {
         "CentrelineT": 3,

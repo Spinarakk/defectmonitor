@@ -1,14 +1,25 @@
 {
     "BuildInfo": {
+        "Camera": 0,
         "EmailAddress": "nicholascklee@gmail.com",
-        "Folder": "D:/Documents/MCAM/Builds/2018-01-19 [12''45'34] Default",
+        "Folder": "C:/Users/Spinarakk/Documents/MCAM/Builds/2018-01-16 [13''24'57] Default",
+        "Machine": 0,
         "Name": "Default",
+        "PlatformDimensions": [
+            636,
+            406
+        ],
         "Username": "Nicholas Lee"
     },
     "ImageCapture": {
         "Layer": 0.5,
         "Phase": 1,
-        "Snapshot": 4
+        "Snapshot": 1
+    },
+    "Notifications": {
+        "Attachment": "",
+        "Password": "Amaero2017",
+        "Sender": "donotreply.amaero@gmail.com"
     },
     "SliceConverter": {
         "Colours": {},

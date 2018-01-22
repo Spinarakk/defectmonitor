@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 import json
-import time
+import csv
 import shutil
 from datetime import datetime
 from validate_email import validate_email
@@ -1098,8 +1098,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.convert_run_flag and not self.slice_counter == len(self.index_list):
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
         elif self.slice_counter == len(self.index_list):
-            self.toggle_control(2)
+            self.convert_run_flag = False
             self.pushDrawContours.setEnabled(True)
+            self.toggle_control(2)
             self.update_layer_ranges()
             self.preview_contours()
 
@@ -1844,6 +1845,9 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         # Setup event listeners for all relevant UI components, and connect them to specific functions
         self.comboParts.currentIndexChanged.connect(self.populate_tables)
         self.pushSet.clicked.connect(self.set_thresholds)
+        self.pushExportAll.clicked.connect(lambda: self.export_data(True))
+        self.pushExportVisible.clicked.connect(lambda: self.export_data(False))
+        self.pushHideSelected.clicked.connect(self.hide_selected)
         self.tableCoat.cellDoubleClicked.connect(self.cell_click)
         self.tableScan.cellDoubleClicked.connect(self.cell_click)
 
@@ -2052,6 +2056,61 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
 
         # Emit a signal to change focus to the selected defect layer
         self.tab_focus.emit(self.widgetReports.currentIndex(), layer, True, column - 1)
+
+    def export_data(self, all_flag):
+        """Exports the data to an excel compatible .csv (comma separated values) file"""
+
+        filename = QFileDialog.getSaveFileName(self, 'Export Data', '', 'CSV File (*.csv)')[0]
+
+        if filename:
+            # If the Export All Data button was pressed, grab all the data from the .json reports
+            if all_flag:
+                pass
+            # Otherwise grab the data from the currently visible table
+            else:
+                tables = [self.tableCoat, self.tableScan]
+                index = self.widgetReports.currentIndex()
+
+                # Grab the data from the currently displayed table
+                data = dict()
+                for row in range(tables[index].rowCount()):
+                    data[str(row)] = list()
+                    for column in range(6):
+                        data[str(row)].append(tables[index].item(row, column).text())
+
+            # Write the data to a csv file using the csv writer
+            with open(filename, 'w+', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                for item in data.values():
+                    writer.writerow(item)
+
+            # Open a message box with an export confirmation message
+            export_confirmation = QMessageBox(self)
+            export_confirmation.setWindowTitle('Export Data')
+            export_confirmation.setIcon(QMessageBox.Information)
+            export_confirmation.setText('The data has been exported to %s.' % filename)
+            export_confirmation.exec_()
+
+    def hide_selected(self):
+        """Hides the currently selected row of layers from the currently displayed window"""
+
+        indexes = list()
+
+        # Coat Explorer
+        if self.widgetReports.currentIndex() == 0:
+            # Grab the row indexes of all the selected cells
+            for item in self.tableCoat.selectedItems():
+                indexes.append(item.row())
+
+            # Remove any duplicate row indexes, sort and reverse the list and remove the rows from the table
+            for index in sorted(list(set(indexes)))[::-1]:
+                self.tableCoat.removeRow(index)
+        # Scan Explorer
+        elif self.widgetReports.currentIndex() == 1:
+            for item in self.tableScan.selectedItems():
+                indexes.append(item.row())
+            for index in sorted(list(set(indexes)))[::-1]:
+                self.tableScan.removeRow(index)
 
     def closeEvent(self, event):
         """Executes when the Done button is clicked or when the window is closed"""
