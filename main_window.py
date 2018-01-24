@@ -922,6 +922,27 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if not flag:
             self.update_status('Image failed to be captured. See command prompt for error message.', 3000)
 
+        # Check if the max layers has been set (by drawing the contours)
+        if self.build['SliceConverter']['MaxLayers']:
+            # Check if the current layer number exceeds the maximum number of layers
+            if self.build['ImageCapture']['Layer'] > self.build['SliceConverter']['MaxLayers']:
+                # Send a 'finished' notification to the stored email address
+                worker = qt_multithreading.Worker(extra_functions.Notifications().finish_notification,
+                                                  self.build['BuildInfo']['Name'],
+                                                  self.build['BuildInfo']['EmailAddress'])
+                self.threadpool.start(worker)
+
+                # Display a finish popup as well
+                finish_confirmation = QMessageBox(self)
+                finish_confirmation.setWindowTitle('Build Finished')
+                finish_confirmation.setIcon(QMessageBox.Information)
+                finish_confirmation.setText('The build\'s most recent layer number has exceeded the max layer number '
+                                            'as determined by the build\'s entered slice files. As such, it is assumed '
+                                            'that the current build has finished.\nRegardless, the program will still '
+                                            'continue to capture additional images should the trigger continue to be '
+                                            'triggered.')
+                finish_confirmation.show()
+
         # Go back into the trigger polling loop after resetting the run flag
         self.run_flag = True
         self.run_loop('')
@@ -1562,13 +1583,20 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def update_time(self):
         """Updates the timers at the bottom right of the Main Window with an incremented formatted timestamp
-        Also checks that the stopwatch idle hasn't exceeded a predefined idle time limit and if so, send a notification"""
+        Also checks that the stopwatch idle hasn't exceeded a predefined idle time limit and if so, send a notification
+        """
 
         self.stopwatch_elapsed += 1
         self.stopwatch_idle += 1
 
         # If the idle time exceeds the stored idle timeout, display an error popup and send a notification
         if self.stopwatch_idle > self.config['IdleTimeout']:
+            worker = qt_multithreading.Worker(extra_functions.Notifications().idle_notification,
+                                              self.build['BuildInfo']['Name'], self.build['ImageCapture']['Phase'],
+                                              self.build['ImageCapture']['Layer'],
+                                              self.build['BuildInfo']['EmailAddress'], self.image_name)
+            self.threadpool.start(worker)
+
             idle_error = QMessageBox(self)
             idle_error.setWindowTitle('Error')
             idle_error.setIcon(QMessageBox.Critical)

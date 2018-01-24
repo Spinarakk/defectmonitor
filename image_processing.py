@@ -459,15 +459,13 @@ class DefectDetector:
 
         # Only report defects that intersect the part contours if the image exists
         if self.contours_flag:
-            image_contours = self.image_contours.copy()
-
             for part_name, part_colour in self.build['SliceConverter']['PartColours'].items():
                 # Skip the combined key as it has already been processed
                 if 'combined' in part_name:
                     continue
 
                 # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
-                size, coordinates, occurrences = self.find_coordinates(image_defects, image_contours,
+                size, coordinates, occurrences = self.find_coordinates(image_defects, self.image_contours,
                                                                        tuple(part_colour), defect_colour)
 
                 # Convert the pixel size data into a percentage based on the total number of pixels in the image

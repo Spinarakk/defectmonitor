@@ -365,7 +365,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.config['BuildFolder'] = self.lineBuildFolder.text()
         self.config['SliceConverter']['ContourT'] = self.spinContourT.value()
         self.config['SliceConverter']['CentrelineT'] = self.spinCentrelineT.value()
-        self.config['IdleTimeout'] = self.spinIdleTimeout.value()
+        self.config['IdleTimeout'] = self.spinIdleTimeout.value() * 60
         self.config['Notifications']['Sender'] = self.lineSenderAddress.text()
         self.config['Notifications']['Password'] = self.linePassword.text()
         self.config['Defaults']['BuildName'] = self.lineBuildName.text()
@@ -510,16 +510,19 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.config = json.load(config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
+        self.pushAdd.clicked.connect(self.add_images)
+        self.pushRemove.clicked.connect(self.remove_images)
         self.pushBrowseHI.clicked.connect(self.browse_homography)
-        self.pushBrowseTI.clicked.connect(self.browse_test_image)
+        self.pushBrowseTI.clicked.connect(self.browse_test)
         self.pushStart.clicked.connect(self.start)
-        self.pushResults.clicked.connect(self.view_results)
+        self.pushResults.clicked.connect(lambda: self.view_results(False))
         self.pushSave.clicked.connect(self.save_results)
-        self.lineTestImage.textChanged.connect(self.enable_checkbox)
 
         # Set the SpinBox settings to the previously saved values
         self.spinWidth.setValue(self.config['CameraCalibration']['Width'])
         self.spinHeight.setValue(self.config['CameraCalibration']['Height'])
+        self.spinWidthHI.setValue(self.config['CameraCalibration']['WidthHI'])
+        self.spinHeightHI.setValue(self.config['CameraCalibration']['HeightHI'])
         self.spinRatio.setValue(self.config['CameraCalibration']['DownscalingRatio'])
 
         # Set and display previously saved image path names if they exist, otherwise leave empty strings
@@ -527,41 +530,39 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.lineHomographyImage.setText(os.path.basename(self.config['CameraCalibration']['HomographyImage']))
         if os.path.isfile(self.config['CameraCalibration']['TestImage']):
             self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
+            self.checkApply.setEnabled(True)
+
+        # Initiate a couple of values
+        self.image_list = list()
 
         self.threadpool = QThreadPool()
 
-    def browse_folder(self):
-        """Opens a File Dialog, allowing the user to select a folder containing calibration images"""
+    def add_images(self):
+        """Adds additional selected images to the image list"""
 
-        folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
+        filenames = QFileDialog.getOpenFileNames(self, 'Add Images...', '', 'Image Files (*.png)')[0]
 
-        # Checks if a folder is actually selected or if the user clicked cancel
-        if folder:
-            # Save the selected folder to the config dictionary
-            self.config['CameraCalibration']['Folder'] = folder
+        if filenames:
+            # Check if any of the selected files are already in the image list and only add the ones which aren't
+            for file in filenames:
+                if file not in self.image_list:
+                    # Add the new images to the image list and the QListWidget
+                    self.image_list.append(file)
+                    self.listImages.addItem(os.path.basename(file).replace('.png', ''))
 
-            # Display the folder name on the respective QLineEdit
-            self.lineCalibrationFolder.setText(folder)
+            self.enable_start()
 
-            # Empty the image QListWidget and the image list
-            self.listImages.clear()
-            self.image_list = list()
+    def remove_images(self):
+        """Removes selected images from the image list"""
 
-            # Grab the list of images in the selected folder and store them if the name contains 'calibration_image'
-            for image_name in os.listdir(folder):
-                if 'image_calibration' in image_name:
-                    self.image_list.append(image_name)
+        # Grab the list of selected images in the QListWidget
+        for item in self.listImages.selectedItems():
+            # Delete the corresponding image from the image list using the row index of the image
+            # The internal list and the QListWidget should always have the exact same ordering of elements
+            del self.image_list[self.listImages.row(item)]
+            self.listImages.takeItem(self.listImages.row(item))
 
-            # Check if certain conditions are met to enable the Start button
-            self.enable_button()
-
-            # Check if the image list contains any valid images
-            if self.image_list:
-                # Remove previous entries and fill with new entries
-                self.listImages.addItems(self.image_list)
-            else:
-                self.update_status('No calibration images found.')
-                self.update_progress(0)
+        self.enable_start()
 
     def browse_homography(self):
         """Opens a File Dialog, allowing the user to select an homography image to calculate the homography matrix"""
@@ -569,10 +570,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')[0]
 
         if filename:
+            # Add the filename to the config.json file and set the name in the box
             self.config['CameraCalibration']['HomographyImage'] = filename
             self.lineHomographyImage.setText(os.path.basename(self.config['CameraCalibration']['HomographyImage']))
+            self.enable_start()
 
-    def browse_test_image(self):
+    def browse_test(self):
         """Opens a File Dialog, allowing the user to select a test image used to test calibration results"""
 
         filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')[0]
@@ -580,27 +583,18 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         if filename:
             self.config['CameraCalibration']['TestImage'] = filename
             self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
+            self.checkApply.setEnabled(True)
 
     def start(self):
-        """Executes when the Start Calibration button is clicked
-        Starts the calibration process after saving the calibration settings to config.json file
-        """
+        """Start the calibration process after saving the calibration settings to config.json file"""
 
         # Enable or disable relevant UI elements to prevent concurrent processes
-        self.pushAdd.setEnabled(False)
-        self.pushRemove.setEnabled(False)
-        self.pushBrowseHI.setEnabled(False)
-        self.pushBrowseTI.setEnabled(False)
-        self.pushStart.setEnabled(False)
-        self.pushDone.setEnabled(False)
-
-        # This setting is exempt from the other settings as by default, this setting should be False
-        self.config['CameraCalibration']['Apply'] = self.checkApply.isChecked()
+        self.toggle_control(False)
 
         # Save calibration settings
         self.apply_settings()
 
-        # Reset the colours of the items in the list widget
+        # Reset the colours of the items in the QListWidget
         # Try exception causes this function to be skipped the first time
         try:
             for index in range(self.listImages.count()):
@@ -608,7 +602,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         except AttributeError:
             pass
 
-        worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate)
+        worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate, self.image_list)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.colour.connect(self.change_colour)
@@ -618,22 +612,24 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
     def start_finished(self):
         """Executes when the CameraCalibration instance has finished"""
 
+        # Re-enable relevant UI elements
+        self.toggle_control(True)
+
         # Opens a Dialog Window to view Calibration Results
         self.view_results(True)
 
-        # Save calibration settings to the config.json file
-        self.apply_settings()
+    def toggle_control(self, flag):
+        """Enables or disables the following elements in one fell swoop depending on the received flag"""
+        self.pushAdd.setEnabled(flag)
+        self.pushRemove.setEnabled(flag)
+        self.pushBrowseHI.setEnabled(flag)
+        self.pushBrowseTI.setEnabled(flag)
+        self.groupCalibrationSettings.setEnabled(flag)
+        self.pushStart.setEnabled(flag)
+        self.pushSave.setEnabled(flag)
+        self.pushDone.setEnabled(flag)
 
-        # Enable or disable relevant UI elements to prevent concurrent processes
-        self.pushAdd.setEnabled(True)
-        self.pushRemove.setEnabled(True)
-        self.pushBrowseHI.setEnabled(True)
-        self.pushBrowseTI.setEnabled(True)
-        self.pushStart.setEnabled(True)
-        self.pushSave.setEnabled(True)
-        self.pushDone.setEnabled(True)
-
-    def view_results(self, calibration_flag=False):
+    def view_results(self, calibration_flag):
         """Opens a Dialog Window when the CameraCalibration instance has finished
         Or when the View Results button is clicked
         Displays the results of the camera calibration to the user
@@ -646,12 +642,12 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             results = self.config.copy()
 
         try:
-            self.calibration_results_dialog.close()
-        except:
+            self.CR_dialog.close()
+        except AttributeError:
             pass
 
-        self.calibration_results_dialog = CalibrationResults(self, results['ImageCorrection'])
-        self.calibration_results_dialog.show()
+        self.CR_dialog = CalibrationResults(self, results['ImageCorrection'])
+        self.CR_dialog.show()
 
     def save_results(self):
         """Copies the calibration results from the temporary calibration_results.json file to the config.json file"""
@@ -681,32 +677,26 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         else:
             self.listImages.item(index).setBackground(QColor('red'))
 
-    def enable_checkbox(self):
-        """(Re-)Enables the Apply to Test Image checkbox if a test image has been selected"""
-
-        if self.lineTestImage.text():
-            self.checkApply.setEnabled(True)
-        else:
-            self.checkApply.setEnabled(False)
-            self.checkApply.setChecked(False)
-
-    def enable_button(self):
+    def enable_start(self):
         """(Re-)Enables the Start button if valid calibration images and an homography image have been selected"""
 
+        self.pushStart.setEnabled(bool(self.image_list) and bool(self.lineHomographyImage.text()))
+
+        # These conditionals just determine which status message to display
         if self.image_list and self.lineHomographyImage.text():
             self.update_status('Waiting to start process.')
-            self.pushStart.setEnabled(True)
+        elif self.image_list:
+            self.update_status('Select homography image.')
         else:
-            self.pushStart.setEnabled(False)
+            self.update_status('Add calibration images.')
 
     def apply_settings(self):
         """Grab the spinxBox and checkBox values and save them to the working config and default config file"""
 
-        with open('config.json') as config:
-            self.config = json.load(config)
-
         self.config['CameraCalibration']['Width'] = self.spinWidth.value()
         self.config['CameraCalibration']['Height'] = self.spinHeight.value()
+        self.config['CameraCalibration']['WidthHI'] = self.spinWidthHI.value()
+        self.config['CameraCalibration']['HeightHI'] = self.spinHeightHI.value()
         self.config['CameraCalibration']['DownscalingRatio'] = self.spinRatio.value()
         self.config['CameraCalibration']['Chessboard'] = self.checkSaveC.isChecked()
         self.config['CameraCalibration']['Undistort'] = self.checkSaveU.isChecked()
@@ -899,7 +889,11 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
 
         if 'Error' in string:
             self.start_test()
-            extra_functions.Notifications().camera_notification('nicholascklee@gmail.com')
+
+            # Send a camera notification to the developer
+            worker = qt_multithreading.Worker(extra_functions.Notifications().camera_notification,
+                                              'nicholascklee@gmail.com')
+            self.threadpool.start(worker)
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
@@ -1056,7 +1050,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.pushDrawContours.setEnabled(True)
 
     def remove_files(self):
-        """Removes slice files from the slice file list"""
+        """Removes selected slice files from the slice file list"""
 
         # Stop the selecting of files in the list from doing anything
         self.listSliceFiles.blockSignals(True)
@@ -1174,6 +1168,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.build['SliceConverter']['Files'] = self.slice_list
         self.build['SliceConverter']['Colours'] = part_colours
         self.build['SliceConverter']['Transform'] = self.part_transform
+        self.build['SliceConverter']['MaxLayers'] = self.max_layers
 
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
@@ -1353,7 +1348,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.preview_contours()
 
     def toggle_control(self, state):
-        """Enables or disables the following buttons in one fell swoop depending on the received state"""
+        """Enables or disables the following elements in one fell swoop depending on the received state"""
 
         # State 0 - No files added
         # State 1 - Files in the middle of being converted or contours being drawn
@@ -1423,13 +1418,11 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.contour_dict[list(sorted(self.part_colours.keys()))[index]] = contour_file.readlines()
 
         self.max_layers = 1
-        self.slice_height = 0.000
 
         # Find the max number of layers and the layer thickness from the first and third line in the contours file
         for contours in self.contour_dict.values():
             if int(contours[0]) > self.max_layers:
                 self.max_layers = int(contours[0])
-            slice_height = float(contours[2].split('C,')[0])
 
         self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
         self.spinRangeHigh.setMaximum(self.max_layers)

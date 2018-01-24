@@ -34,7 +34,7 @@ class Notifications:
 
         self.send_notification(message, address)
 
-    def idle_notification(self, build_name, phase, layer, address, attachment_name, timeout):
+    def idle_notification(self, build_name, phase, layer, address, attachment_name):
         """Construct the message and attachment to be sent when an Idle Timeout is triggered"""
 
         self.notification['To'] = address
@@ -43,11 +43,11 @@ class Notifications:
         phases = ['Coat', 'Scan']
 
         # Construct the full message here
-        notification = 'Defect Monitor has failed to capture an image in the last %s minutes.\nThis could be the result of ' \
-                  'a machine malfunction, a part error, a camera issue, the magnetic trigger not working correctly or ' \
-                  'the build has finished and because the user hadn\'t added any slice files, the final layer number ' \
-                  'is unknown.\nAttached is the latest captured image, which appears to be %s Layer %s.' % \
-                  (timeout, phases[phase], layer)
+        notification = 'Defect Monitor has failed to capture an image in the last %s minutes.\nThis could be the ' \
+                       'result of a machine malfunction, a part error, a camera issue, the magnetic trigger not ' \
+                       'working correctly or the build has finished and because the user hadn\'t added any slice ' \
+                       'files, the final layer number is unknown.\nAttached is the latest captured image, which ' \
+                       'appears to be %s Layer %s.' % (self.config['IdleTimeout'] // 60, phases[phase], layer)
 
         if attachment_name:
             self.attach_attachment(attachment_name)
@@ -63,6 +63,19 @@ class Notifications:
         notification = 'An error with the camera has been detected.\nThe camera has possibly shut down and is unable ' \
                        'to be detected by the computer.\nTry disconnecting and reconnecting the yellow ethernet cable' \
                        'connected to the POE switch.'
+
+        self.send_notification(notification, address)
+
+    def finish_notification(self, build_name, address):
+        """Construct the message to be sent when the captured image layer number has exceeded the slice layer number"""
+
+        self.notification['To'] = address
+        self.notification['Subject'] = 'Build Finished'
+
+        notification = 'The build\'s most recent layer number has exceeded the max layer number as determined by the ' \
+                       'build\s entered slice files. As such, it is assumed that the current build has finished.' \
+                       '\nRegardless, the program will still continue to capture additional images should the ' \
+                       'trigger continue to be triggered.'
 
         self.send_notification(notification, address)
 

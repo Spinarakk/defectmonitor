@@ -1,15 +1,16 @@
 {
     "BuildFolder": "C:/Users/Spinarakk/Documents/MCAM/Builds",
     "CameraCalibration": {
-        "Apply": false,
+        "Apply": true,
         "Chessboard": false,
-        "DownscalingRatio": 2,
-        "Folder": "D:/Documents/University Work/2017 Final Year Project/Kinect/Calibration",
+        "DownscalingRatio": 1,
         "Height": 7,
-        "HomographyImage": "D:/Documents/MCAM/Calibration/image_homography.png",
-        "TestImage": "D:/Documents/MCAM/Calibration/image_test.png",
+        "HeightHI": 15,
+        "HomographyImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/snapshotR_0007.png",
+        "TestImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/scanR_0034.png",
         "Undistort": false,
-        "Width": 9
+        "Width": 9,
+        "WidthHI": 10
     },
     "CameraSettings": {
         "BlackLevel": 500,
@@ -31,7 +32,7 @@
         "Size": 100,
         "Thickness": 2
     },
-    "IdleTimeout": 30,
+    "IdleTimeout": 1800,
     "ImageCorrection": {
         "CameraMatrix": [
             [
