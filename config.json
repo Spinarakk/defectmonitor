@@ -2,19 +2,19 @@
     "BuildFolder": "C:/Users/Spinarakk/Documents/MCAM/Builds",
     "CameraCalibration": {
         "Apply": true,
-        "Chessboard": false,
+        "Chessboard": true,
         "DownscalingRatio": 1,
-        "Height": 7,
-        "HeightHI": 15,
-        "HomographyImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/snapshotR_0007.png",
-        "TestImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/scanR_0034.png",
-        "Undistort": false,
-        "Width": 9,
-        "WidthHI": 10
+        "Height": 10,
+        "HeightHI": 10,
+        "HomographyImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/snapshotR_0005.png",
+        "TestImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/snapshotR_0018.png",
+        "Undistort": true,
+        "Width": 15,
+        "WidthHI": 13
     },
     "CameraSettings": {
         "BlackLevel": 500,
-        "ExposureTime": 10000,
+        "ExposureTime": 23000,
         "FrameDelay": 0,
         "FrameTransmissionDelay": 0,
         "Gain": 51,
@@ -36,13 +36,13 @@
     "ImageCorrection": {
         "CameraMatrix": [
             [
-                2573.9702258668,
+                2509.6556773586117,
                 0.0,
                 1920.0
             ],
             [
                 0.0,
-                2419.9392275648,
+                2506.062571448144,
                 1374.0
             ],
             [
@@ -51,59 +51,58 @@
                 1.0
             ]
         ],
-        "CropBoundary": [
-            1581,
-            3991,
-            398,
-            3868
+        "CropOffset": [
+            1732,
+            511
         ],
         "DistortionCoefficients": [
             [
-                -0.2640464569,
-                0.1238091428,
+                -0.26287808642481,
+                0.1535977514617118,
                 0.0,
                 0.0,
-                -0.0285638515
+                -0.05535696778315622
             ]
         ],
         "HomographyMatrix": [
             [
-                -1.3717514701,
-                -0.0297079113,
-                5349.1631096499
+                -1.4907545008330436,
+                -0.08877979005931705,
+                5968.464221858041
             ],
             [
-                0.8951034278,
-                -1.9053315042,
-                5235.8509593099
+                1.0064286628754895,
+                -1.9328639303135025,
+                5311.510195594893
             ],
             [
-                0.0003135199,
-                -2.19168e-05,
+                0.00030953224606955,
+                -1.698638687101476e-05,
                 1.0
             ]
         ],
         "HomographyResolution": [
-            5605,
-            5235
+            6004,
+            5311
         ],
         "ImageResolution": [
-            2410,
-            3470
+            2436,
+            3816
         ],
         "Offset": [
-            39,
-            122
+            0,
+            0
         ],
-        "RMS": 1.6641703202,
-        "ScaleFactor": 5.3333333333
+        "RMS": 1.683951497950847,
+        "ScaleFactor": 6
     },
     "Notifications": {
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"
     },
     "RecentBuilds": [
-        "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json"
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json",
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/Demo Build.json"
     ],
     "SliceConverter": {
         "CentrelineT": 3,

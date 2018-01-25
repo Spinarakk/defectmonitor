@@ -303,7 +303,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.display['ImageFolder'] = ['%s/fixed/coat' % self.build['BuildInfo']['Folder'],
                                            '%s/fixed/scan' % self.build['BuildInfo']['Folder'],
                                            '%s/contours' % self.build['BuildInfo']['Folder'],
-                                           '%s/fixed/snapshot' % self.build['BuildInfo']['Folder']]
+                                           '%s/raw/snapshot' % self.build['BuildInfo']['Folder']]
 
             # Set the display flag to true to allow tab changes to update images
             self.display_flag = True
@@ -465,7 +465,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         try:
             self.CR_dialog.close()
-        except AttributeError:
+        except (AttributeError, RuntimeError):
             pass
 
         self.CR_dialog = dialog_windows.CalibrationResults(self, results['ImageCorrection'])
@@ -477,7 +477,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         try:
             self.DR_dialog.close()
-        except AttributeError:
+        except (AttributeError, RuntimeError):
             pass
 
         self.DR_dialog = dialog_windows.DefectReports(self)
@@ -813,6 +813,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.stopwatch_elapsed = 0
             self.stopwatch_idle = 0
             self.update_time()
+            self.timeout_flag = True
 
             # Create a QTimer that will increment the two running timers
             self.timer_stopwatch = QTimer()
@@ -1590,12 +1591,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.stopwatch_idle += 1
 
         # If the idle time exceeds the stored idle timeout, display an error popup and send a notification
-        if self.stopwatch_idle > self.config['IdleTimeout']:
+        if self.stopwatch_idle > self.config['IdleTimeout'] and self.timeout_flag:
             worker = qt_multithreading.Worker(extra_functions.Notifications().idle_notification,
                                               self.build['BuildInfo']['Name'], self.build['ImageCapture']['Phase'],
                                               self.build['ImageCapture']['Layer'],
                                               self.build['BuildInfo']['EmailAddress'], self.image_name)
             self.threadpool.start(worker)
+
+            self.timeout_flag = False
 
             idle_error = QMessageBox(self)
             idle_error.setWindowTitle('Error')

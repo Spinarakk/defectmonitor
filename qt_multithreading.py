@@ -66,7 +66,7 @@ class Worker(QRunnable):
             # Emit back an error if the function fails in any way
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
-            #self.signals.error.emit((exctype, value, traceback.format_exc()))
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
         else:
             # Emit the result of the function
             self.signals.result.emit(result)

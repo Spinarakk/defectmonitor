@@ -106,17 +106,21 @@ class Calibration:
                     self.progress.emit(25)
                     image_test = image_processing.ImageFix().perspective_fix(image_test)
                     self.progress.emit(50)
-                    #image_test = image_processing.ImageFix().crop(image_test)
-                    self.progress.emit(75)
                     cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DP.png'), image_test)
+                    image_test = image_processing.ImageFix().crop(image_test)
+                    self.progress.emit(75)
+                    cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image_test)
                     self.status.emit('Test image successfully fixed.')
                     self.progress.emit(100)
 
                     # Open the image in the native image viewer for the user to view the results of the calibration
-                    #os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
+                    os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
 
                 self.status.emit('Calibration completed successfully.')
-
+                return True
+            else:
+                self.status.emit('Homography corner detection failed. Check chessboard dimensions.')
+                return False
         else:
             self.status.emit('No valid chessboard images found. Check images or chessboard dimensions.')
 
@@ -162,7 +166,7 @@ class Calibration:
             # If the Save Chessboard Image checkbox is checked
             if self.config['CameraCalibration']['Chessboard']:
                 # Create a 'corners' folder in the current image's root directory if it doesn't exist
-                folder = os.path.isdir('%s/corners' % image_name)
+                folder = '%s/corners' % os.path.dirname(image_name_full)
                 if not os.path.isdir(folder):
                     os.makedirs(folder)
 
@@ -191,7 +195,7 @@ class Calibration:
         self.status.emit('Undistorting %s...' % image_name)
 
         # Create an 'undistorted' folder in the current image's root directory if it doesn't exist
-        folder = os.path.isdir('%s/undistorted' % image_name_full)
+        folder = '%s/undistorted' % os.path.dirname(image_name_full)
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
@@ -264,5 +268,4 @@ class Calibration:
             self.status.emit('Homography matrix found.')
             return True
         else:
-            self.status.emit('Corner detection failed. Check homography image.')
             return False

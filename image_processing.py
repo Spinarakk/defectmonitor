@@ -63,10 +63,12 @@ class ImageFix:
         """Crops the image to a more desirable region of interest"""
 
         # Save value to be used to determine region of interest
-        boundary = self.config['ImageCorrection']['CropBoundary']
+        # Crop Offset refers to the XY offset as given in FastStone image viewer crop borders
+        offset = self.config['ImageCorrection']['CropOffset']
+        resolution = self.config['ImageCorrection']['ImageResolution']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
-        return image[boundary[0]: boundary[1], boundary[2]: boundary[3]]
+        return image[offset[0]: offset[0] + resolution[0], offset[1]: offset[1] + resolution[1]]
 
     @staticmethod
     def clahe(image, gray_flag=False, cliplimit=8.0, tilegridsize=(64, 64)):
@@ -136,15 +138,19 @@ class DefectDetector:
         # The previous layer integer will need to be specially calculated
         layer_p = str(int(self.layer) - 1).zfill(4)
 
-        # Check if the corresponding previous image (layer - 1) and the contours image exist and load them if they do
+        # Check if the corresponding previous image (layer - 1) exists and load it if it does
         if os.path.isfile(image_name.replace(self.layer, layer_p)):
             self.image_previous = cv2.imread(image_name.replace(self.layer, layer_p))
             self.histogram_flag = True
         else:
             self.histogram_flag = False
 
-        if os.path.isfile(image_name.replace('coatF', 'contours').replace('scanF', 'contours')):
-            self.image_contours = cv2.imread(image_name.replace('coatF', 'contours').replace('scanF', 'contours'))
+        # Derive the name of the corresponding contours image by using the layer number
+        contour_name = os.path.dirname(os.path.dirname(os.path.dirname(image_name))) + \
+                       '/contours/contours_%s.png' % self.layer
+
+        if os.path.isfile(contour_name):
+            self.image_contours = cv2.imread(contour_name)
             self.contours_flag = True
 
             # Add the part names to the defect dictionary
@@ -459,7 +465,7 @@ class DefectDetector:
 
         # Only report defects that intersect the part contours if the image exists
         if self.contours_flag:
-            for part_name, part_colour in self.build['SliceConverter']['PartColours'].items():
+            for part_name, part_colour in self.build['SliceConverter']['Colours'].items():
                 # Skip the combined key as it has already been processed
                 if 'combined' in part_name:
                     continue

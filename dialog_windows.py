@@ -38,6 +38,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
+        # This line removes the What's This question mark from the dialog window title bar
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
+
         # Flag to prevent additional image folders from being created
         self.open_flag = bool(build_name)
         self.settings_flag = settings_flag
@@ -260,6 +263,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         super(Preferences, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
 
         # Disallow the user from resizing the dialog window
         self.setFixedSize(self.size())
@@ -405,6 +409,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         super(CameraSettings, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
 
         # Disallow the user from resizing the dialog window
         #self.setFixedSize(self.size())
@@ -497,6 +502,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         super(CameraCalibration, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         # Restoring the window state needs to go into a try loop as the first time the program is run on a new system
@@ -588,8 +594,9 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
     def start(self):
         """Start the calibration process after saving the calibration settings to config.json file"""
 
-        # Enable or disable relevant UI elements to prevent concurrent processes
+        # Disable relevant UI elements to prevent concurrent processes
         self.toggle_control(False)
+        self.pushSave.setEnabled(False)
 
         # Save calibration settings
         self.apply_settings()
@@ -606,17 +613,19 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.colour.connect(self.change_colour)
-        worker.signals.finished.connect(self.start_finished)
+        worker.signals.result.connect(self.start_finished)
         self.threadpool.start(worker)
 
-    def start_finished(self):
+    def start_finished(self, flag):
         """Executes when the CameraCalibration instance has finished"""
 
         # Re-enable relevant UI elements
         self.toggle_control(True)
+        self.pushSave.setEnabled(flag)
 
-        # Opens a Dialog Window to view Calibration Results
-        self.view_results(True)
+        # Opens a Dialog Window to view Calibration Results only if the entire calibration was successful
+        if flag:
+            self.view_results(True)
 
     def toggle_control(self, flag):
         """Enables or disables the following elements in one fell swoop depending on the received flag"""
@@ -626,7 +635,6 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.pushBrowseTI.setEnabled(flag)
         self.groupCalibrationSettings.setEnabled(flag)
         self.pushStart.setEnabled(flag)
-        self.pushSave.setEnabled(flag)
         self.pushDone.setEnabled(flag)
 
     def view_results(self, calibration_flag):
@@ -643,7 +651,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
 
         try:
             self.CR_dialog.close()
-        except AttributeError:
+        except (AttributeError, RuntimeError):
             pass
 
         self.CR_dialog = CalibrationResults(self, results['ImageCorrection'])
@@ -737,6 +745,7 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         super(CalibrationResults, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -796,6 +805,7 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
         super(StressTest, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
         self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
@@ -1369,7 +1379,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         if self.checkBackground.isChecked():
             # Use the chosen background image to draw contours on
-            image = self.image_background.copy()
+            image = cv2.flip(self.image_background.copy(), 0)
         else:
             # Create a blank RGB image and convert it to white, and draw a black rectangle representing the platform
             image = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
@@ -1494,6 +1504,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         super(ImageConverter, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -1820,6 +1831,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         super(DefectReports, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
