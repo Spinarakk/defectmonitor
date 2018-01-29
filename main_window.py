@@ -92,6 +92,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
+        self.action3DVisualization.triggered.connect(self.defect_visualization)
 
         # Menubar -> Tools
         self.actionCameraSettings.triggered.connect(self.camera_settings)
@@ -107,7 +108,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionFauxTrigger.triggered.connect(self.faux_trigger)
         self.actionProcessCurrent.triggered.connect(self.process_current)
         self.actionProcessAll.triggered.connect(self.process_all)
-        self.actionProcessParts.triggered.connect(self.process_parts)
 
         # Menubar -> Settings
         self.actionBuildSettings.triggered.connect(self.build_settings)
@@ -148,7 +148,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Sidebar Toolbox Defect Processor
         self.pushProcessCurrent.clicked.connect(self.process_current)
         self.pushProcessAll.clicked.connect(self.process_all)
-        self.pushProcessParts.clicked.connect(self.process_parts)
         self.pushDefectReports.clicked.connect(self.defect_reports)
 
         # Layer Selection
@@ -484,6 +483,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.DR_dialog.tab_focus.connect(self.tab_focus)
         self.DR_dialog.show()
 
+    def defect_visualization(self):
+        """Opens a Modeless Dialog Window when the 3D Visualization button is clicked
+        Displays a 3D model constructed out of the slice files and defect data"""
+        pass
+
     # MENUBAR -> TOOLS
 
     def camera_calibration(self):
@@ -568,9 +572,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionProcessAll.setText('Process All')
             self.toggle_processing_buttons(0)
 
-    def process_parts(self):
-        pass
-
     def process_settings(self, layer):
         """Saves the settings to be used to process an image for defects to the build.json file
         This method exists as the only difference between the two options is the layer number"""
@@ -623,8 +624,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionProcessCurrent.setEnabled(state == 1)
         self.pushProcessAll.setEnabled(state != 0)
         self.actionProcessAll.setEnabled(state != 0)
-        self.pushProcessParts.setEnabled(state != 0)
-        self.actionProcessParts.setEnabled(state != 0)
 
     # MENUBAR -> SETTINGS
 
@@ -1023,6 +1022,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Acquire the layer and phase (tab index) from the image name
         layer = int(os.path.splitext(os.path.basename(self.image_name))[0][-4:])
+
         if 'coat' in self.image_name:
             index = 0
         elif 'scan' in self.image_name:

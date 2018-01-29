@@ -12,6 +12,7 @@ class ImageViewer(QGraphicsView):
     # Signal that will be emitted after the zoom in action has been completed
     # Just used to toggle the Zoom In action unchecked
     zoom_done = pyqtSignal()
+    roi_done = pyqtSignal(object)
     mouse_pos = pyqtSignal(int, int)
 
     def __init__(self, parent):
@@ -28,8 +29,9 @@ class ImageViewer(QGraphicsView):
         # List of QRectF zoom boxes in scene pixel coordinates
         self.zoom_list = list()
 
-        # Flags for enabling or disabling mouse interaction
+        # Flags for enabling or disabling mouse interaction and region selection
         self.zoom_flag = False
+        self.roi_flag = False
 
     def set_image(self, image):
         """Set the scene's current image to the received image after converting it to QPixmap"""
@@ -97,10 +99,14 @@ class ImageViewer(QGraphicsView):
             selection_box = self.scene.selectionArea().boundingRect().intersected(view_box)
             self.scene.setSelectionArea(QPainterPath())
             if selection_box.isValid() and (selection_box != view_box):
-                self.zoom_list.append(selection_box)
-                self.update_viewer()
+                if self.roi_flag:
+                    self.roi_done.emit(selection_box)
+                else:
+                    self.zoom_list.append(selection_box)
+                    self.update_viewer()
             self.setDragMode(QGraphicsView.NoDrag)
-            self.zoom_done.emit()
+            if not self.roi_flag:
+                self.zoom_done.emit()
 
     def mouseDoubleClickEvent(self, event):
         """When the Left Mouse button is double clicked, reset the zoom back to the original size"""

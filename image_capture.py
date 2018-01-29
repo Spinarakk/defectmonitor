@@ -144,6 +144,9 @@ class ImageCapture:
         status_camera.emit('Capturing...')
         status_trigger.emit('Detected')
 
+        # Remove the decimal point from the layer number
+        layer = int(layer)
+
         # Setup the camera while checking for any errors
         self.setup_camera(status_camera, layer)
 

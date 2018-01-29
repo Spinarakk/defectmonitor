@@ -369,9 +369,6 @@
    </item>
    <item row="5" column="1">
     <widget class="QPushButton" name="pushExportAll">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
      <property name="toolTip">
       <string>Export all the data (including all the parts) to a .csv file.</string>
      </property>

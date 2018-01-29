@@ -943,6 +943,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushZoomIn.clicked.connect(self.zoom_in)
         self.pushZoomOut.clicked.connect(self.zoom_out)
         self.pushGo.clicked.connect(self.set_slice)
+        self.pushSelectRegion.clicked.connect(self.select_region)
+        self.pushRemoveRegion.clicked.connect(self.remove_region)
         self.pushRotate.clicked.connect(self.rotate)
         self.pushResetR.clicked.connect(self.rotate_reset)
         self.pushTranslate.clicked.connect(self.translate)
@@ -964,6 +966,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.listSliceFiles.itemSelectionChanged.connect(self.select_parts)
         self.graphicsDisplay.mouse_pos.connect(self.update_position)
         self.graphicsDisplay.zoom_done.connect(self.zoom_in_finished)
+        self.graphicsDisplay.roi_done.connect(self.set_region)
 
         # Initiate a bunch of values
         self.contour_dict = dict()
@@ -974,6 +977,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.current_layer = 1
         self.convert_run_flag = False
         self.draw_run_flag = False
+
+        # Set the ROI rectangle if the flag is true
+        self.roi_flag = self.build['ROIFlag']
+        self.roi = self.build['ROI']
 
         # This value is used to indicate which process is active, used for the pause button and for exiting the window
         # 0 - None / 1 - Convert / 2 - Draw
@@ -1117,24 +1124,26 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             draw_confirmation.setWindowTitle('Draw Contours')
             draw_confirmation.setIcon(QMessageBox.Warning)
             draw_confirmation.setText('Saving drawn contours to the build folder.\n\n'
-                                      'Note that this will completely empty the build\'s contours folder and remove '
-                                      'all of the individual part reports. Part by part defect data will need to be '
-                                      're-calculated after re-drawing all the contours, but the combined report will '
-                                      'remain untouched.\n\n'
+                                      'Note that this will completely empty the build\'s contours folder and replace '
+                                      'all of the defect reports with empty reports. All defect data will need to be '
+                                      're-processed after re-drawing all the contours.\n\n'
                                       'Would you like to proceed to draw contours?')
             draw_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             retval = draw_confirmation.exec_()
 
             # If the user clicked No, the method will end, otherwise it continues
             if retval == 16384:
-                # Delete all the files in the build's contours folder
+                # Delete all the files in the build's contours folder and reports folder
                 for filename in os.listdir(self.output_folder):
                     os.remove(self.output_folder + '/' + filename)
 
-                # Check the new slice file list against the old slice file list for files that can be deleted
-                for filename in list(set(self.build['SliceConverter']['Files']) - set(self.slice_list)):
-                    os.remove('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'],
-                                                             os.path.splitext(os.path.basename(filename))[0]))
+                for filename in os.listdir('%s/reports' % self.build['BuildInfo']['Folder']):
+                    # Instead of deleting the combined and background reports, replace their contents with empty dicts
+                    if 'combined' in filename or 'background' in filename:
+                        with open('%s/reports/%s' % (self.build['BuildInfo']['Folder'], filename), 'w+') as report:
+                            json.dump(dict(), report)
+                        continue
+                    os.remove('%s/reports/%s' % (self.build['BuildInfo']['Folder'], filename))
             else:
                 return
 
@@ -1163,9 +1172,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
             # Create the reports if a build has been created
             if self.build['BuildInfo']['Name']:
-                if not os.path.isfile('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name)):
-                    with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
-                        json.dump(dict(), report)
+                with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
+                    json.dump(dict(), report)
 
         # Set the 'background' part colour to black
         part_colours['background'] = (0, 0, 0)
@@ -1174,11 +1182,13 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.contour_counter = self.spinRangeLow.value()
         self.draw_run_flag = True
 
-        # Save the list of slice files, part colours and transformations to the build.json file
+        # Save the list of slice files, part colours, transformations, max layers and roi to the build.json file
         self.build['SliceConverter']['Files'] = self.slice_list
         self.build['SliceConverter']['Colours'] = part_colours
         self.build['SliceConverter']['Transform'] = self.part_transform
         self.build['SliceConverter']['MaxLayers'] = self.max_layers
+        self.build['ROIFlag'] = self.roi_flag
+        self.build['ROI'] = self.roi
 
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
@@ -1188,7 +1198,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.draw_contours(self.contour_counter, True)
 
     def draw_contours(self, layer, names_flag=False):
-
         self.active_process = 2
         self.update_status('All | Drawing %s of %s.' % (str(layer).zfill(4), str(self.spinRangeHigh.value()).zfill(4)))
 
@@ -1203,7 +1212,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.threadpool.start(worker)
 
     def draw_contours_finished(self):
-
         self.contour_counter += 1
 
         self.progress_current += self.increment
@@ -1267,6 +1275,35 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
     def set_maximum(self):
         """Sets the maximum value of the low range spinbox to the current high range spinbox's value"""
         self.spinRangeLow.setMaximum(self.spinRangeHigh.value())
+
+    def select_region(self):
+        """Allows the user to select a region to crop the images for the defect processor"""
+        self.graphicsDisplay.zoom_flag = self.pushSelectRegion.isChecked()
+        self.graphicsDisplay.roi_flag = self.pushSelectRegion.isChecked()
+
+    def set_region(self, region):
+        """Saves the selected region to the build.json file and displays the region size on the dialog window
+        Also disables the checked status of the Select Region button after successfully selecting a region"""
+
+        self.pushSelectRegion.setChecked(False)
+        self.graphicsDisplay.roi_flag = False
+
+        # Display the width and height of the ROI on the dialog window
+        self.labelWidth.setText(str(round(region.width())))
+        self.labelHeight.setText(str(round(region.height())))
+
+        # Enable the draw roi flag and save the region coordinates to the instance
+        self.roi_flag = True
+        self.roi = [round(region.x()), round(region.y()), round(region.right()), round(region.bottom())]
+
+        print(self.roi)
+
+        self.preview_contours()
+
+    def remove_region(self):
+        """Resets the selected region and removes the drawn rectangle from the preview screen"""
+        self.roi_flag = False
+        self.preview_contours()
 
     def rotate(self):
         """Applies rotation parameters to the part_transform dictionary for the selected parts"""
@@ -1365,9 +1402,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # State 2 - Files added, contour preview successfully displayed
         self.pushAddSF.setEnabled(state != 1)
         self.pushRemoveSF.setEnabled(state != 1)
-        self.groupDisplayControl.setEnabled(state == 2)
         self.groupDisplayOptions.setEnabled(state == 2)
+        self.groupDisplayControl.setEnabled(state == 2)
         self.groupDrawRange.setEnabled(state == 2)
+        self.groupROI.setEnabled(state == 2)
         self.groupRotation.setEnabled(state == 2)
         self.groupTranslation.setEnabled(state == 2)
         self.pushBrowseOF.setEnabled(state != 1)
@@ -1384,7 +1422,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             # Create a blank RGB image and convert it to white, and draw a black rectangle representing the platform
             image = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
             image[:] = (255, 255, 255)
-            cv2.rectangle(image, (0, 0), image.shape[:2][::-1], (0, 0, 0), 3)
+            cv2.rectangle(image, (0, 0), image.shape[:2][::-1], (0, 0, 0), 5)
 
         # Check if the Fill Contours checkbox is checked to figure out how to draw the contours
         if self.checkFillContours.isChecked():
@@ -1407,6 +1445,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         if self.checkCentrelines.isChecked():
             cv2.line(image, (0, image.shape[0] // 2), (image.shape[1], image.shape[0] // 2), (0, 0, 0), thickness)
             cv2.line(image, (image.shape[1] // 2, 0), (image.shape[1] // 2, image.shape[0]), (0, 0, 0), thickness)
+
+        # Draw a rectangle of the user selected region of interest
+        if self.roi_flag:
+            cv2.rectangle(image, (self.roi[0], self.roi[1]), (self.roi[2], self.roi[3]), (0, 0, 0), 4)
 
         self.graphicsDisplay.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         self.update_table()
@@ -1850,8 +1892,8 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         # Setup event listeners for all relevant UI components, and connect them to specific functions
         self.comboParts.currentIndexChanged.connect(self.populate_tables)
         self.pushSet.clicked.connect(self.set_thresholds)
-        self.pushExportAll.clicked.connect(lambda: self.export_data(True))
-        self.pushExportVisible.clicked.connect(lambda: self.export_data(False))
+        self.pushExportAll.clicked.connect(self.export_all_data)
+        self.pushExportVisible.clicked.connect(self.export_visible_data)
         self.pushHideSelected.clicked.connect(self.hide_selected)
         self.tableCoat.cellDoubleClicked.connect(self.cell_click)
         self.tableScan.cellDoubleClicked.connect(self.cell_click)
@@ -2062,28 +2104,151 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         # Emit a signal to change focus to the selected defect layer
         self.tab_focus.emit(self.widgetReports.currentIndex(), layer, True, column - 1)
 
-    def export_data(self, all_flag):
-        """Exports the data to an excel compatible .csv (comma separated values) file"""
+    def export_all_data(self):
+        """Exports all the data to two separate excel compatible .csv (comma separated values) files"""
 
-        filename = QFileDialog.getSaveFileName(self, 'Export Data', '', 'CSV File (*.csv)')[0]
+        # Let the user set a name for the coat and scan data (with a pre-defined name already set)
+        filename_coat = QFileDialog.getSaveFileName(self, 'Export Coat Data', '%s/%s_data_coat' %
+                                               (self.build['BuildInfo']['Folder'] , self.build['BuildInfo']['Name']),
+                                               'CSV File (*.csv)')[0]
+
+        if filename_coat:
+            filename_scan = QFileDialog.getSaveFileName(self, 'Export Scan Data', '%s/%s_data_scan' %
+                                               (self.build['BuildInfo']['Folder'] , self.build['BuildInfo']['Name']),
+                                               'CSV File (*.csv)')[0]
+            if not filename_scan:
+                # Did the filename grab this way to not have so many indents in the main code
+                return
+        else:
+            return
+
+        # Initialize the two data dictionaries to store the data to
+        data_coat = dict()
+        data_scan = dict()
+        data_coat['LABELS'] = list()
+        data_scan['LABELS'] = list()
+
+        # All the lists for each layer needs to be initialized first before they can be extended
+        for layer in range(1, self.build['SliceConverter']['MaxLayers'] + 1):
+            data_coat[str(layer)] = list()
+            data_scan[str(layer)] = list()
+
+        # Iterate through all the parts
+        for part_name in self.part_names:
+            # Set up the first row of both dictionaries by extending the part name, labels and finally a spacer
+            data_coat['LABELS'].extend([part_name, 'LAYER', 'STREAKS', 'CHATTER', 'PATCHES', 'OUTLIERS', 'HISTOGRAM', ''])
+            data_scan['LABELS'].extend([part_name, 'LAYER', 'STREAKS', 'CHATTER', 'HISTOGRAM', 'OVERLAY', ''])
+
+            # Read each part's reports into memory
+            with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name)) as report:
+                report = json.load(report)
+
+            for layer in range(1, self.build['SliceConverter']['MaxLayers'] + 1):
+                # Grab the coat data in a try loop in case the index doesn't exist in the dictionary
+                try:
+                    data = report[str(layer).zfill(4)]['coat']
+                except (IndexError, KeyError):
+                    data_coat[str(layer)].extend([part_name, str(layer), '0', '0', '0', '0', '0'])
+                else:
+                    data_coat[str(layer)].extend([part_name, str(layer), data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0]])
+
+                    # Separated out as the parts don't contain histogram data
+                    try:
+                        data_coat[str(layer)].extend([round(data['HC'], 2), ''])
+                    except (KeyError, IndexError):
+                        data_coat[str(layer)].extend(['0', ''])
+
+                # Do the same for the scan data
+                try:
+                    data = report[str(layer).zfill(4)]['scan']
+                except (IndexError, KeyError):
+                    data_scan[str(layer)].extend([part_name, str(layer), '0', '0'])
+                else:
+                    data_scan[str(layer)].extend([part_name, str(layer), data['BS'][1], data['BC'][1]])
+
+                    try:
+                        data_scan[str(layer)].append(round(data['HC'], 2))
+                    except (KeyError, IndexError):
+                        data_scan[str(layer)].append('0')
+
+                    try:
+                        data_scan[str(layer)].extend([round(data['OC'] * 100, 4), ''])
+                    except (KeyError, IndexError):
+                        data_scan[str(layer)].extend(['0', ''])
+
+        # Write the coat and scan data to separate .csv files using the csv writer
+        # Put into a try loop just in case the user tries to overwrite a csv file that is currently open
+        try:
+            with open(filename_coat, 'w+', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                for item in data_coat.values():
+                    writer.writerow(item)
+        except PermissionError:
+            self.permission_error()
+            return
+        try:
+            with open(filename_scan, 'w+', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                for item in data_scan.values():
+                    writer.writerow(item)
+        except PermissionError:
+            self.permission_error()
+            return
+
+        # Open a message box with an export confirmation message
+        export_confirmation = QMessageBox(self)
+        export_confirmation.setWindowTitle('Export All Data')
+        export_confirmation.setIcon(QMessageBox.Information)
+        export_confirmation.setText('The coat data has been exported to %s.\n\nThe scan data has been exported '
+                                    'to %s.' % (filename_coat, filename_scan))
+        export_confirmation.exec_()
+
+    def permission_error(self):
+        """Opens a message box displaying a permission error when trying to write the csv file"""
+        permission_error = QMessageBox(self)
+        permission_error.setWindowTitle('Error')
+        permission_error.setIcon(QMessageBox.Critical)
+        permission_error.setText('Permission error when trying to save the .csv file.\nPlease close the .csv file '
+                                 'you wish to overwrite before retrying.')
+        permission_error.exec_()
+
+    def export_visible_data(self):
+        """Exports the visible table data to an excel compatible .csv (comma separated values) file"""
+
+        filename = QFileDialog.getSaveFileName(self, 'Export Visible Data', '%s/%s_data' %
+                                               (self.build['BuildInfo']['Folder'] , self.build['BuildInfo']['Name']),
+                                               'CSV File (*.csv)')[0]
 
         if filename:
-            # If the Export All Data button was pressed, grab all the data from the .json reports
-            if all_flag:
-                pass
-            # Otherwise grab the data from the currently visible table
+            # The data will be stored in lists a dictionary with every key being a new row
+            data = dict()
+
+            tables = [self.tableCoat, self.tableScan]
+            index = self.widgetReports.currentIndex()
+            part = self.comboParts.currentIndex()
+
+            # Set up the first row of the table with the labels depending on which table is being exported
+            if index == 0:
+                data['LABELS'] = ['LAYER', 'STREAKS', 'CHATTER', 'PATCHES', 'OUTLIERS']
+                # Only the combined data has the following data
+                if part == 0:
+                    data['LABELS'].append('HISTOGRAM')
             else:
-                tables = [self.tableCoat, self.tableScan]
-                index = self.widgetReports.currentIndex()
+                data['LABELS'] = ['LAYER', 'STREAKS', 'CHATTER']
+                if part == 0:
+                    data['LABELS'].extend(['HISTOGRAM', 'OVERLAY'])
 
-                # Grab the data from the currently displayed table
-                data = dict()
-                for row in range(tables[index].rowCount()):
-                    data[str(row)] = list()
-                    for column in range(6):
+            # Grab the data from the currently visible table
+            for row in range(tables[index].rowCount()):
+                data[str(row)] = list()
+                for column in range(6):
+                    # Check if the cell has data and skip it if it doesnt (for individual parts)
+                    try:
                         data[str(row)].append(tables[index].item(row, column).text())
+                    except AttributeError:
+                        continue
 
-            # Write the data to a csv file using the csv writer
+            # Write the data to a .csv file using the csv writer
             with open(filename, 'w+', newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 for item in data.values():
@@ -2091,7 +2256,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
 
             # Open a message box with an export confirmation message
             export_confirmation = QMessageBox(self)
-            export_confirmation.setWindowTitle('Export Data')
+            export_confirmation.setWindowTitle('Export Visible Data')
             export_confirmation.setIcon(QMessageBox.Information)
             export_confirmation.setText('The data has been exported to %s.' % filename)
             export_confirmation.exec_()

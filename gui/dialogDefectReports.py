@@ -150,7 +150,6 @@ class Ui_dialogDefectReports(object):
         self.labelParts.setObjectName("labelParts")
         self.gridLayout.addWidget(self.labelParts, 0, 1, 1, 1)
         self.pushExportAll = QtWidgets.QPushButton(dialogDefectReports)
-        self.pushExportAll.setEnabled(False)
         self.pushExportAll.setObjectName("pushExportAll")
         self.gridLayout.addWidget(self.pushExportAll, 5, 1, 1, 1)
         self.pushExportVisible = QtWidgets.QPushButton(dialogDefectReports)

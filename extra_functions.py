@@ -43,11 +43,11 @@ class Notifications:
         phases = ['Coat', 'Scan']
 
         # Construct the full message here
-        notification = 'Defect Monitor has failed to capture an image in the last %s minutes.\nThis could be the ' \
+        notification = 'Defect Monitor has failed to capture an image in the last %s minutes.\n\nThis could be the ' \
                        'result of a machine malfunction, a part error, a camera issue, the magnetic trigger not ' \
                        'working correctly or the build has finished and because the user hadn\'t added any slice ' \
-                       'files, the final layer number is unknown.\nAttached is the latest captured image, which ' \
-                       'appears to be %s Layer %s.' % (self.config['IdleTimeout'] // 60, phases[phase], layer)
+                       'files, the final layer number is unknown.\n\nAttached is the latest captured image, which ' \
+                       'appears to be %s Layer %s.' % (self.config['IdleTimeout'] // 60, phases[phase], int(layer))
 
         if attachment_name:
             self.attach_attachment(attachment_name)

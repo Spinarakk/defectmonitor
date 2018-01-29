@@ -1211,7 +1211,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>98</width>
+            <width>136</width>
             <height>110</height>
            </rect>
           </property>
@@ -1414,7 +1414,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>98</width>
+            <width>136</width>
             <height>110</height>
            </rect>
           </property>
@@ -1455,22 +1455,22 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushProcessParts">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Process Parts</string>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="pushDefectReports">
              <property name="enabled">
               <bool>false</bool>
              </property>
              <property name="text">
               <string>Defect Reports</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="push3DVisualization">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>3D Visualization</string>
              </property>
             </widget>
            </item>
@@ -1523,6 +1523,8 @@
     <addaction name="separator"/>
     <addaction name="actionCalibrationResults"/>
     <addaction name="actionDefectReports"/>
+    <addaction name="separator"/>
+    <addaction name="action3DVisualization"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1534,7 +1536,6 @@
      </property>
      <addaction name="actionProcessCurrent"/>
      <addaction name="actionProcessAll"/>
-     <addaction name="actionProcessParts"/>
     </widget>
     <widget class="QMenu" name="menuImageCapture">
      <property name="title">
@@ -1825,6 +1826,14 @@
    </property>
    <property name="text">
     <string>Stress Test</string>
+   </property>
+  </action>
+  <action name="action3DVisualization">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>3D Visualization</string>
    </property>
   </action>
  </widget>

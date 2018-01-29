@@ -1,19 +1,320 @@
 {
     "BuildInfo": {
-        "EmailAddress": "",
-        "Folder": "",
-        "Name": "",
-        "Username": ""
+        "EmailAddress": "nicholascklee@gmail.com",
+        "Folder": "C:/Users/Spinarakk/Documents/MCAM/Builds/2018-01-29 [16''00'06] Default",
+        "Name": "Default",
+        "Username": "Nicholas Lee"
     },
     "ImageCapture": {
         "Layer": 0.5,
         "Phase": 1,
         "Snapshot": 1
     },
+    "ROI": [
+        275,
+        154,
+        3467,
+        2220
+    ],
+    "ROIFlag": true,
     "SliceConverter": {
-        "Colours": {},
-        "Files": [],
-        "MaxLayers": 1,
-        "Transform": {}
+        "Colours": {
+            "D1": [
+                100,
+                100,
+                0
+            ],
+            "D2": [
+                101,
+                101,
+                0
+            ],
+            "D3": [
+                102,
+                102,
+                0
+            ],
+            "D4": [
+                103,
+                103,
+                0
+            ],
+            "Distortion Trial 1": [
+                104,
+                104,
+                0
+            ],
+            "P1": [
+                105,
+                105,
+                0
+            ],
+            "P2": [
+                106,
+                106,
+                0
+            ],
+            "P3": [
+                107,
+                107,
+                0
+            ],
+            "P4": [
+                108,
+                108,
+                0
+            ],
+            "P5": [
+                109,
+                109,
+                0
+            ],
+            "T1": [
+                110,
+                110,
+                0
+            ],
+            "T10": [
+                119,
+                119,
+                0
+            ],
+            "T11": [
+                120,
+                120,
+                0
+            ],
+            "T12": [
+                121,
+                121,
+                0
+            ],
+            "T13": [
+                122,
+                122,
+                0
+            ],
+            "T14": [
+                123,
+                123,
+                0
+            ],
+            "T15": [
+                124,
+                124,
+                0
+            ],
+            "T16": [
+                125,
+                125,
+                0
+            ],
+            "T2": [
+                111,
+                111,
+                0
+            ],
+            "T3": [
+                112,
+                112,
+                0
+            ],
+            "T4": [
+                113,
+                113,
+                0
+            ],
+            "T5": [
+                114,
+                114,
+                0
+            ],
+            "T6": [
+                115,
+                115,
+                0
+            ],
+            "T7": [
+                116,
+                116,
+                0
+            ],
+            "T8": [
+                117,
+                117,
+                0
+            ],
+            "T9": [
+                118,
+                118,
+                0
+            ],
+            "background": [
+                0,
+                0,
+                0
+            ]
+        },
+        "Files": [
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/D1.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/D2.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/D3.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/D4.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/Distortion Trial 1.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/P1.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/P2.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/P3.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/P4.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/P5.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T1.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T10.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T11.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T12.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T13.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T14.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T15.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T16.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T2.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T3.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T4.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T5.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T6.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T7.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T8.cli",
+            "C:/Users/Spinarakk/Documents/MCAM/Slice Files/2018-01-12/T9.cli"
+        ],
+        "MaxLayers": 3492,
+        "Transform": {
+            "D1": [
+                0,
+                0,
+                0
+            ],
+            "D2": [
+                0,
+                0,
+                0
+            ],
+            "D3": [
+                0,
+                0,
+                0
+            ],
+            "D4": [
+                0,
+                0,
+                0
+            ],
+            "Distortion Trial 1": [
+                0,
+                0,
+                0
+            ],
+            "P1": [
+                0,
+                0,
+                0
+            ],
+            "P2": [
+                0,
+                0,
+                0
+            ],
+            "P3": [
+                0,
+                0,
+                0
+            ],
+            "P4": [
+                0,
+                0,
+                0
+            ],
+            "P5": [
+                0,
+                0,
+                0
+            ],
+            "T1": [
+                0,
+                0,
+                0
+            ],
+            "T10": [
+                0,
+                0,
+                0
+            ],
+            "T11": [
+                0,
+                0,
+                0
+            ],
+            "T12": [
+                0,
+                0,
+                0
+            ],
+            "T13": [
+                0,
+                0,
+                0
+            ],
+            "T14": [
+                0,
+                0,
+                0
+            ],
+            "T15": [
+                0,
+                0,
+                0
+            ],
+            "T16": [
+                0,
+                0,
+                0
+            ],
+            "T2": [
+                0,
+                0,
+                0
+            ],
+            "T3": [
+                0,
+                0,
+                0
+            ],
+            "T4": [
+                0,
+                0,
+                0
+            ],
+            "T5": [
+                0,
+                0,
+                0
+            ],
+            "T6": [
+                0,
+                0,
+                0
+            ],
+            "T7": [
+                0,
+                0,
+                0
+            ],
+            "T8": [
+                0,
+                0,
+                0
+            ],
+            "T9": [
+                0,
+                0,
+                0
+            ]
+        }
     }
 }

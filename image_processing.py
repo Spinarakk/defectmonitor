@@ -1,6 +1,5 @@
 # Import external libraries
 import os
-import time
 import cv2
 import numpy as np
 import json
@@ -68,7 +67,7 @@ class ImageFix:
         resolution = self.config['ImageCorrection']['ImageResolution']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
-        return image[offset[0]: offset[0] + resolution[0], offset[1]: offset[1] + resolution[1]]
+        return image[offset[0] : offset[0] + resolution[0], offset[1] : offset[1] + resolution[1]]
 
     @staticmethod
     def clahe(image, gray_flag=False, cliplimit=8.0, tilegridsize=(64, 64)):
@@ -138,9 +137,15 @@ class DefectDetector:
         # The previous layer integer will need to be specially calculated
         layer_p = str(int(self.layer) - 1).zfill(4)
 
+        # Grab the ROI from the build.json file
+        roi = self.build['ROI']
+
         # Check if the corresponding previous image (layer - 1) exists and load it if it does
+        # Also crop down the image's region of interest to the saved crop boundary
         if os.path.isfile(image_name.replace(self.layer, layer_p)):
             self.image_previous = cv2.imread(image_name.replace(self.layer, layer_p))
+            if self.build['ROIFlag']:
+                self.image_previous = self.image_previous[roi[0] : roi[2], roi[1] : roi[3]]
             self.histogram_flag = True
         else:
             self.histogram_flag = False
@@ -151,6 +156,9 @@ class DefectDetector:
 
         if os.path.isfile(contour_name):
             self.image_contours = cv2.imread(contour_name)
+            if self.build['ROIFlag']:
+                self.image_contours = self.image_contours[roi[0] : roi[2], roi[1] : roi[3]]
+
             self.contours_flag = True
 
             # Add the part names to the defect dictionary
@@ -180,6 +188,10 @@ class DefectDetector:
 
         # Create a blank black RGB image the same size as the raw image to draw the defects on
         image_blank = np.zeros(image.shape, np.uint8)
+
+        # Crop down the image's region of interest
+        if self.build['ROIFlag']:
+            image = image[roi[0] : roi[2], roi[1] : roi[3]]
 
         # Different detection methods will be applied to the coat or scan image
         if 'coat' in self.phase:
@@ -448,10 +460,15 @@ class DefectDetector:
     def report_defects(self, image_defects, defect_colour, defect_type):
         """Report the size and coordinates of any defects that overlay any of the part contours and the background"""
 
+        if self.build['ROIFlag']:
+            roi = self.build['ROI']
+            image_defects = image_defects[roi[0]: roi[2], roi[1]: roi[3]]
+
         # Report the combined defects first by comparing to a blank image
         # This process will always happen regardless if a contour image exists or not
         image_blank = np.zeros(image_defects.shape, np.uint8)
-        size, coordinates, occurrences = self.find_coordinates(image_defects, image_blank, COLOUR_BLACK, defect_colour)
+        size, coordinates, occurrences, _ = self.find_coordinates(image_defects, image_blank, COLOUR_BLACK,
+                                                                  defect_colour)
 
         # Convert the pixel size data into a percentage based on the total number of pixels in the image
         if 'SP' in defect_type or 'CO' in defect_type:
@@ -471,12 +488,15 @@ class DefectDetector:
                     continue
 
                 # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
-                size, coordinates, occurrences = self.find_coordinates(image_defects, self.image_contours,
-                                                                       tuple(part_colour), defect_colour)
+                size, coordinates, occurrences, size_contour = self.find_coordinates(image_defects, self.image_contours,
+                                                                                     tuple(part_colour), defect_colour)
 
                 # Convert the pixel size data into a percentage based on the total number of pixels in the image
                 if 'SP' in defect_type or 'CO' in defect_type:
-                    size = round(size / self.total_pixels * 100, 4)
+                    if size_contour:
+                        size = round(size / size_contour * 100, 4)
+                    else:
+                        print('ZERO ERROR')
 
                 if size > 0:
                     # Add these to the defect dictionary for the current part, and the combined dictionary
@@ -490,11 +510,14 @@ class DefectDetector:
         Because reporting the coordinates of every pixel will yield an incredibly long list...
         The centre coordinates of each 'defect blob' is reported instead"""
 
-        # Create a mask of each part using their respective colour
+        # Create a mask of the part in question part using its respective colour
         mask = cv2.inRange(image_overlay, part_colour, part_colour)
 
         # Because the colour causes some noise in the mask due to gradients, close and remove any white noise
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
+
+        # Calculate the size of the contour in the mask
+        size_contour = cv2.countNonZero(mask)
 
         # Overlay the defect image with the created mask of the part in question
         image_overlap = cv2.bitwise_and(image_defects, image_defects, mask=mask)
@@ -519,4 +542,4 @@ class DefectDetector:
                 coordinates.append((int(x), int(y)))
                 occurrences += 1
 
-        return size, coordinates, occurrences
+        return size, coordinates, occurrences, size_contour

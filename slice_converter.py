@@ -1,10 +1,8 @@
 # Import external libraries
 import os
-import time
 import cv2
 import numpy as np
 import json
-from operator import add
 
 # Import related modules
 import image_processing
@@ -134,7 +132,7 @@ class SliceConverter:
                 contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
 
             # Offset the offset by the transform parameters for the current part
-            offset = tuple(map(add, self.config['ImageCorrection']['Offset'], transform[part_name][:2]))
+            offset = tuple(transform[part_name][:2])
 
             # Block of code responsible for rotation of the current part if an angle has been specified
             if transform[part_name][2]:
