@@ -67,7 +67,7 @@ class ImageFix:
         resolution = self.config['ImageCorrection']['ImageResolution']
 
         # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
-        return image[offset[0] : offset[0] + resolution[0], offset[1] : offset[1] + resolution[1]]
+        return image[offset[0]:offset[0] + resolution[0], offset[1]:offset[1] + resolution[1]]
 
     @staticmethod
     def clahe(image, gray_flag=False, cliplimit=8.0, tilegridsize=(64, 64)):
@@ -124,6 +124,15 @@ class DefectDetector:
         self.progress = progress
         self.progress.emit(0)
 
+        # Load the image to be analyzed into memory
+        image = cv2.imread(image_name)
+
+        # Grab the total number of pixels in the image
+        self.total_pixels = image.size / 3
+
+        # Create a blank black RGB image the same size as the raw image to draw the defects on
+        image_blank = np.zeros(image.shape, np.uint8)
+
         # Discern the phase from the image name itself as at this point of the code, the name is 100% correct
         if 'coat' in image_name:
             self.phase = 'coat'
@@ -137,28 +146,19 @@ class DefectDetector:
         # The previous layer integer will need to be specially calculated
         layer_p = str(int(self.layer) - 1).zfill(4)
 
-        # Grab the ROI from the build.json file
-        roi = self.build['ROI']
-
         # Check if the corresponding previous image (layer - 1) exists and load it if it does
-        # Also crop down the image's region of interest to the saved crop boundary
+        # Also crop down the image's region of interest to the saved crop boundary if necessary
         if os.path.isfile(image_name.replace(self.layer, layer_p)):
             self.image_previous = cv2.imread(image_name.replace(self.layer, layer_p))
-            if self.build['ROIFlag']:
-                self.image_previous = self.image_previous[roi[0] : roi[2], roi[1] : roi[3]]
             self.histogram_flag = True
         else:
             self.histogram_flag = False
 
         # Derive the name of the corresponding contours image by using the layer number
-        contour_name = os.path.dirname(os.path.dirname(os.path.dirname(image_name))) + \
-                       '/contours/contours_%s.png' % self.layer
+        contour_name = '%s/contours/contours_%s.png' % (self.build['BuildInfo']['Folder'], self.layer)
 
         if os.path.isfile(contour_name):
             self.image_contours = cv2.imread(contour_name)
-            if self.build['ROIFlag']:
-                self.image_contours = self.image_contours[roi[0] : roi[2], roi[1] : roi[3]]
-
             self.contours_flag = True
 
             # Add the part names to the defect dictionary
@@ -179,19 +179,6 @@ class DefectDetector:
 
             if self.phase not in self.defects[part_name][self.layer]:
                 self.defects[part_name][self.layer][self.phase] = dict()
-
-        # Load the image to be analyzed into memory
-        image = cv2.imread(image_name)
-
-        # Grab the total number of pixels in the image
-        self.total_pixels = image.size / 3
-
-        # Create a blank black RGB image the same size as the raw image to draw the defects on
-        image_blank = np.zeros(image.shape, np.uint8)
-
-        # Crop down the image's region of interest
-        if self.build['ROIFlag']:
-            image = image[roi[0] : roi[2], roi[1] : roi[3]]
 
         # Different detection methods will be applied to the coat or scan image
         if 'coat' in self.phase:
@@ -277,6 +264,10 @@ class DefectDetector:
                         if abs(y1 - y2) == 0 and 20 < y1 < image_defects.shape[0] - 20:
                             cv2.line(image_defects, (x1, y1), (x2, y2), COLOUR_RED, 2)
 
+        # Crops down the defect image to remove non-ROI parts
+        if self.build['ROIFlag']:
+            image_defects = self.defect_roi(image_defects, self.build['ROI'])
+
         # Save the found defects to the corresponding report
         self.report_defects(image_defects, COLOUR_RED, 'BS')
 
@@ -313,10 +304,9 @@ class DefectDetector:
                                   COLOUR_BLUE, thickness=3)
                     coordinate_previous = coordinate
 
-        # Save the found defects to the corresponding report
+        if self.build['ROIFlag']:
+            image_defects = self.defect_roi(image_defects, self.build['ROI'])
         self.report_defects(image_defects, COLOUR_BLUE, 'BC')
-
-        # Save the image with the defects on it to the corresponding folder
         cv2.imwrite('%s/defects/%s/chatter/%sBC_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                            self.layer), image_defects)
 
@@ -333,9 +323,9 @@ class DefectDetector:
         # Change the colour of the pixels in the blank image to green if they're above the threshold
         image_defects[image_threshold == 255] = COLOUR_GREEN
 
+        if self.build['ROIFlag']:
+            image_defects = self.defect_roi(image_defects, self.build['ROI'])
         self.report_defects(image_defects, COLOUR_GREEN, 'SP')
-
-        # Save the image with the defects on it to the corresponding folder
         cv2.imwrite('%s/defects/%s/patches/%sSP_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                            self.layer), image_defects)
 
@@ -384,9 +374,9 @@ class DefectDetector:
         image_inner_shadow = cv2.threshold(image_white, retval * 0.95, 255, cv2.THRESH_TOZERO_INV)[1]
         image_defects[np.where((image_inner_shadow != COLOUR_BLACK).all(axis=2))] = COLOUR_YELLOW
 
+        if self.build['ROIFlag']:
+            image_defects = self.defect_roi(image_defects, self.build['ROI'])
         self.report_defects(image_defects, COLOUR_YELLOW, 'CO')
-
-        # Save the image with the defects on it to the corresponding folder
         cv2.imwrite(
             '%s/defects/%s/outliers/%sCO_%s.png' % (self.build['BuildInfo']['Folder'], self.phase, self.phase,
                                                     self.layer), image_defects)
@@ -419,6 +409,9 @@ class DefectDetector:
 
         # Draw the contours on the defect image in purple
         cv2.drawContours(image_defects, contours_list, -1, COLOUR_PURPLE, thickness=cv2.FILLED)
+
+        if self.build['ROIFlag']:
+            image_defects = self.defect_roi(image_defects, self.build['ROI'])
 
         # Compare the detected scan pattern against the drawn contours
         if self.contours_flag:
@@ -460,10 +453,6 @@ class DefectDetector:
     def report_defects(self, image_defects, defect_colour, defect_type):
         """Report the size and coordinates of any defects that overlay any of the part contours and the background"""
 
-        if self.build['ROIFlag']:
-            roi = self.build['ROI']
-            image_defects = image_defects[roi[0]: roi[2], roi[1]: roi[3]]
-
         # Report the combined defects first by comparing to a blank image
         # This process will always happen regardless if a contour image exists or not
         image_blank = np.zeros(image_defects.shape, np.uint8)
@@ -503,6 +492,13 @@ class DefectDetector:
                     self.defects[part_name][self.layer][self.phase][defect_type] = [size, occurrences] + coordinates
                 else:
                     self.defects[part_name][self.layer][self.phase][defect_type] = [0, 0]
+
+    @staticmethod
+    def defect_roi(image, roi):
+        """Crops the image (specifically the found defects image) to the specified ROI and adds black to the rest"""
+        image_roi = np.zeros(image.shape, np.uint8)
+        image_roi[roi[1]:roi[3], roi[0]:roi[2]] = image[roi[1]:roi[3], roi[0]:roi[2]]
+        return image_roi
 
     @staticmethod
     def find_coordinates(image_defects, image_overlay, part_colour, defect_colour):

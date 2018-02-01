@@ -12,7 +12,7 @@ class ImageViewer(QGraphicsView):
     # Signal that will be emitted after the zoom in action has been completed
     # Just used to toggle the Zoom In action unchecked
     zoom_done = pyqtSignal()
-    roi_done = pyqtSignal(object)
+    roi_done = pyqtSignal(list, bool)
     mouse_pos = pyqtSignal(int, int)
 
     def __init__(self, parent):
@@ -100,7 +100,9 @@ class ImageViewer(QGraphicsView):
             self.scene.setSelectionArea(QPainterPath())
             if selection_box.isValid() and (selection_box != view_box):
                 if self.roi_flag:
-                    self.roi_done.emit(selection_box)
+                    roi = [round(selection_box.x()), round(selection_box.y()), round(selection_box.width()),
+                           round(selection_box.height())]
+                    self.roi_done.emit(roi, True)
                 else:
                     self.zoom_list.append(selection_box)
                     self.update_viewer()

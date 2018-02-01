@@ -287,6 +287,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinThickness.setValue(self.config['Gridlines']['Thickness'])
         self.spinContourT.setValue(self.config['SliceConverter']['ContourT'])
         self.spinCentrelineT.setValue(self.config['SliceConverter']['CentrelineT'])
+        self.spinROIOffset.setValue(self.config['SliceConverter']['ROIOffset'])
         self.spinIdleTimeout.setValue(self.config['IdleTimeout'])
         self.lineSenderAddress.setText(self.config['Notifications']['Sender'])
         self.linePassword.setText(self.config['Notifications']['Password'])
@@ -299,17 +300,10 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinSize.setToolTip('5 - %s' % int(self.config['ImageCorrection']['ImageResolution'][0] / 2))
 
         # Setup event listeners for all the setting boxes to detect a change in an entered value
-        self.lineBuildFolder.textChanged.connect(self.apply_enable)
-        self.spinSize.valueChanged.connect(self.apply_enable)
-        self.spinThickness.valueChanged.connect(self.apply_enable)
-        self.spinContourT.valueChanged.connect(self.apply_enable)
-        self.spinCentrelineT.valueChanged.connect(self.apply_enable)
-        self.spinIdleTimeout.valueChanged.connect(self.apply_enable)
-        self.lineSenderAddress.textChanged.connect(self.apply_enable)
-        self.linePassword.textChanged.connect(self.apply_enable)
-        self.lineBuildName.textChanged.connect(self.apply_enable)
-        self.lineUsername.textChanged.connect(self.apply_enable)
-        self.lineEmailAddress.textChanged.connect(self.apply_enable)
+        for element in self.findChildren(QSpinBox):
+            element.valueChanged.connect(self.apply_enable)
+        for element in self.findChildren(QLineEdit):
+            element.textChanged.connect(self.apply_enable)
 
     def browse_folder(self):
         """Opens a File Dialog, allowing the user to select a folder to store all the builds"""
@@ -369,6 +363,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.config['BuildFolder'] = self.lineBuildFolder.text()
         self.config['SliceConverter']['ContourT'] = self.spinContourT.value()
         self.config['SliceConverter']['CentrelineT'] = self.spinCentrelineT.value()
+        self.config['SliceConverter']['ROIOffset'] = self.spinROIOffset.value()
         self.config['IdleTimeout'] = self.spinIdleTimeout.value() * 60
         self.config['Notifications']['Sender'] = self.lineSenderAddress.text()
         self.config['Notifications']['Password'] = self.linePassword.text()
@@ -440,13 +435,8 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
 
         # Setup event listeners for all the setting boxes to detect a change in an entered value
         self.comboPixelFormat.currentIndexChanged.connect(self.apply_enable)
-        self.spinGain.valueChanged.connect(self.apply_enable)
-        self.spinBlackLevel.valueChanged.connect(self.apply_enable)
-        self.spinExposureTime.valueChanged.connect(self.apply_enable)
-        self.spinPacketSize.valueChanged.connect(self.apply_enable)
-        self.spinInterPacketDelay.valueChanged.connect(self.apply_enable)
-        self.spinFrameDelay.valueChanged.connect(self.apply_enable)
-        self.spinTriggerTimeout.valueChanged.connect(self.apply_enable)
+        for element in self.findChildren(QSpinBox):
+            element.valueChanged.connect(self.apply_enable)
 
     def apply_enable(self):
         """Enable the Apply button on any change of settings"""
@@ -943,8 +933,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushZoomIn.clicked.connect(self.zoom_in)
         self.pushZoomOut.clicked.connect(self.zoom_out)
         self.pushGo.clicked.connect(self.set_slice)
-        self.pushSelectRegion.clicked.connect(self.select_region)
-        self.pushRemoveRegion.clicked.connect(self.remove_region)
+        self.pushSelect.clicked.connect(self.select_roi)
+        self.pushRemove.clicked.connect(self.remove_roi)
+        self.pushSet.clicked.connect(lambda: self.set_roi(0, True))
         self.pushRotate.clicked.connect(self.rotate)
         self.pushResetR.clicked.connect(self.rotate_reset)
         self.pushTranslate.clicked.connect(self.translate)
@@ -954,8 +945,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushBrowseOF.clicked.connect(self.browse_output)
 
         # Checkboxes
-        self.checkCentrelines.toggled.connect(self.preview_contours)
-        self.checkFillContours.toggled.connect(self.preview_contours)
+        self.checkCentrelines.toggled.connect(lambda: self.preview_contours(0))
+        self.checkFillContours.toggled.connect(lambda: self.preview_contours(0))
         self.checkBackground.toggled.connect(self.set_background)
 
         # Spinboxes
@@ -966,7 +957,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.listSliceFiles.itemSelectionChanged.connect(self.select_parts)
         self.graphicsDisplay.mouse_pos.connect(self.update_position)
         self.graphicsDisplay.zoom_done.connect(self.zoom_in_finished)
-        self.graphicsDisplay.roi_done.connect(self.set_region)
+        self.graphicsDisplay.roi_done.connect(self.set_roi)
 
         # Initiate a bunch of values
         self.contour_dict = dict()
@@ -1061,10 +1052,12 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.convert_slice(self.slice_list[self.index_list[self.slice_counter]])
         else:
             self.update_layer_ranges()
-            self.preview_contours()
             if self.slice_list:
+                self.preview_contours(self.config['SliceConverter']['ROIOffset'])
                 self.toggle_control(2)
                 self.pushDrawContours.setEnabled(True)
+            else:
+                self.preview_contours()
 
     def remove_files(self):
         """Removes selected slice files from the slice file list"""
@@ -1089,14 +1082,15 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.toggle_control(0)
 
         self.update_layer_ranges()
-        self.preview_contours()
+        self.preview_contours(self.config['SliceConverter']['ROIOffset'])
 
     def convert_slice(self, slice_file):
         """Looping method to convert slice files"""
 
         self.active_process = 1
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert_cli, slice_file)
+        worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert_cli, slice_file,
+                                          self.config['ImageCorrection']['ScaleFactor'])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.finished.connect(self.convert_slice_finished)
@@ -1113,7 +1107,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.pushDrawContours.setEnabled(True)
             self.toggle_control(2)
             self.update_layer_ranges()
-            self.preview_contours()
+            self.preview_contours(self.config['SliceConverter']['ROIOffset'])
 
     def draw_setup(self):
         """Setup to draw the contours"""
@@ -1206,8 +1200,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
                                           layer, self.build['SliceConverter']['Colours'],
-                                          self.build['SliceConverter']['Transform'], self.output_folder, -1, names_flag,
-                                          True)
+                                          self.build['SliceConverter']['Transform'], self.output_folder, -1, 0,
+                                          names_flag, True)
         worker.signals.finished.connect(self.draw_contours_finished)
         self.threadpool.start(worker)
 
@@ -1276,34 +1270,39 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         """Sets the maximum value of the low range spinbox to the current high range spinbox's value"""
         self.spinRangeLow.setMaximum(self.spinRangeHigh.value())
 
-    def select_region(self):
+    def select_roi(self):
         """Allows the user to select a region to crop the images for the defect processor"""
-        self.graphicsDisplay.zoom_flag = self.pushSelectRegion.isChecked()
-        self.graphicsDisplay.roi_flag = self.pushSelectRegion.isChecked()
+        self.graphicsDisplay.zoom_flag = self.pushSelect.isChecked()
+        self.graphicsDisplay.roi_flag = self.pushSelect.isChecked()
 
-    def set_region(self, region):
-        """Saves the selected region to the build.json file and displays the region size on the dialog window
-        Also disables the checked status of the Select Region button after successfully selecting a region"""
+    def remove_roi(self):
+        """Resets the selected region and removes the drawn rectangle from the preview screen"""
+        self.roi_flag = False
+        self.pushRemove.setEnabled(False)
+        self.preview_contours()
 
-        self.pushSelectRegion.setChecked(False)
+    def set_roi(self, region, preview_flag):
+        """Saves the received region to the build.json file and displays the ROI and region coordinates and size
+        Also disables checked status of the Select button after successfully selecting a region"""
+
+        if not bool(region):
+            region = [self.spinTLX.value(), self.spinTLY.value(), self.spinSizeX.value(), self.spinSizeY.value()]
+        else:
+            self.spinTLX.setValue(region[0])
+            self.spinTLY.setValue(region[1])
+            self.spinSizeX.setValue(region[2])
+            self.spinSizeY.setValue(region[3])
+
+        self.pushRemove.setEnabled(True)
+        self.pushSelect.setChecked(False)
         self.graphicsDisplay.roi_flag = False
-
-        # Display the width and height of the ROI on the dialog window
-        self.labelWidth.setText(str(round(region.width())))
-        self.labelHeight.setText(str(round(region.height())))
 
         # Enable the draw roi flag and save the region coordinates to the instance
         self.roi_flag = True
-        self.roi = [round(region.x()), round(region.y()), round(region.right()), round(region.bottom())]
+        self.roi = [region[0], region[1], region[0] + region[2], region[1] + region[3]]
 
-        print(self.roi)
-
-        self.preview_contours()
-
-    def remove_region(self):
-        """Resets the selected region and removes the drawn rectangle from the preview screen"""
-        self.roi_flag = False
-        self.preview_contours()
+        if preview_flag:
+            self.preview_contours()
 
     def rotate(self):
         """Applies rotation parameters to the part_transform dictionary for the selected parts"""
@@ -1412,7 +1411,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushPause.setEnabled(state == 1)
         self.pushDone.setEnabled(state != 1)
 
-    def preview_contours(self):
+    def preview_contours(self, roi_offset=0):
         """Draw a 'preview' of the selected layer's contours"""
 
         if self.checkBackground.isChecked():
@@ -1432,7 +1431,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
                                           self.current_layer, self.part_colours, self.part_transform,
-                                          self.output_folder, thickness, False, False)
+                                          self.output_folder, thickness, roi_offset, False, False)
+        worker.signals.roi.connect(self.set_roi)
         worker.signals.result.connect(self.update_display)
 
         self.threadpool.start(worker)
@@ -1471,10 +1471,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.max_layers = 1
 
-        # Find the max number of layers and the layer thickness from the first and third line in the contours file
+        # Find the max number of layers from the first line in the contours file
         for contours in self.contour_dict.values():
-            if int(contours[0]) > self.max_layers:
-                self.max_layers = int(contours[0])
+            self.max_layers = max(int(contours[0]), self.max_layers)
 
         self.labelSliceNumber.setText('%s / %s' % (str(self.current_layer).zfill(4), str(self.max_layers).zfill(4)))
         self.spinRangeHigh.setMaximum(self.max_layers)
@@ -2123,10 +2122,8 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
             return
 
         # Initialize the two data dictionaries to store the data to
-        data_coat = dict()
-        data_scan = dict()
-        data_coat['LABELS'] = list()
-        data_scan['LABELS'] = list()
+        data_coat = {'LABELS': list()}
+        data_scan = {'LABELS': list()}
 
         # All the lists for each layer needs to be initialized first before they can be extended
         for layer in range(1, self.build['SliceConverter']['MaxLayers'] + 1):

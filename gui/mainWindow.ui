@@ -951,17 +951,11 @@
           <string>Display Options</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
-          <property name="leftMargin">
-           <number>9</number>
-          </property>
           <property name="topMargin">
            <number>6</number>
           </property>
-          <property name="rightMargin">
-           <number>9</number>
-          </property>
           <property name="bottomMargin">
-           <number>6</number>
+           <number>7</number>
           </property>
           <item>
            <widget class="QCheckBox" name="checkEqualization">
@@ -1019,6 +1013,20 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="checkROI">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Region of Interest</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1038,17 +1046,11 @@
           <string>Overlay Defects</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
-          <property name="leftMargin">
-           <number>9</number>
-          </property>
           <property name="topMargin">
            <number>6</number>
           </property>
-          <property name="rightMargin">
-           <number>9</number>
-          </property>
           <property name="bottomMargin">
-           <number>6</number>
+           <number>7</number>
           </property>
           <item>
            <widget class="QCheckBox" name="checkToggleAll">
@@ -1142,14 +1144,11 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>191</height>
+           <height>166</height>
           </size>
          </property>
          <property name="currentIndex">
           <number>0</number>
-         </property>
-         <property name="tabSpacing">
-          <number>6</number>
          </property>
          <widget class="QWidget" name="pageAssortedTools">
           <property name="geometry">
@@ -1157,7 +1156,7 @@
             <x>0</x>
             <y>0</y>
             <width>136</width>
-            <height>110</height>
+            <height>85</height>
            </rect>
           </property>
           <attribute name="label">
@@ -1176,13 +1175,6 @@
            <property name="bottomMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QPushButton" name="pushCameraSettings">
-             <property name="text">
-              <string>Camera Settings</string>
-             </property>
-            </widget>
-           </item>
            <item>
             <widget class="QPushButton" name="pushCameraCalibration">
              <property name="text">
@@ -1212,7 +1204,7 @@
             <x>0</x>
             <y>0</y>
             <width>136</width>
-            <height>110</height>
+            <height>85</height>
            </rect>
           </property>
           <attribute name="label">
@@ -1231,16 +1223,6 @@
            <property name="bottomMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QPushButton" name="pushAcquireCT">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Acquire CT</string>
-             </property>
-            </widget>
-           </item>
            <item>
             <widget class="QPushButton" name="pushSnapshot">
              <property name="enabled">
@@ -1407,7 +1389,6 @@
           <zorder>pushRun</zorder>
           <zorder>pushStop</zorder>
           <zorder>pushSnapshot</zorder>
-          <zorder>pushAcquireCT</zorder>
          </widget>
          <widget class="QWidget" name="pageDefectProcessor">
           <property name="geometry">
@@ -1415,7 +1396,7 @@
             <x>0</x>
             <y>0</y>
             <width>136</width>
-            <height>110</height>
+            <height>85</height>
            </rect>
           </property>
           <attribute name="label">
@@ -1461,16 +1442,6 @@
              </property>
              <property name="text">
               <string>Defect Reports</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="push3DVisualization">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>3D Visualization</string>
              </property>
             </widget>
            </item>
@@ -1523,8 +1494,6 @@
     <addaction name="separator"/>
     <addaction name="actionCalibrationResults"/>
     <addaction name="actionDefectReports"/>
-    <addaction name="separator"/>
-    <addaction name="action3DVisualization"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">

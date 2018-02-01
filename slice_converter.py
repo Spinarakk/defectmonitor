@@ -14,13 +14,8 @@ class SliceConverter:
     Currently takes in a .cli file and parses it, saving it as a .txt file after conversion
     """
 
-    def __init__(self):
-
-        # Load from the config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-    def convert_cli(self, filename, status, progress):
+    @staticmethod
+    def convert_cli(filename, scale, status, progress):
         """Reads the .cli file and converts the contents from binary into an organised ASCII contour list"""
 
         # UI Progress and Status Messages
@@ -78,7 +73,7 @@ class SliceConverter:
                         vector_count = decimal * 2
                 elif vector_count > 0:
                     # Write the converted value to the text file
-                    contours_file.write('%s,' % round(decimal * units * self.config['ImageCorrection']['ScaleFactor']))
+                    contours_file.write('%s,' % round(decimal * units * scale))
                     vector_count -= 1
                 elif decimal == 128:
                     # 128 indicates a new layer
@@ -103,12 +98,19 @@ class SliceConverter:
 
         progress.emit(100)
 
-    def draw_contours(self, contour_dict, image, layer, colours, transform, folder, thickness, names_flag, save_flag):
+    @staticmethod
+    def draw_contours(contour_dict, image, layer, colours, transform, folder, thickness, roi_offset, names_flag,
+                      save_flag, roi):
         """Draw all the contours of the received parts and of the received layer on the same image"""
 
         if names_flag:
             # Copy a blank black RGB image using the received image's size to write the part names on
             image_names = np.zeros(image.shape, np.uint8)
+
+        # Initialize values in order to calculate the ROI of all the part contours
+        min_x, min_y = image.shape[1], image.shape[0]
+        max_x = 0
+        max_y = 0
 
         # Iterate through all the parts
         for part_name, contour_list in contour_dict.items():
@@ -147,6 +149,13 @@ class SliceConverter:
                 for index, item in enumerate(contours):
                     contours[index] = cv2.transform(item, rotation_matrix)
 
+            # Find the minimum and maximum X and Y values to create a bounding box surrounding all the parts
+            if roi_offset:
+                for item in contours:
+                    x, y, w, h = cv2.boundingRect(item)
+                    min_x, max_x = min(x, min_x), max(x + w, max_x)
+                    min_y, max_y = min(y, min_y), max(y + h, max_y)
+
             # Draw all the contours on the received image
             cv2.drawContours(image, contours, -1, colours[part_name], offset=offset, thickness=thickness)
 
@@ -161,6 +170,13 @@ class SliceConverter:
         # Flip the whole image vertically to account for the fact that OpenCV's origin is the top left corner
         image = cv2.flip(image, 0)
 
+        if roi_offset:
+            min_x -= roi_offset
+            max_x += roi_offset
+            #min_y = abs(min_y - roi_offset - image.shape[0])
+            #max_y = abs(max_y + roi_offset - image.shape[0])
+            roi.emit([min_x, min_y, max_x - min_x, max_y - min_y], False)
+
         if names_flag:
             cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)
 
@@ -169,5 +185,3 @@ class SliceConverter:
             cv2.imwrite('%s/contours_%s.png' % (folder, str(layer).zfill(4)), image)
         else:
             return image
-
-

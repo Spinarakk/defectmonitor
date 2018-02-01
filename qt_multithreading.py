@@ -22,6 +22,8 @@ class WorkerSignals(QObject):
     colour = pyqtSignal(int, bool)
     notification = pyqtSignal(str)
 
+    roi = pyqtSignal(list, bool)
+
 
 class Worker(QRunnable):
     """Worker thread that inherits from QRunnable to handle worker thread setup, signals and wrap-up"""
@@ -55,6 +57,10 @@ class Worker(QRunnable):
         # calibrate
         if 'calibrate' in str(self.function):
             kwargs['colour'] = self.signals.colour
+
+        # draw_contours
+        if 'draw' in str(self.function):
+            kwargs['roi'] = self.signals.roi
 
     @pyqtSlot()
     def run(self):

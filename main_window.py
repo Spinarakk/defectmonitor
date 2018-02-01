@@ -92,7 +92,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionZoomOut.triggered.connect(self.zoom_out)
         self.actionCalibrationResults.triggered.connect(self.calibration_results)
         self.actionDefectReports.triggered.connect(self.defect_reports)
-        self.action3DVisualization.triggered.connect(self.defect_visualization)
 
         # Menubar -> Tools
         self.actionCameraSettings.triggered.connect(self.camera_settings)
@@ -119,10 +118,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionAbout.triggered.connect(self.about)
 
         # Display Options Group Box
-        self.checkEqualization.toggled.connect(self.update_display)
-        self.checkGridlines.toggled.connect(self.update_display)
-        self.checkContours.toggled.connect(self.update_display)
-        self.checkNames.toggled.connect(self.update_display)
+        for element in self.groupDisplayOptions.findChildren(QCheckBox):
+            element.toggled.connect(self.update_display)
 
         # Overlay Defects Group Box
         self.checkToggleAll.toggled.connect(self.toggle_all)
@@ -133,14 +130,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.checkPattern.toggled.connect(self.toggle_defect)
 
         # Sidebar Toolbox Assorted Tools
-        self.pushCameraSettings.clicked.connect(self.camera_settings)
         self.pushCameraCalibration.clicked.connect(self.camera_calibration)
         self.pushSliceConverter.clicked.connect(self.slice_converter)
         self.pushImageConverter.clicked.connect(self.image_converter)
 
         # Sidebar Toolbox Image Capture
-        self.pushAcquireCT.clicked.connect(self.acquire_camera)
-        self.pushAcquireCT.clicked.connect(self.acquire_trigger)
         self.pushSnapshot.clicked.connect(self.snapshot)
         self.pushRun.clicked.connect(self.run_build)
         self.pushStop.clicked.connect(self.stop_build)
@@ -291,7 +285,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionBuildSettings.setEnabled(True)
             self.actionAcquireCamera.setEnabled(True)
             self.actionAcquireTrigger.setEnabled(True)
-            self.pushAcquireCT.setEnabled(True)
             self.pushDefectReports.setEnabled(True)
             self.actionDefectReports.setEnabled(True)
             self.actionUpdateFolders.setEnabled(True)
@@ -482,11 +475,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.DR_dialog = dialog_windows.DefectReports(self)
         self.DR_dialog.tab_focus.connect(self.tab_focus)
         self.DR_dialog.show()
-
-    def defect_visualization(self):
-        """Opens a Modeless Dialog Window when the 3D Visualization button is clicked
-        Displays a 3D model constructed out of the slice files and defect data"""
-        pass
 
     # MENUBAR -> TOOLS
 
@@ -753,7 +741,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.pushSnapshot.setEnabled(flag)
         self.actionSnapshot.setEnabled(flag)
-        self.pushAcquireCT.setEnabled(flag)
         self.actionAcquireCamera.setEnabled(flag)
         self.actionAcquireTrigger.setEnabled(flag)
         self.actionStressTest.setEnabled(flag)
@@ -975,7 +962,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionNew.setEnabled(flag)
         self.actionOpen.setEnabled(flag)
         self.menuRecentBuilds.setEnabled(flag)
-        self.pushCameraSettings.setEnabled(flag)
         self.actionCameraSettings.setEnabled(flag)
         self.pushCameraCalibration.setEnabled(flag)
         self.actionCameraCalibration.setEnabled(flag)
@@ -986,7 +972,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionBuildSettings.setEnabled(flag)
         self.actionPreferences.setEnabled(flag)
         self.checkResume.setEnabled(flag)
-        self.pushAcquireCT.setEnabled(flag)
         self.actionAcquireCamera.setEnabled(flag)
         self.actionAcquireTrigger.setEnabled(flag)
         self.actionStressTest.setEnabled(flag)
@@ -1112,6 +1097,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkGridlines.setEnabled(False)
                 self.checkGridlines.setChecked(False)
 
+            if self.build['ROIFlag']:
+                self.checkROI.setEnabled(True)
+            else:
+                self.checkROI.setEnabled(False)
+                self.checkROI.setChecked(False)
+
             # Check if the following defect images exist, and enable or disable the corresponding checkboxes
             # Subsequently overlay the defects in the order they were selected
             # Only do this for the coat and scan images, otherwise uncheck all checked defects and disable the groupbox
@@ -1186,6 +1177,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                     image_gridlines = cv2.resize(image_gridlines, image.shape[:2][::-1], interpolation=cv2.INTER_CUBIC)
 
                 image = cv2.add(image, image_gridlines)
+
+            # Overlay the ROI box
+            if self.checkROI.isChecked():
+                roi = self.build['ROI']
+                cv2.rectangle(image, (roi[0], roi[1]), (roi[2], roi[3]), (255, 255, 255), 5)
 
             # Applies CLAHE to the display image
             if self.checkEqualization.isChecked():
