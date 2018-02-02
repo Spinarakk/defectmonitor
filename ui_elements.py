@@ -15,7 +15,7 @@ class ImageViewer(QGraphicsView):
     roi_done = pyqtSignal(list, bool)
     mouse_pos = pyqtSignal(int, int)
 
-    def __init__(self, parent):
+    def __init__(self, parent=None):
 
         super(ImageViewer, self).__init__()
 
@@ -37,8 +37,8 @@ class ImageViewer(QGraphicsView):
         """Set the scene's current image to the received image after converting it to QPixmap"""
 
         # Convert the received image into a QPixmap that can be displayed on the graphics viewer
-        qimage = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
-        pixmap = QPixmap.fromImage(qimage)
+        pixmap = QPixmap.fromImage(QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1],
+                                          QImage.Format_RGB888))
 
         if self._pixmap_handle is not None:
             self._pixmap_handle.setPixmap(pixmap)

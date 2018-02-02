@@ -244,7 +244,6 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.browse_folder()
                 return
 
-
         # Save the newly created (or loaded) build
         with open('build.json', 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
@@ -407,7 +406,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
 
         # Disallow the user from resizing the dialog window
-        #self.setFixedSize(self.size())
+        self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -1169,7 +1168,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
                     json.dump(dict(), report)
 
-        # Set the 'background' part colour to black
+        # Create a 'combined' and 'background' part colour and set them to black
+        part_colours['combined'] = (0, 0, 0)
         part_colours['background'] = (0, 0, 0)
 
         # Set the starting layer to draw as the entered lower layer range (default is all the contours)
@@ -1968,13 +1968,11 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                     # Grab the data from the report dictionary, with the first element being the layer number
                     data_coat = [row + 1, data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0]]
 
-                    # Only append the histogram comparison information if the 'combined' part is being displayed
-                    if part == 0:
-                        # And if the histogram result is available in the first place
-                        try:
-                            data_coat.append(round(data['HC'], 2))
-                        except (KeyError, IndexError):
-                            data_coat.append(0)
+                    # Append the histogram result if it is available in the first place
+                    try:
+                        data_coat.append(round(data['HC'], 2))
+                    except (KeyError, IndexError):
+                        data_coat.append(0)
 
                     # Set colours for if the data is over/under the threshold, or there is no data at all
                     # Green is GOOD
@@ -2020,18 +2018,17 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                     # Grab the data from the report dictionary, with the first element being the layer number
                     data_scan = [row + 1, data['BS'][1], data['BC'][1]]
 
-                    # Only append the histogram comparison information if the 'combined' part is being displayed
-                    if part == 0:
-                        # And if the histogram result is available in the first place
-                        try:
-                            data_scan.append(round(data['HC'], 2))
-                        except (KeyError, IndexError):
-                            data_scan.append(0)
-                        # Same goes for the overlay comparison information
-                        try:
-                            data_scan.append(round(data['OC'] * 100, 4))
-                        except (KeyError, IndexError):
-                            data_scan.append(0)
+                    # Append the histogram result if it is available in the first place
+                    try:
+                        data_scan.append(round(data['HC'], 2))
+                    except (KeyError, IndexError):
+                        data_scan.append(0)
+
+                    # Same goes for the overlay comparison information
+                    try:
+                        data_scan.append(round(data['OC'] * 100, 4))
+                    except (KeyError, IndexError):
+                        data_scan.append(0)
 
                     # Set colours for if the data is over/under the threshold, or there is no data at all
                     for index, value in enumerate(data_scan):

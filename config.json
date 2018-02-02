@@ -98,7 +98,8 @@
     },
     "RecentBuilds": [
         "C:/Users/Spinarakk/Documents/MCAM/Builds/Demo Build.json",
-        "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json"
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json",
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/Test.json"
     ],
     "SliceConverter": {
         "CentrelineT": 3,

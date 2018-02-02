@@ -498,8 +498,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         dialog_windows.SliceConverter(self).exec_()
 
-        # Update the folders and display if the Slice Converter window is closed
+        # Reload the build.json file and update the folders and display if the Slice Converter window is closed
         if self.display_flag:
+            with open('build.json') as build:
+                self.build = json.load(build)
+
             self.update_folders(True)
 
     def image_converter(self):
@@ -1124,6 +1127,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 for defect in self.defect_checkbox:
                     # Check if the image exists in the first place, otherwise display an error message box
                     if os.path.isfile(defects[defect]):
+                        # Directly replace the colours of the original image with the defect colour
                         mask = cv2.inRange(cv2.imread(defects[defect]), self.defect_colours[defect],
                                            self.defect_colours[defect])
                         image[np.nonzero(mask)] = self.defect_colours[defect]
@@ -1137,6 +1141,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                         # Uncheck the checkbox in question
                         self.display['CheckboxNames'][self.display['DefectNames'].index(defect)].setChecked(False)
             else:
+                # Disable and uncheck all the Overlay Defects checkboxes
                 for checkbox in self.groupOverlayDefects.findChildren(QCheckBox):
                     checkbox.blockSignals(True)
                     checkbox.setChecked(False)

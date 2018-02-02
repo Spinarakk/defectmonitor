@@ -64,8 +64,8 @@ class Calibration:
             # Calibrate the camera and output the camera matrix and distortion coefficients
             # RMS is the root mean square re-projection error
             rms, camera_matrix, distortion_coefficients, _, _ = \
-                cv2.calibrateCamera(self.points_3d, self.points_2d, self.resolution, None, None, flags=
-                cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
+                cv2.calibrateCamera(self.points_3d, self.points_2d, self.resolution, None, None,
+                                    flags=cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
 
             # Save the calibration results to the results dictionary
             self.results['ImageCorrection']['RMS'] = rms
@@ -141,8 +141,9 @@ class Calibration:
         self.resolution = image.shape[:2][::-1]
 
         # Determine the resolution of the image after downscaling (if necessary) and downscale it
-        image_scaled = cv2.resize(image, (image.shape[1]//ratio, image.shape[0]//ratio), interpolation=cv2.INTER_AREA)
-        
+        image_scaled = cv2.resize(image, (image.shape[1] // ratio, image.shape[0] // ratio),
+                                  interpolation=cv2.INTER_AREA)
+
         # Detect the corners of the chessboard
         retval, corners = cv2.findChessboardCorners(image_scaled, (width, height))
 
@@ -221,7 +222,8 @@ class Calibration:
         image = cv2.imread(self.config['CameraCalibration']['HomographyImage'], 0)
 
         # Determine the resolution of the image after downscaling and downscale it
-        image_scaled = cv2.resize(image, (image.shape[1]//ratio, image.shape[0]//ratio), interpolation=cv2.INTER_AREA)
+        image_scaled = cv2.resize(image, (image.shape[1] // ratio, image.shape[0] // ratio),
+                                  interpolation=cv2.INTER_AREA)
 
         # Detect the corners of the chessboard
         retval, corners = cv2.findChessboardCorners(image_scaled, (width, height))
@@ -250,7 +252,7 @@ class Calibration:
 
             # Perform a perspective transform on the original image
             points_corners = np.float32([[(0, 0)], [(0, image.shape[0])], [(image.shape[1], image.shape[0])],
-                                       [(image.shape[1], 0)]]).reshape(-1, 1, 2)
+                                         [(image.shape[1], 0)]]).reshape(-1, 1, 2)
             points_transform = cv2.perspectiveTransform(points_corners, homography_matrix)
 
             # Create a translation offset to move the perspective warped image to the centre

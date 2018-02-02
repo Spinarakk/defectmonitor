@@ -10,8 +10,8 @@ import image_processing
 
 class SliceConverter:
     """Module used to convert any slice files from .cli format into ASCII format
-    Output can then be used to draw contours using OpenCV
-    Currently takes in a .cli file and parses it, saving it as a .txt file after conversion
+    By parsing the .cli file, converting binary to decimal, and outputs it as a .txt file of contours
+    These contours can then be subsequently drawn using OpenCV
     """
 
     @staticmethod
@@ -170,12 +170,13 @@ class SliceConverter:
         # Flip the whole image vertically to account for the fact that OpenCV's origin is the top left corner
         image = cv2.flip(image, 0)
 
+        # Apply the offset to the region of interest
         if roi_offset:
             min_x -= roi_offset
             max_x += roi_offset
-            #min_y = abs(min_y - roi_offset - image.shape[0])
-            #max_y = abs(max_y + roi_offset - image.shape[0])
-            roi.emit([min_x, min_y, max_x - min_x, max_y - min_y], False)
+            min_y = abs(min_y - roi_offset - image.shape[0])
+            max_y = abs(max_y + roi_offset - image.shape[0])
+            roi.emit([min_x, max_y, max_x - min_x, min_y - max_y], False)
 
         if names_flag:
             cv2.imwrite('%s/part_names.png' % os.path.dirname(folder), image_names)

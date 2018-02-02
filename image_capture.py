@@ -8,7 +8,8 @@ import serial.tools.list_ports
 
 
 class ImageCapture:
-    """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached"""
+    """Module used to capture images from the connected Basler Ace acA3800-10gm GigE camera if attached
+    Also contains methods to look for an attached camera and trigger, and to apply settings to the camera"""
 
     def acquire_camera(self):
         """Accesses the pypylon wrapper and checks the ethernet ports for a connected camera

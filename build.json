@@ -1,8 +1,8 @@
 {
     "BuildInfo": {
         "EmailAddress": "nicholascklee@gmail.com",
-        "Folder": "C:/Users/Spinarakk/Documents/MCAM/Builds/2018-01-29 [16''00'06] Default",
-        "Name": "Default",
+        "Folder": "C:/Users/Spinarakk/Documents/MCAM/Builds/2018-02-02 [14''36'31] Test",
+        "Name": "Test",
         "Username": "Nicholas Lee"
     },
     "ImageCapture": {
@@ -11,10 +11,10 @@
         "Snapshot": 1
     },
     "ROI": [
-        275,
-        154,
-        3467,
-        2220
+        155,
+        76,
+        3590,
+        2357
     ],
     "ROIFlag": true,
     "SliceConverter": {
@@ -150,6 +150,11 @@
                 0
             ],
             "background": [
+                0,
+                0,
+                0
+            ],
+            "combined": [
                 0,
                 0,
                 0
