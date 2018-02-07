@@ -30,7 +30,7 @@
     },
     "Gridlines": {
         "Size": 100,
-        "Thickness": 2
+        "Thickness": 3
     },
     "IdleTimeout": 3600,
     "ImageCorrection": {
@@ -104,7 +104,7 @@
     "SliceConverter": {
         "CentrelineT": 3,
         "ContourT": 3,
-        "ROIOffset": 150
+        "ROIOffset": 50
     },
     "Threshold": {
         "HistogramCoat": 5000,

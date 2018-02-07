@@ -27,8 +27,8 @@ from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogC
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
-    """Opens a Modal Dialog Window when File -> New... or File -> Open... or Tools -> Settings is clicked
-    Allows the user to setup a new build and change settings
+    """Module used to initiate the New Build/Open Build/Settings dialog window
+    Allows the user to either setup a new build or open an existing build and change settings
     """
 
     def __init__(self, parent=None, build_name='', settings_flag=False):
@@ -45,7 +45,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.open_flag = bool(build_name)
         self.settings_flag = settings_flag
 
-        # Load from the default build.json file unless window was opened by Open or Settings
+        # Load from the default build.json file unless window was opened by Open Build or Settings
         if not build_name:
             build_name = 'build_default.json'
 
@@ -54,7 +54,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         # Load from the config.json file
         with open('config.json') as config:
-            self.config = json.load(config)
+            config = json.load(config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Buttons
@@ -63,25 +63,13 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.pushCreate.clicked.connect(self.create)
 
         # Lines
-        if not self.open_flag:
-            # Only enable this signal if a new build is being created
-            self.lineBuildName.textChanged.connect(self.change_folder)
-
         self.lineUsername.textChanged.connect(self.enable_test)
         self.lineEmailAddress.textChanged.connect(self.enable_test)
 
         # Set default placeholder text in some of the fields
-        self.lineBuildName.setPlaceholderText(self.config['Defaults']['BuildName'])
-        self.lineUsername.setPlaceholderText(self.config['Defaults']['Username'])
-        self.lineEmailAddress.setPlaceholderText(self.config['Defaults']['EmailAddress'])
-
-        # Set and display a default image folder name to save images for the current build
-        # Generate a timestamp for folder labelling purposes
-        time = datetime.now()
-        self.image_folder = """%s/%s-%s-%s [%s''%s'%s]""" % \
-                            (self.config['BuildFolder'], time.year, str(time.month).zfill(2), str(time.day).zfill(2),
-                             str(time.hour).zfill(2), str(time.minute).zfill(2), str(time.second).zfill(2))
-        self.change_folder()
+        self.lineBuildName.setPlaceholderText(config['Defaults']['BuildName'])
+        self.lineUsername.setPlaceholderText(config['Defaults']['Username'])
+        self.lineEmailAddress.setPlaceholderText(config['Defaults']['EmailAddress'])
 
         # If this dialog window was opened as a result of the Open... action, then the following is executed
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
@@ -92,6 +80,17 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.lineImageFolder.setText(self.build['BuildInfo']['Folder'])
             self.lineUsername.setText(self.build['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
+        else:
+            # Otherwise do a few setup procedures for the New Build
+            self.lineBuildName.textChanged.connect(self.change_folder)
+
+            # Set and display a default image folder name to save images for the current build
+            # Generate a timestamp for folder labelling purposes
+            time = datetime.now()
+            self.image_folder = """%s/%s-%s-%s [%s''%s'%s]""" % \
+                                (config['BuildFolder'], time.year, str(time.month).zfill(2), str(time.day).zfill(2),
+                                 str(time.hour).zfill(2), str(time.minute).zfill(2), str(time.second).zfill(2))
+            self.change_folder()
 
         # If this dialog window was opened as a result of the Build Settings... action, then the following is executed
         # Disable a few of the buttons to disallow changing of the slice files and build folder
@@ -113,9 +112,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.lineBuildName.blockSignals(True)
 
     def change_folder(self):
-        """Changes the prospective image folder name depending on the entered Build Name"""
+        """Changes the prospective image folder name depending on the entered Build Name
+        Uses the placeholder text in the Build Name if the Name field is empty"""
 
-        # Use the placeholder text if the user hasn't entered anything into the lineEdit
         if self.lineBuildName.text():
             self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.text()))
         else:
@@ -196,7 +195,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
 
-        # Check if the entered email address is valid (by checking the state of the Add Test Attachment button
+        # Check if the entered email address is valid by using the external validation module
         if not validate_email(self.build['BuildInfo']['EmailAddress']):
             # Open an error message box and exit the method
             missing_folder_error = QMessageBox(self)
@@ -1716,95 +1715,12 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
         self.naming_flag = True
 
-        worker = qt_multithreading.Worker(self.convert_image_function, image_name, self.checked)
+        worker = qt_multithreading.Worker(image_processing.ImageFix().convert_image, image_name, self.checked)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.naming_error.connect(self.naming_error)
         worker.signals.finished.connect(self.convert_image_finished)
         self.threadpool.start(worker)
-
-    @staticmethod
-    def convert_image_function(image_name, checkboxes, status, progress, naming_error):
-        """Applies the distortion, perspective, crop and CLAHE processes to the received image
-        Also subsequently saves each image after every process if the corresponding checkbox is checked"""
-
-        # Load the image into memory
-        image = cv2.imread(image_name)
-
-        # Grab the folder names and the image name which will be used to construct the new modified names
-        folder_name = os.path.dirname(image_name)
-        image_name = os.path.basename(os.path.splitext(image_name)[0])
-
-        # If the Alternate Naming Scheme for Crop Images checkbox is checked
-        # Detect the phase and layer number from the image name itself and use those to save to the fixed folder instead
-        if checkboxes[0]:
-            # Phase check
-            if 'coatR_' in image_name:
-                phase = 'coat'
-            elif 'scanR_' in image_name:
-                phase = 'scan'
-            elif 'snapshotR_' in image_name:
-                phase = 'snapshot'
-            else:
-                # If the phase can't be determined due to incorrect naming, don't use alternate naming scheme
-                checkboxes[0] = False
-                naming_error.emit()
-
-            # Layer check
-            try:
-                int(image_name[-4:])
-            except ValueError:
-                # If the layer number can't be determined due to incorrect naming, don't use alternate naming scheme
-                checkboxes[0] = False
-                naming_error.emit()
-
-        # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
-        # Images are only saved if the corresponding checkbox is checked
-
-        progress.emit(0)
-        status.emit('Undistorting image...')
-        image = image_processing.ImageFix().distortion_fix(image)
-
-        if checkboxes[3]:
-            if checkboxes[1]:
-                cv2.imwrite('%s/undistort/%s_D.png' % (folder_name, image_name), image)
-            else:
-                cv2.imwrite('%s/%s_D.png' % (folder_name, image_name), image)
-
-        progress.emit(25)
-        status.emit('Fixing perspective warp...')
-        image = image_processing.ImageFix().perspective_fix(image)
-
-        if checkboxes[4]:
-            if checkboxes[1]:
-                cv2.imwrite('%s/perspective/%s_DP.png' % (folder_name, image_name), image)
-            else:
-                cv2.imwrite('%s/%s_DP.png' % (folder_name, image_name), image)
-
-        progress.emit(50)
-        status.emit('Cropping image to size...')
-        image = image_processing.ImageFix().crop(image)
-
-        if checkboxes[5]:
-            if checkboxes[0]:
-                cv2.imwrite('%s/fixed/%s/%s.png' % (folder_name, phase, image_name.replace('R_', 'F_')), image)
-            elif checkboxes[1]:
-                cv2.imwrite('%s/crop/%s_DPC.png' % (folder_name, image_name), image)
-            else:
-                cv2.imwrite('%s/%s_DPC.png' % (folder_name, image_name), image)
-
-        progress.emit(75)
-        status.emit('Applying CLAHE equalization...')
-        image = image_processing.ImageFix().clahe(image)
-
-        if checkboxes[6]:
-            if checkboxes[1]:
-                cv2.imwrite('%s/equalization/%s_DPCE.png' % (folder_name, image_name), image)
-            else:
-                cv2.imwrite('%s/%s_DPCE.png' % (folder_name, image_name), image)
-
-        progress.emit(100)
-        status.emit('Image conversion successful.')
 
     def convert_image_finished(self):
         """Continuation function that either continues the image processing loop or finishes the entire run"""
@@ -2105,13 +2021,15 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
 
         # Let the user set a name for the coat and scan data (with a pre-defined name already set)
         filename_coat = QFileDialog.getSaveFileName(self, 'Export Coat Data', '%s/%s_data_coat' %
-                                               (self.build['BuildInfo']['Folder'] , self.build['BuildInfo']['Name']),
-                                               'CSV File (*.csv)')[0]
+                                                    (
+                                                    self.build['BuildInfo']['Folder'], self.build['BuildInfo']['Name']),
+                                                    'CSV File (*.csv)')[0]
 
         if filename_coat:
             filename_scan = QFileDialog.getSaveFileName(self, 'Export Scan Data', '%s/%s_data_scan' %
-                                               (self.build['BuildInfo']['Folder'] , self.build['BuildInfo']['Name']),
-                                               'CSV File (*.csv)')[0]
+                                                        (self.build['BuildInfo']['Folder'],
+                                                         self.build['BuildInfo']['Name']),
+                                                        'CSV File (*.csv)')[0]
             if not filename_scan:
                 # Did the filename grab this way to not have so many indents in the main code
                 return
@@ -2130,7 +2048,8 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         # Iterate through all the parts
         for part_name in self.part_names:
             # Set up the first row of both dictionaries by extending the part name, labels and finally a spacer
-            data_coat['LABELS'].extend([part_name, 'LAYER', 'STREAKS', 'CHATTER', 'PATCHES', 'OUTLIERS', 'HISTOGRAM', ''])
+            data_coat['LABELS'].extend(
+                [part_name, 'LAYER', 'STREAKS', 'CHATTER', 'PATCHES', 'OUTLIERS', 'HISTOGRAM', ''])
             data_scan['LABELS'].extend([part_name, 'LAYER', 'STREAKS', 'CHATTER', 'HISTOGRAM', 'OVERLAY', ''])
 
             # Read each part's reports into memory
@@ -2144,7 +2063,8 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                 except (IndexError, KeyError):
                     data_coat[str(layer)].extend([part_name, str(layer), '0', '0', '0', '0', '0'])
                 else:
-                    data_coat[str(layer)].extend([part_name, str(layer), data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0]])
+                    data_coat[str(layer)].extend(
+                        [part_name, str(layer), data['BS'][1], data['BC'][1], data['SP'][0], data['CO'][0]])
 
                     # Separated out as the parts don't contain histogram data
                     try:
@@ -2210,7 +2130,7 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
         """Exports the visible table data to an excel compatible .csv (comma separated values) file"""
 
         filename = QFileDialog.getSaveFileName(self, 'Export Visible Data', '%s/%s_data' %
-                                               (self.build['BuildInfo']['Folder'] , self.build['BuildInfo']['Name']),
+                                               (self.build['BuildInfo']['Folder'], self.build['BuildInfo']['Name']),
                                                'CSV File (*.csv)')[0]
 
         if filename:

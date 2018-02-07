@@ -45,13 +45,13 @@ class Worker(QRunnable):
             if 'run' in str(self.function):
                 kwargs['status_trigger'] = self.signals.status_trigger
 
-        # convert_cli / convert_image_function / run_detector / calibrate
-        if 'convert_' in str(self.function) or 'detector' in str(self.function) or 'calibrate' in str(self.function):
+        # convert_cli / convert_image / run_processor / calibrate
+        if 'convert_' in str(self.function) or 'processor' in str(self.function) or 'calibrate' in str(self.function):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
 
         # convert_image_function
-        if 'convert_image_function' in str(self.function):
+        if 'convert_image' in str(self.function):
             kwargs['naming_error'] = self.signals.naming_error
 
         # calibrate

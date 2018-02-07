@@ -46,6 +46,87 @@ class ImageFix:
         # Save the image using a modified image name
         cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
 
+    def convert_image(self, image_name, checkboxes, status, progress, naming_error):
+        """Applies the distortion, perspective, crop and CLAHE processes to the received image
+        Also subsequently saves each image after every process if the corresponding checkbox is checked"""
+
+        # Load the image into memory
+        image = cv2.imread(image_name)
+
+        # Grab the folder names and the image name which will be used to construct the new modified names
+        folder_name = os.path.dirname(image_name)
+        image_name = os.path.basename(os.path.splitext(image_name)[0])
+
+        # If the Alternate Naming Scheme for Crop Images checkbox is checked
+        # Detect the phase and layer number from the image name itself and use those to save to the fixed folder instead
+        if checkboxes[0]:
+            # Phase check
+            if 'coatR_' in image_name:
+                phase = 'coat'
+            elif 'scanR_' in image_name:
+                phase = 'scan'
+            elif 'snapshotR_' in image_name:
+                phase = 'snapshot'
+            else:
+                # If the phase can't be determined due to incorrect naming, don't use alternate naming scheme
+                checkboxes[0] = False
+                naming_error.emit()
+
+            # Layer check
+            try:
+                int(image_name[-4:])
+            except ValueError:
+                # If the layer number can't be determined due to incorrect naming, don't use alternate naming scheme
+                checkboxes[0] = False
+                naming_error.emit()
+
+        # Apply the image processing techniques in order, subsequently saving the image and incrementing progress
+        # Images are only saved if the corresponding checkbox is checked
+        progress.emit(0)
+        status.emit('Undistorting image...')
+        image = self.distortion_fix(image)
+
+        if checkboxes[3]:
+            if checkboxes[1]:
+                cv2.imwrite('%s/undistort/%s_D.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_D.png' % (folder_name, image_name), image)
+
+        progress.emit(25)
+        status.emit('Fixing perspective warp...')
+        image = self.perspective_fix(image)
+
+        if checkboxes[4]:
+            if checkboxes[1]:
+                cv2.imwrite('%s/perspective/%s_DP.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_DP.png' % (folder_name, image_name), image)
+
+        progress.emit(50)
+        status.emit('Cropping image to size...')
+        image = self.crop(image)
+
+        if checkboxes[5]:
+            if checkboxes[0]:
+                cv2.imwrite('%s/fixed/%s/%s.png' % (folder_name, phase, image_name.replace('R_', 'F_')), image)
+            elif checkboxes[1]:
+                cv2.imwrite('%s/crop/%s_DPC.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_DPC.png' % (folder_name, image_name), image)
+
+        progress.emit(75)
+        status.emit('Applying CLAHE equalization...')
+        image = self.clahe(image)
+
+        if checkboxes[6]:
+            if checkboxes[1]:
+                cv2.imwrite('%s/equalization/%s_DPCE.png' % (folder_name, image_name), image)
+            else:
+                cv2.imwrite('%s/%s_DPCE.png' % (folder_name, image_name), image)
+
+        progress.emit(100)
+        status.emit('Image conversion successful.')
+
     def distortion_fix(self, image):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
 
@@ -92,14 +173,14 @@ class ImageFix:
         return image
 
 
-class DefectDetector:
+class DefectProcessor:
     """Module used to process the corrected images using OpenCV functions to detect a variety of different defects
     Defects to be analyzed are outlined in the README.txt file
     Throughout the code, image objects are named image_(purpose)_(modification *default=BGR)
     Therefore an image that will contain defect pixels that has been converted to gray would be image_defects_gray
     """
 
-    def run_detector(self, image_name, status, progress):
+    def run_processor(self, image_name, status, progress):
         """Initial run method that decides whether to run the coat or scan collection of detection processes"""
 
         progress.emit(0)
