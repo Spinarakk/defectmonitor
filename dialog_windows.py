@@ -835,7 +835,7 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
             self.pushStart.setEnabled(False)
 
     def test_loop(self):
-        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder)
+        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder, self.config['CameraSettings'])
         worker.signals.status_camera.connect(self.update_status)
         worker.signals.finished.connect(self.test_done)
         self.threadpool.start(worker)
@@ -966,9 +966,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.current_layer = 1
         self.convert_run_flag = False
         self.draw_run_flag = False
-
-        # Set the ROI rectangle if the flag is true
-        self.roi_flag = self.build['ROIFlag']
         self.roi = self.build['ROI']
 
         # This value is used to indicate which process is active, used for the pause button and for exiting the window
@@ -1180,7 +1177,6 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.build['SliceConverter']['Colours'] = part_colours
         self.build['SliceConverter']['Transform'] = self.part_transform
         self.build['SliceConverter']['MaxLayers'] = self.max_layers
-        self.build['ROIFlag'] = self.roi_flag
         self.build['ROI'] = self.roi
 
         with open('build.json', 'w+') as build:
@@ -1276,7 +1272,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def remove_roi(self):
         """Resets the selected region and removes the drawn rectangle from the preview screen"""
-        self.roi_flag = False
+        self.roi[0] = 0
         self.pushRemove.setEnabled(False)
         self.preview_contours()
 
@@ -1296,9 +1292,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.pushSelect.setChecked(False)
         self.graphicsDisplay.roi_flag = False
 
-        # Enable the draw roi flag and save the region coordinates to the instance
-        self.roi_flag = True
-        self.roi = [region[0], region[1], region[0] + region[2], region[1] + region[3]]
+        # The first element in the roi list is a flag used to signify that the roi is to be drawn and used
+        self.roi = [1, region[0], region[1], region[0] + region[2], region[1] + region[3]]
 
         if preview_flag:
             self.preview_contours()
@@ -1446,8 +1441,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             cv2.line(image, (image.shape[1] // 2, 0), (image.shape[1] // 2, image.shape[0]), (0, 0, 0), thickness)
 
         # Draw a rectangle of the user selected region of interest
-        if self.roi_flag:
-            cv2.rectangle(image, (self.roi[0], self.roi[1]), (self.roi[2], self.roi[3]), (0, 0, 0), 4)
+        if self.roi[0]:
+            cv2.rectangle(image, (self.roi[1], self.roi[2]), (self.roi[3], self.roi[4]), (0, 0, 0), 4)
 
         self.graphicsDisplay.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         self.update_table()

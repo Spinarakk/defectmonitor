@@ -10,8 +10,8 @@
         "Phase": 1,
         "Snapshot": 1
     },
-    "ROIFlag": false,
     "ROI": [
+        0,
         0,
         0,
         0,

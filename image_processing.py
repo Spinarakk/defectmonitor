@@ -9,7 +9,7 @@ COLOUR_RED = (0, 0, 255)
 COLOUR_BLUE = (255, 0, 0)
 COLOUR_GREEN = (0, 255, 0)
 COLOUR_YELLOW = (0, 255, 255)
-COLOUR_PURPLE = (255, 0, 255)
+COLOUR_PINK = (203, 192, 255)
 COLOUR_BLACK = (0, 0, 0)
 COLOUR_WHITE = (255, 255, 255)
 
@@ -175,43 +175,27 @@ class ImageFix:
 
 class DefectProcessor:
     """Module used to process the corrected images using OpenCV functions to detect a variety of different defects
-    Defects to be analyzed are outlined in the README.txt file
-    Throughout the code, image objects are named image_(purpose)_(modification *default=BGR)
-    Therefore an image that will contain defect pixels that has been converted to gray would be image_defects_gray
+    Defects to be analyzed are outlined in the README.txt file and are named arbitrarily (not industry standards)
     """
 
-    def run_processor(self, image_name, status, progress):
+    def run_processor(self, image_name, layer, phase, folder, part_colours, roi, status, progress):
         """Initial run method that decides whether to run the coat or scan collection of detection processes"""
 
         progress.emit(0)
 
-        # Load from the build.json file
-        with open('build.json') as build:
-            self.build = json.load(build)
-
-        # Discern the layer and previous layer numbers from the image name itself
-        folder = self.build['BuildInfo']['Folder']
-        layer = os.path.splitext(image_name)[0][-4:]
-        layer_p = str(int(layer) - 1).zfill(4)
-
-        # Do the same for the phase
-        if 'coat' in image_name:
-            phase = 'coat'
-        elif 'scan' in image_name:
-            phase = 'scan'
-
-        # Create a defect type dictionary to convert from shorthand to full name
-        self.types = {'BS': 'streaks', 'BC': 'chatter', 'SP': 'patches', 'CO': 'outliers', 'OC': 'pattern'}
+        # Discern the previous layer number and convert them to strings
+        layer_p = str(layer - 1).zfill(4)
+        layer = str(layer).zfill(4)
 
         # Load or create the images to be analyzed into memory
-        image = cv2.imread(image_name)  # Original image to be analyzed
-        image_b = np.zeros(image.shape, np.uint8)  # Blank black image to draw defects on
-        image_c = cv2.imread('%s/contours/contours_%s.png' % (folder, layer))  # Corresponding part contours image
-        image_p = cv2.imread(image_name.replace(layer, layer_p))  # Previous layer image
+        image = cv2.imread(image_name)                                          # Original image to be analyzed
+        image_b = np.zeros(image.shape, np.uint8)                               # Blank black image to draw defects on
+        image_c = cv2.imread('%s/contours/contours_%s.png' % (folder, layer))   # Corresponding part contours image
+        image_p = cv2.imread(image_name.replace(layer, layer_p))                # Previous layer image
 
         # If the contours image exists, add the part names to a newly created defect dictionary to store defect results
         if type(image_c) is np.ndarray:
-            self.defects = dict.fromkeys(self.build['SliceConverter']['Colours'].keys(), dict())
+            self.defects = dict.fromkeys(part_colours.keys(), dict())
         else:
             # Otherwise create the master defect dictionary
             self.defects = dict()
@@ -232,11 +216,53 @@ class DefectProcessor:
             if phase not in self.defects[part_name][layer]:
                 self.defects[part_name][layer][phase] = dict()
 
-        # Different detection methods will be applied to the coat or scan image
+        # (Coat + Scan) Blade streak defects will be drawn in red
+        status.emit('Detecting blade streaks...')
+        image_d = self.detect_blade_streak(image, image_b.copy())
+        self.report_defects(image_d, image_c, layer, phase, folder, part_colours, roi, COLOUR_RED, 'BS')
+        progress.emit(20 + 5 * int('scan' in phase))
+
+        # (Coat + Scan) Blade chatter defects will be drawn in blue
+        status.emit('Detecting blade chatter...')
+        image_d = self.detect_blade_chatter(image, image_b.copy())
+        self.report_defects(image_d, image_c, layer, phase, folder, part_colours, roi, COLOUR_BLUE, 'BC')
+        progress.emit(40 + 10 * int('scan' in phase))
+
         if 'coat' in phase:
-            self.analyze_coat(image, image_b, image_c, image_p, layer, phase, status, progress)
+            # (Coat only) Shiny patch defects will be drawn in green
+            status.emit('Detecting shiny patches...')
+            image_d = self.detect_shiny_patch(image, image_b.copy())
+            self.report_defects(image_d, image_c, layer, phase, folder, part_colours, roi, COLOUR_GREEN, 'SP')
+            progress.emit(60)
+
+            # (Coat only) Contrast outlier defects will be drawn in yellow
+            status.emit('Detecting contrast outliers...')
+            image_d = self.detect_contrast_outlier(image, image_b.copy())
+            self.report_defects(image_d, image_c, layer, phase, folder, part_colours, roi, COLOUR_YELLOW, 'CO')
+            progress.emit(80)
+
         elif 'scan' in phase:
-            self.analyze_scan(image, image_b, image_c, image_p, layer, phase, status, progress)
+            # (Scan only) Scan pattern will be drawn in pink
+            status.emit('Detecting scan pattern...')
+            image_d = self.detect_scan_pattern(image, image_b.copy())
+            image_d = self.report_defects(image_d, image_c, layer, phase, folder, part_colours, roi, COLOUR_PINK, 'OC')
+            progress.emit(75)
+
+            if type(image_c) is np.ndarray:
+                if roi[0]:
+                    image_c = self.defect_roi(image_c, roi)
+                self.defects['combined'][layer][phase]['OC'] = self.compare_overlay(image_d, image_c)
+
+        # Histogram comparison with the previous layer if the previous layer's image exists
+        if type(image_p) is np.ndarray:
+            status.emit('Comparing against previous layer...')
+            # Crop down both the current image and previous image to remove non-ROI parts if needed
+            if roi[0]:
+                image = self.defect_roi(image, roi)
+                image_p = self.defect_roi(image_p, roi)
+
+            # Save the result directly to the combined report
+            self.defects['combined'][layer][phase]['HC'] = self.compare_histogram(image, image_p)
 
         # Save all the reports to their respective json files
         for part_name, data in self.defects.items():
@@ -245,76 +271,43 @@ class DefectProcessor:
 
         progress.emit(100)
 
-    def analyze_coat(self, image, image_b, image_c, image_p, layer, phase, status, progress):
-        """Analyzes the coat image for any potential defects as listed in the order below"""
+    def report_defects(self, image_d, image_c, layer, phase, folder, part_colours, roi, defect_colour, defect_type):
+        """Report the size and coordinates of any defects that overlay any of the part contours and the background"""
 
-        # Blade streak defects will be drawn in red
-        status.emit('Detecting blade streaks...')
-        image_d = self.detect_blade_streak(image, image_b.copy())
-        self.report_defects(image_d, image_c, layer, phase, COLOUR_RED, 'BS')
-        progress.emit(20)
+        # Crop down the defect image to remove non-ROI parts if needed
+        if roi[0]:
+            image_d = self.defect_roi(image_d, roi)
 
-        # Blade chatter defects will be drawn in blue
-        status.emit('Detecting blade chatter...')
-        image_d = self.detect_blade_chatter(image, image_b.copy())
-        self.report_defects(image_d, image_c, layer, phase, COLOUR_BLUE, 'BC')
-        progress.emit(40)
+        # Create a defect type dictionary to convert from shorthand to full name
+        types = {'BS': 'streaks', 'BC': 'chatter', 'SP': 'patches', 'CO': 'outliers', 'OC': 'pattern'}
 
-        # Shiny patch defects will be drawn in green
-        status.emit('Detecting shiny patches...')
-        image_d = self.detect_shiny_patch(image, image_b.copy())
-        self.report_defects(image_d, image_c, layer, phase, COLOUR_GREEN, 'SP')
-        progress.emit(60)
+        # Save the defect image to the corresponding folder
+        cv2.imwrite('%s/defects/%s/%s/%s%s_%s.png' % (folder, phase, types[defect_type], phase, defect_type, layer),
+                    image_d)
 
-        # Contrast outlier defects will be drawn in yellow
-        status.emit('Detecting contrast outliers...')
-        image_d = self.detect_contrast_outlier(image, image_b.copy())
-        self.report_defects(image_d, image_c, layer, phase, COLOUR_YELLOW, 'CO')
-        progress.emit(80)
+        # Return the image back to the caller if the scan pattern image only needs to be cropped and saved
+        if 'OC' in defect_type:
+            return image_d
 
-        # Histogram comparison with the previous layer if the previous layer's image exists
-        if type(image_p) is np.ndarray:
-            status.emit('Comparing against previous layer...')
-            # Crop down both the current image and previous image to remove non-ROI parts if needed
-            if self.build['ROIFlag']:
-                image = self.defect_roi(image, self.build['ROI'])
-                image_p = self.defect_roi(image_p, self.build['ROI'])
+        # Only report defects that intersect the part contours if the image exists
+        for name, colour in part_colours.items():
+            if 'combined' in name or type(image_c) is np.ndarray:
+                # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
+                if 'combined' in name:
+                    result, size_part = self.find_coordinates(image_d, np.zeros(image_d.shape, np.uint8),
+                                                              tuple(colour), defect_colour)
+                    size_part = image_d.size / 3
+                else:
+                    result, size_part = self.find_coordinates(image_d, image_c, tuple(colour), defect_colour)
 
-            # Save the result directly to the combined report
-            self.defects['combined'][layer][phase]['HC'] = self.compare_histogram(image, image_p)
+                # Convert the pixel size data into a percentage based on the total number of pixels in the image
+                if 'SP' in defect_type or 'CO' in defect_type:
+                    result[0] = round(result[0] / size_part * 100, 4)
 
-    def analyze_scan(self, image, image_b, image_c, image_p, layer, phase, status, progress):
-        """Analyzes the scan image for any potential defects as listed in the order below"""
-
-        # Blade streak defects will be drawn in red
-        status.emit('Detecting blade streaks...')
-        image_d = self.detect_blade_streak(image, image_b.copy())
-        self.report_defects(image_d, image_c, layer, phase, COLOUR_RED, 'BS')
-        progress.emit(25)
-
-        # Blade chatter defects will be drawn in blue
-        status.emit('Detecting blade chatter...')
-        image_d = self.detect_blade_chatter(image, image_b.copy())
-        self.report_defects(image_d, image_c, layer, phase, COLOUR_BLUE, 'BC')
-        progress.emit(50)
-
-        # Scan pattern will be drawn in purple
-        status.emit('Detecting scan pattern...')
-        image_d = self.detect_scan_pattern(image, image_b.copy())
-        image_d = self.report_defects(image_d, image_c, layer, phase, COLOUR_PURPLE, 'OC')
-        if type(image_c) is np.ndarray:
-            if self.build['ROIFlag']:
-                image_c = self.defect_roi(image_c, self.build['ROI'])
-            self.defects['combined'][layer][phase]['OC'] = self.compare_overlay(image_d, image_c)
-        progress.emit(75)
-
-        # Histogram comparison with the previous layer if the previous layer's image exists
-        if type(image_p) is np.ndarray:
-            status.emit('Comparing against previous layer...')
-            if self.build['ROIFlag']:
-                image = self.defect_roi(image, self.build['ROI'])
-                image_p = self.defect_roi(image_p, self.build['ROI'])
-            self.defects['combined'][layer][phase]['HC'] = self.compare_histogram(image, image_p)
+                # Add these to the defect dictionary for the current part, and the combined dictionary
+                self.defects[name][layer][phase][defect_type] = result
+            else:
+                continue
 
     @staticmethod
     def detect_blade_streak(image, image_defects):
@@ -469,45 +462,10 @@ class DefectProcessor:
             if cv2.contourArea(contour) > 1000:
                 contours_list.append(contour)
 
-        # Draw the contours on the defect image in purple
-        cv2.drawContours(image_defects, contours_list, -1, COLOUR_PURPLE, thickness=cv2.FILLED)
+        # Draw the contours on the defect image in pink
+        cv2.drawContours(image_defects, contours_list, -1, COLOUR_PINK, thickness=cv2.FILLED)
 
         return image_defects
-
-    def report_defects(self, image_d, image_c, layer, phase, defect_colour, defect_type):
-        """Report the size and coordinates of any defects that overlay any of the part contours and the background"""
-
-        # Crop down the defect image to remove non-ROI parts if needed
-        if self.build['ROIFlag']:
-            image_d = self.defect_roi(image_d, self.build['ROI'])
-
-        # Save the defect image to the corresponding folder
-        cv2.imwrite('%s/defects/%s/%s/%s%s_%s.png' % (self.build['BuildInfo']['Folder'], phase,
-                                                      self.types[defect_type], phase, defect_type, layer), image_d)
-
-        # Return back if the scan pattern only needs to be cropped and saved
-        if 'OC' in defect_type:
-            return image_d
-
-        # Only report defects that intersect the part contours if the image exists
-        for name, colour in self.build['SliceConverter']['Colours'].items():
-            if 'combined' in name or type(image_c) is np.ndarray:
-                # Find the total size, coordinates and occurrences of the defect pixels that overlap the part
-                if 'combined' in name:
-                    result, size_part = self.find_coordinates(image_d, np.zeros(image_d.shape, np.uint8),
-                                                              tuple(colour), defect_colour)
-                    size_part = image_d.size / 3
-                else:
-                    result, size_part = self.find_coordinates(image_d, image_c, tuple(colour), defect_colour)
-
-                # Convert the pixel size data into a percentage based on the total number of pixels in the image
-                if 'SP' in defect_type or 'CO' in defect_type:
-                    result[0] = round(result[0] / size_part * 100, 4)
-
-                # Add these to the defect dictionary for the current part, and the combined dictionary
-                self.defects[name][layer][phase][defect_type] = result
-            else:
-                continue
 
     @staticmethod
     def compare_histogram(image_current, image_previous):
@@ -535,9 +493,9 @@ class DefectProcessor:
     def compare_overlay(image_defects, image_contours):
         """Compares the detected scan pattern against the drawn contours and calculates the difference result"""
 
-        # Convert all the part colours into purple so that it can be compared to the detected scan pattern
+        # Convert all the part contour colours to pink so that it can be compared to the detected scan pattern
         mask = cv2.inRange(image_contours, (100, 100, 0), (255, 255, 0))
-        image_contours[np.nonzero(mask)] = COLOUR_PURPLE
+        image_contours[np.nonzero(mask)] = COLOUR_PINK
 
         # Use template matching to directly compare the two images and return the result
         result = float(cv2.matchTemplate(image_defects, image_contours, cv2.TM_CCOEFF_NORMED)[0][0])
@@ -547,7 +505,7 @@ class DefectProcessor:
     def defect_roi(image, roi):
         """Crops the image (specifically the found defects image) to the specified ROI and adds black to the rest"""
         image_roi = np.zeros(image.shape, np.uint8)
-        image_roi[roi[1]:roi[3], roi[0]:roi[2]] = image[roi[1]:roi[3], roi[0]:roi[2]]
+        image_roi[roi[2]:roi[4], roi[1]:roi[3]] = image[roi[2]:roi[4], roi[1]:roi[3]]
         return image_roi
 
     @staticmethod

@@ -541,9 +541,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         else:
             self.update_status('Running displayed %s image through the Defect Detector...' % phase)
 
-        # Send the image name to be processed to the detector
+        # Send the image name and any other required values to the defect processor
         worker = qt_multithreading.Worker(image_processing.DefectProcessor().run_processor,
-                                          self.display['ImageList'][self.tab_index][layer - 1])
+                                          self.display['ImageList'][self.tab_index][layer - 1], layer, phase,
+                                          self.build['BuildInfo']['Folder'], self.build['SliceConverter']['Colours'],
+                                          self.build['ROI'])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.finished.connect(self.process_finished)
@@ -566,7 +568,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.update_status('Defect Detection finished successfully.', 10000)
 
     def toggle_processing_buttons(self, state):
-        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
+        """Enables or disable the following buttons/actions when switching display tabs"""
 
         # State 0 is when the current tab of images CANNOT be processed, or when a Process Current is running
         # State 1 is when the current image CAN be processed
@@ -667,7 +669,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Capture a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot,
-                                          self.build['ImageCapture']['Snapshot'], folder)
+                                          self.build['ImageCapture']['Snapshot'], folder, self.config['CameraSettings'])
         worker.signals.status_camera.connect(self.update_status_camera)
         worker.signals.name.connect(self.fix_image)
         worker.signals.result.connect(self.snapshot_finished)
@@ -686,7 +688,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.update_status('Snapshot failed to be captured. See command prompt for error message.', 3000)
 
     def toggle_snapshot_buttons(self, flag):
-        """Enables or disables the following buttons/actions in one fell swoop depending on the received flag"""
+        """Enable or disable the following buttons/actions when a snapshot image is to be captured"""
 
         self.pushSnapshot.setEnabled(flag)
         self.actionSnapshot.setEnabled(flag)
@@ -789,7 +791,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.run_exit()
 
     def run_loop(self, result):
-        """Because reading from the serial trigger takes a little bit of time, it temporarily freezes the main UI
+        """Because reading from the serial trigger takes a little bit of ti me, it temporarily freezes the main UI
         As such, the serial read is turned into a QRunnable function that is passed to a worker using the QThreadPool
         The current method works as a sort of recursive loop, where the result of the trigger poll is checked
         If a trigger is detected, the corresponding image capture function is executed as a worker to the QThreadPool
@@ -801,15 +803,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if self.run_flag:
             if 'TRIG' in result:
                 # Disable all the image capture buttons
-                self.pushRun.setEnabled(False)
-                self.actionRun.setEnabled(False)
-                self.actionFauxTrigger.setEnabled(False)
-                self.pushStop.setEnabled(False)
+                self.toggle_capture_buttons(False)
+
+                # Determine the layer number and the name of the current phase (coat or scan) as strings
+                layer = str(int(self.build['ImageCapture']['Layer'])).zfill(4)
+                phase = self.display['FolderNames'][self.build['ImageCapture']['Phase']][:-1].lower()
 
                 # Capture an image
-                worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_run,
-                                                  self.build['ImageCapture']['Layer'],
-                                                  self.build['ImageCapture']['Phase'], self.folder)
+                worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_run, layer, phase,
+                                                  self.config['CameraSettings'], self.folder)
                 worker.signals.status_camera.connect(self.update_status_camera)
                 worker.signals.status_trigger.connect(self.update_status_trigger)
                 worker.signals.name.connect(self.fix_image)
@@ -840,10 +842,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.stopwatch_idle = 0
 
         # Re-enable all the image capture buttons
-        self.pushRun.setEnabled(True)
-        self.actionRun.setEnabled(True)
-        self.actionFauxTrigger.setEnabled(True)
-        self.pushStop.setEnabled(True)
+        self.toggle_capture_buttons(True)
 
         # Increment the run capture layer and toggle the phase
         self.build['ImageCapture']['Layer'] += 0.5
@@ -903,7 +902,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.serial_trigger.close()
 
     def toggle_run_buttons(self, flag):
-        """Enables or disables the following buttons/actions in one fell swoop depending on the received flag"""
+        """Enable or disable the following buttons/actions when a build has been started or stopped"""
 
         self.actionNew.setEnabled(flag)
         self.actionOpen.setEnabled(flag)
@@ -925,6 +924,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionSnapshot.setEnabled(flag)
         self.actionFauxTrigger.setEnabled(not flag)
         self.pushStop.setEnabled(not flag)
+
+    def toggle_capture_buttons(self, flag):
+        """Enable or disable the following buttons/actions when an image is to be captured during a build run"""
+
+        self.pushRun.setEnabled(flag)
+        self.actionRun.setEnabled(flag)
+        self.actionFauxTrigger.setEnabled(flag)
+        self.pushStop.setEnabled(flag)
 
     # IMAGE PROCESSING
 
@@ -1038,7 +1045,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkGridlines.setEnabled(False)
                 self.checkGridlines.setChecked(False)
 
-            if self.build['ROIFlag']:
+            if self.build['ROI'][0]:
                 self.checkROI.setEnabled(True)
             else:
                 self.checkROI.setEnabled(False)
@@ -1124,7 +1131,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Overlay the ROI box
             if self.checkROI.isChecked():
                 roi = self.build['ROI']
-                cv2.rectangle(image, (roi[0], roi[1]), (roi[2], roi[3]), (255, 255, 255), 5)
+                cv2.rectangle(image, (roi[1], roi[2]), (roi[3], roi[4]), (255, 255, 255), 5)
 
             # Applies CLAHE to the display image
             if self.checkEqualization.isChecked():
@@ -1152,7 +1159,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.groupOverlayDefects.setEnabled(False)
 
     def toggle_display_control(self, state):
-        """Enables or disables the following buttons/actions in one fell swoop depending on the received state"""
+        """Enables or disable the following buttons/actions when switching display tabs"""
 
         # State 0 - No images in folder
         # State 1 - Image not found, have images in folder

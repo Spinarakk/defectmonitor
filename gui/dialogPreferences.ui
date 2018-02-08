@@ -151,6 +151,9 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="toolTip">
+      <string>Set to 0 minutes to disable idle notifications.</string>
+     </property>
      <property name="title">
       <string>Idle Timeout</string>
      </property>
@@ -174,13 +177,13 @@
       <item>
        <widget class="QSpinBox" name="spinIdleTimeout">
         <property name="toolTip">
-         <string>1 - 60</string>
+         <string>0 - 180</string>
         </property>
         <property name="minimum">
-         <number>1</number>
+         <number>0</number>
         </property>
         <property name="maximum">
-         <number>60</number>
+         <number>180</number>
         </property>
        </widget>
       </item>

@@ -11,12 +11,12 @@
         "Snapshot": 1
     },
     "ROI": [
+        1,
         155,
         76,
         3590,
         2357
     ],
-    "ROIFlag": true,
     "SliceConverter": {
         "Colours": {
             "D1": [

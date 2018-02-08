@@ -2,10 +2,6 @@
 import os
 import cv2
 import numpy as np
-import json
-
-# Import related modules
-import image_processing
 
 
 class SliceConverter:
