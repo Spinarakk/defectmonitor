@@ -332,7 +332,7 @@
    <item row="4" column="0" colspan="4">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Notifications</string>
+      <string>Notification Settings</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_5">
       <property name="topMargin">
@@ -370,9 +370,9 @@
        </widget>
       </item>
       <item row="0" column="0" colspan="2">
-       <widget class="QLabel" name="label">
+       <widget class="QLabel" name="labelWarning">
         <property name="text">
-         <string>Please ensure that the entered email addresses are valid and correct.</string>
+         <string>Please ensure that the entered email addresses are correct and valid.</string>
         </property>
        </widget>
       </item>

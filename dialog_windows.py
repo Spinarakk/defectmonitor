@@ -1281,12 +1281,12 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         Also disables checked status of the Select button after successfully selecting a region"""
 
         if not bool(region):
-            region = [self.spinTLX.value(), self.spinTLY.value(), self.spinSizeX.value(), self.spinSizeY.value()]
+            region = [self.spinTLX.value(), self.spinTLY.value(), self.spinResolutionX.value(), self.spinResolutionY.value()]
         else:
             self.spinTLX.setValue(region[0])
             self.spinTLY.setValue(region[1])
-            self.spinSizeX.setValue(region[2])
-            self.spinSizeY.setValue(region[3])
+            self.spinResolutionX.setValue(region[2])
+            self.spinResolutionY.setValue(region[3])
 
         self.pushRemove.setEnabled(True)
         self.pushSelect.setChecked(False)
