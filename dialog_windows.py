@@ -508,9 +508,10 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.pushRemove.clicked.connect(self.remove_images)
         self.pushBrowseHI.clicked.connect(self.browse_homography)
         self.pushBrowseTI.clicked.connect(self.browse_test)
+        self.pushCropImage.clicked.connect(self.crop_image)
+        self.pushViewResults.clicked.connect(lambda: self.view_results(self.config['ImageCorrection']))
+        self.pushSaveResults.clicked.connect(self.save_results)
         self.pushStart.clicked.connect(self.start)
-        self.pushResults.clicked.connect(lambda: self.view_results(False))
-        self.pushSave.clicked.connect(self.save_results)
 
         # Set the SpinBox settings to the previously saved values
         self.spinWidth.setValue(self.config['CameraCalibration']['Width'])
@@ -518,6 +519,10 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.spinWidthHI.setValue(self.config['CameraCalibration']['WidthHI'])
         self.spinHeightHI.setValue(self.config['CameraCalibration']['HeightHI'])
         self.spinRatio.setValue(self.config['CameraCalibration']['DownscalingRatio'])
+        self.spinTLX.setValue(self.config['ImageCorrection']['CropOffset'][1])
+        self.spinTLY.setValue(self.config['ImageCorrection']['CropOffset'][0])
+        self.spinResolutionX.setValue(self.config['ImageCorrection']['ImageResolution'][1])
+        self.spinResolutionY.setValue(self.config['ImageCorrection']['ImageResolution'][0])
 
         # Set and display previously saved image path names if they exist, otherwise leave empty strings
         if os.path.isfile(self.config['CameraCalibration']['HomographyImage']):
@@ -584,10 +589,11 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
 
         # Disable relevant UI elements to prevent concurrent processes
         self.toggle_control(False)
-        self.pushSave.setEnabled(False)
+        self.pushStart.setEnabled(False)
+        self.pushSaveResults.setEnabled(False)
 
         # Save calibration settings
-        self.apply_settings()
+        self.save_settings()
 
         # Reset the colours of the items in the QListWidget
         # Try exception causes this function to be skipped the first time
@@ -597,23 +603,30 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         except AttributeError:
             pass
 
-        worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate, self.image_list)
+        worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate, self.image_list,
+                                          self.config['CameraCalibration'], self.config['ImageCorrection'], )
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.colour.connect(self.change_colour)
         worker.signals.result.connect(self.start_finished)
         self.threadpool.start(worker)
 
-    def start_finished(self, flag):
+    def start_finished(self, parameters):
         """Executes when the CameraCalibration instance has finished"""
 
         # Re-enable relevant UI elements
         self.toggle_control(True)
-        self.pushSave.setEnabled(flag)
+        self.pushSaveResults.setEnabled(bool(parameters))
 
-        # Opens a Dialog Window to view Calibration Results only if the entire calibration was successful
-        if flag:
-            self.view_results(True)
+        # Open the Calibration Results window to display the results only if the entire calibration was successful
+        if parameters:
+            # Save the calculated parameters as instance variables to be used if the user wants to save the results
+            self.parameters = parameters
+            self.view_results(parameters)
+
+            # Enable the Crop Test Image button only if the test image has been fixed
+            if self.checkApply.isChecked():
+                self.pushCropImage.setEnabled(True)
 
     def toggle_control(self, flag):
         """Enables or disables the following elements in one fell swoop depending on the received flag"""
@@ -622,45 +635,51 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.pushBrowseHI.setEnabled(flag)
         self.pushBrowseTI.setEnabled(flag)
         self.groupCalibrationSettings.setEnabled(flag)
-        self.pushStart.setEnabled(flag)
+        self.groupCropSettings.setEnabled(flag)
         self.pushDone.setEnabled(flag)
 
-    def view_results(self, calibration_flag):
-        """Opens a Dialog Window when the CameraCalibration instance has finished
-        Or when the View Results button is clicked
-        Displays the results of the camera calibration to the user
-        """
+    def crop_image(self):
+        """Crops the test image down to the entered region of interest"""
 
-        if calibration_flag:
-            with open('calibration_results.json') as file:
-                results = json.load(file)
+        image = cv2.imread(self.config['CameraCalibration']['TestImage'].replace('.png', '_DP.png'))
+
+        offset = [self.spinTLY.value(), self.spinTLX.value()]
+        resolution = [self.spinResolutionY.value(), self.spinResolutionX.value()]
+
+        if type(image) is np.ndarray:
+            image = image_processing.ImageFix().crop(image, offset, resolution)
+            cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image)
+            os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
+            self.update_status('Test image cropped.')
         else:
-            results = self.config.copy()
+            self.update_status('Fixed test image cannot be found.')
+            self.pushCropImage.setEnabled(False)
+
+    def view_results(self, parameters):
+        """Opens the Calibration Results window to displays the results of the camera calibration to the user"""
 
         try:
             self.CR_dialog.close()
         except (AttributeError, RuntimeError):
             pass
 
-        self.CR_dialog = CalibrationResults(self, results['ImageCorrection'])
+        self.CR_dialog = CalibrationResults(self, parameters)
         self.CR_dialog.show()
 
     def save_results(self):
-        """Copies the calibration results from the temporary calibration_results.json file to the config.json file"""
+        """Saves the calculated results including the crop area to the config.json file"""
 
-        # Load the results from the temporary calibration_results.json file
-        with open('calibration_results.json') as file:
-            results = json.load(file)
-
-        # Delete the calibration_results.json file
-        os.remove('calibration_results.json')
+        self.parameters['CropOffset'][1] = self.spinTLX.value()
+        self.parameters['CropOffset'][0] = self.spinTLY.value()
+        self.parameters['ImageResolution'][1] = self.spinResolutionX.value()
+        self.parameters['ImageResolution'][0] = self.spinResolutionY.value()
 
         # Copy the results dictionary into the config dictionary
-        self.config.update(results)
+        self.config['ImageCorrection'] = self.parameters.copy()
 
         # Save to the config.json file and disable saving again
-        self.apply_settings()
-        self.pushSave.setEnabled(False)
+        self.save_settings()
+        self.pushSaveResults.setEnabled(False)
         self.update_status('Calibration results saved to the config file.')
 
     def change_colour(self, index, valid):
@@ -677,6 +696,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         """(Re-)Enables the Start button if valid calibration images and an homography image have been selected"""
 
         self.pushStart.setEnabled(bool(self.image_list) and bool(self.lineHomographyImage.text()))
+        self.pushCropImage.setEnabled(False)
 
         # These conditionals just determine which status message to display
         if self.image_list and self.lineHomographyImage.text():
@@ -686,7 +706,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         else:
             self.update_status('Add calibration images.')
 
-    def apply_settings(self):
+    def save_settings(self):
         """Grab the spinxBox and checkBox values and save them to the working config and default config file"""
 
         self.config['CameraCalibration']['Width'] = self.spinWidth.value()
@@ -711,7 +731,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         """Executes when the Done button is clicked or when the window is closed"""
 
         # Save settings so that settings persist across instances
-        self.apply_settings()
+        self.save_settings()
 
         # Remove the calibration_results.json file if it exists
         if os.path.isfile('calibration_results.json'):
@@ -727,7 +747,7 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
     Allows user to look at the pertinent calibration parameters and results
     """
 
-    def __init__(self, parent=None, results=None):
+    def __init__(self, parent=None, parameters=None):
 
         # Setup Dialog UI with CameraCalibration as parent and restore the previous window state
         super(CalibrationResults, self).__init__(parent)
@@ -742,17 +762,14 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
             pass
 
         # Split camera parameters into their own respective values to be used in OpenCV functions
-        camera_matrix = np.array(results['CameraMatrix'])
-        distortion_coefficients = np.array(results['DistortionCoefficients'])
-        homography_matrix = np.array(results['HomographyMatrix'])
+        camera_matrix = np.array(parameters['CameraMatrix'])
+        distortion_coefficients = np.array(parameters['DistortionCoefficients'])
+        homography_matrix = np.array(parameters['HomographyMatrix'])
 
-        # Sets the tables' columns and rows to automatically resize appropriately
-        self.tableCM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableDC.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableHM.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableCM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableDC.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableHM.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Set all the table columns and rows to automatically resize appropriately
+        for table in self.findChildren(QTableWidget):
+            table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Nested for loops to access each of the table boxes in order
         for row in range(3):
@@ -777,7 +794,7 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.tableHM.resizeRowsToContents()
 
         # Displaying the re-projection error on the appropriate text label
-        self.labelRMS.setText('Re-Projection Error: ' + format(results['RMS'], '.10g'))
+        self.labelRMS.setText('Re-Projection Error: ' + format(parameters['RMS'], '.10g'))
 
     def closeEvent(self, event):
         """Executes when the window is closed"""
@@ -1708,9 +1725,13 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
     def convert_image(self, image_name):
         """Converts the image by applying the required image processing functions to fix the images using QThreads"""
 
+        # Load the calibration parameters to be used to convert the images
+        with open('config.json') as config:
+            parameters = json.load(config)['ImageCorrection']
         self.naming_flag = True
 
-        worker = qt_multithreading.Worker(image_processing.ImageFix().convert_image, image_name, self.checked)
+        worker = qt_multithreading.Worker(image_processing.ImageFix().convert_image, image_name, parameters,
+                                          self.checked)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.naming_error.connect(self.naming_error)

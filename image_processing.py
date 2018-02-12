@@ -17,36 +17,21 @@ COLOUR_WHITE = (255, 255, 255)
 class ImageFix:
     """Module containing methods used to transform or modify any images using a variety of OpenCV functions"""
 
-    def __init__(self):
-
-        # Load from the config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Checks whether to use the temporary results of the camera calibration, or the ones saved in the config file
-        try:
-            with open('calibration_results.json') as parameters:
-                self.parameters = json.load(parameters)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            self.parameters = self.config['ImageCorrection']
-        else:
-            self.parameters = self.parameters['ImageCorrection']
-
-    def fix_image(self, image_name):
+    def fix_image(self, image_name, parameters):
         """Fixes the received image for distortion, perspective and crops it to the correct size, and saves it"""
 
         # Load the image into memory
         image = cv2.imread(image_name)
 
         # Apply the following fixes
-        image = self.distortion_fix(image)
-        image = self.perspective_fix(image)
-        image = self.crop(image)
+        image = self.distortion_fix(image, parameters['CameraMatrix'], parameters['DistortionCoefficients'])
+        image = self.perspective_fix(image, parameters['HomographyMatrix'], parameters['HomographyResolution'])
+        image = self.crop(image, parameters['CropOffset'], parameters['ImageResolution'])
 
         # Save the image using a modified image name
         cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
 
-    def convert_image(self, image_name, checkboxes, status, progress, naming_error):
+    def convert_image(self, image_name, parameters, checkboxes, status, progress, naming_error):
         """Applies the distortion, perspective, crop and CLAHE processes to the received image
         Also subsequently saves each image after every process if the corresponding checkbox is checked"""
 
@@ -84,7 +69,7 @@ class ImageFix:
         # Images are only saved if the corresponding checkbox is checked
         progress.emit(0)
         status.emit('Undistorting image...')
-        image = self.distortion_fix(image)
+        image = self.distortion_fix(image, parameters['CameraMatrix'], parameters['DistortionCoefficients'])
 
         if checkboxes[3]:
             if checkboxes[1]:
@@ -94,7 +79,7 @@ class ImageFix:
 
         progress.emit(25)
         status.emit('Fixing perspective warp...')
-        image = self.perspective_fix(image)
+        image = self.perspective_fix(image, parameters['HomographyMatrix'], parameters['HomographyResolution'])
 
         if checkboxes[4]:
             if checkboxes[1]:
@@ -104,7 +89,7 @@ class ImageFix:
 
         progress.emit(50)
         status.emit('Cropping image to size...')
-        image = self.crop(image)
+        image = self.crop(image, parameters['CropOffset'], parameters['ImageResolution'])
 
         if checkboxes[5]:
             if checkboxes[0]:
@@ -127,27 +112,19 @@ class ImageFix:
         progress.emit(100)
         status.emit('Image conversion successful.')
 
-    def distortion_fix(self, image):
+    @staticmethod
+    def distortion_fix(image, cmatrix, distco):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
+        return cv2.undistort(image, np.array(cmatrix), np.array(distco))
 
-        return cv2.undistort(image, np.array(self.parameters['CameraMatrix']),
-                             np.array(self.parameters['DistortionCoefficients']))
-
-    def perspective_fix(self, image):
+    @staticmethod
+    def perspective_fix(image, hmatrix, hres):
         """Fixes the perspective warp due to the off-centre position of the camera"""
+        return cv2.warpPerspective(image, np.array(hmatrix), tuple(hres))
 
-        return cv2.warpPerspective(image, np.array(self.parameters['HomographyMatrix']),
-                                   tuple(self.parameters['HomographyResolution']))
-
-    def crop(self, image):
+    @staticmethod
+    def crop(image, offset, resolution):
         """Crops the image to a more desirable region of interest"""
-
-        # Save value to be used to determine region of interest
-        # Crop Offset refers to the XY offset as given in FastStone image viewer crop borders
-        offset = self.config['ImageCorrection']['CropOffset']
-        resolution = self.config['ImageCorrection']['ImageResolution']
-
-        # Crop the image to a rectangle region of interest as dictated by the following values [H,W]
         return image[offset[0]:offset[0] + resolution[0], offset[1]:offset[1] + resolution[1]]
 
     @staticmethod

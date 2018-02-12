@@ -14,25 +14,7 @@ class Calibration:
     User specifies a folder of chessboard images taken using the camera and outputs the camera intrinsics and parameters
     """
 
-    def __init__(self):
-
-        # Load from the config.json file
-        with open('config.json') as config:
-            self.config = json.load(config)
-
-        # Create a copy of the ImageCorrection key of the config.json file to store the calibration results
-        self.results = dict()
-        self.results['ImageCorrection'] = self.config['ImageCorrection'].copy()
-
-        # Image points are points in the 2D image plane
-        # They are represented by the corners of the squares on the chessboard as found by findChessboardCorners
-        self.points_2d = list()
-
-        # Object Points are the points in the 3D real world space
-        # They are represented as a series of points as relative to each other, and are created like (0,0), (1,0)...
-        self.points_3d = list()
-
-    def calibrate(self, image_list, status, progress, colour):
+    def calibrate(self, image_list, settings, results, status, progress, colour):
 
         # Assign the status, progress and signals as instance variables so other methods can use them
         self.status = status
@@ -42,16 +24,24 @@ class Calibration:
         # Reset the progress bar
         self.progress.emit(0)
 
-        # Initialize a list to store valid image flags
+        # Initialize an ImageCorrection dictionary to store results and a list to store valid image flags
         image_list_valid = list()
 
         # Count the number of calibration images to use as a progress indicator
         increment = 100 / len(image_list)
         progress = 0
 
+        # Image points are points in the 2D image plane
+        # They are represented by the corners of the squares on the chessboard as found by findChessboardCorners
+        self.points_2d = list()
+
+        # Object Points are the points in the 3D real world space
+        # They are represented as a series of points as relative to each other, and are created like (0,0), (1,0)...
+        self.points_3d = list()
+
         # Go through and find the corners for all the valid images in the folder
         for index, image_name in enumerate(image_list):
-            image_list_valid.append(self.find_draw_corners(image_name, index))
+            image_list_valid.append(self.find_draw_corners(image_name, index, settings))
 
             # UI Progress and Status Messages
             progress += increment
@@ -68,12 +58,12 @@ class Calibration:
                                     flags=cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_ZERO_TANGENT_DIST)
 
             # Save the calibration results to the results dictionary
-            self.results['ImageCorrection']['RMS'] = rms
-            self.results['ImageCorrection']['CameraMatrix'] = camera_matrix.tolist()
-            self.results['ImageCorrection']['DistortionCoefficients'] = distortion_coefficients.tolist()
+            results['RMS'] = rms
+            results['CameraMatrix'] = camera_matrix.tolist()
+            results['DistortionCoefficients'] = distortion_coefficients.tolist()
 
             # If the Save Undistorted Images checkbox is checked
-            if self.config['CameraCalibration']['Undistort']:
+            if settings['Undistort']:
                 # Reset the progress bar and recalculate the increment
                 self.progress.emit(0)
                 increment = 100 / image_list_valid.count(1)
@@ -88,43 +78,40 @@ class Calibration:
                         progress += increment
                         self.progress.emit(round(progress))
 
-            # If the homography matrix was successfully found
-            if self.find_homography(camera_matrix, distortion_coefficients):
+            results = self.find_homography(camera_matrix, distortion_coefficients, settings, results)
 
-                # Save the results to a temporary .json file
-                with open('calibration_results.json', 'w+') as results:
-                    json.dump(self.results, results, indent=4, sort_keys=True)
-
+            # If the homography matrix was successfully found, aka if a proper dictionary has been returned
+            if results:
                 # If the Apply to Test Image checkbox is checked, apply the recently calculated camera parameters
                 # On the received test image (with corresponding progress indicators)
-                if self.config['CameraCalibration']['Apply']:
-                    self.status.emit('Processing test image...')
+                if settings['Apply']:
+                    self.status.emit('Fixing test image...')
                     self.progress.emit(0)
-                    image_test = cv2.imread(self.config['CameraCalibration']['TestImage'])
-                    image_test = image_processing.ImageFix().distortion_fix(image_test)
-                    cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_D.png'), image_test)
-                    self.progress.emit(25)
-                    image_test = image_processing.ImageFix().perspective_fix(image_test)
-                    self.progress.emit(50)
-                    cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DP.png'), image_test)
-                    image_test = image_processing.ImageFix().crop(image_test)
-                    self.progress.emit(75)
-                    cv2.imwrite(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'), image_test)
+                    image_test = cv2.imread(settings['TestImage'])
+                    image_test = image_processing.ImageFix().distortion_fix(image_test, results['CameraMatrix'],
+                                                                            results['DistortionCoefficients'])
+                    cv2.imwrite(settings['TestImage'].replace('.png', '_D.png'), image_test)
+                    self.progress.emit(33)
+                    image_test = image_processing.ImageFix().perspective_fix(image_test, results['HomographyMatrix'],
+                                                                             results['HomographyResolution'])
+                    self.progress.emit(66)
+                    cv2.imwrite(settings['TestImage'].replace('.png', '_DP.png'), image_test)
                     self.status.emit('Test image successfully fixed.')
                     self.progress.emit(100)
 
                     # Open the image in the native image viewer for the user to view the results of the calibration
-                    os.startfile(self.config['CameraCalibration']['TestImage'].replace('.png', '_DPC.png'))
+                    os.startfile(settings['TestImage'].replace('.png', '_DP.png'))
 
                 self.status.emit('Calibration completed successfully.')
-                return True
+                return results
             else:
                 self.status.emit('Homography corner detection failed. Check chessboard dimensions.')
                 return False
         else:
             self.status.emit('No valid chessboard images found. Check images or chessboard dimensions.')
+            return False
 
-    def find_draw_corners(self, image_name_full, index):
+    def find_draw_corners(self, image_name_full, index, settings):
         """Find the corners in the chessboard and draw the corner points if the flag is raised"""
 
         # Grab just the image name without the directory path
@@ -132,9 +119,9 @@ class Calibration:
         self.status.emit('Finding corners in %s...' % image_name)
 
         # Grab certain values to be used in Calibration functions
-        width = self.config['CameraCalibration']['Width']
-        height = self.config['CameraCalibration']['Height']
-        ratio = self.config['CameraCalibration']['DownscalingRatio']
+        width = settings['Width']
+        height = settings['Height']
+        ratio = settings['DownscalingRatio']
 
         # Load the image into memory and save the resolution of the image
         image = cv2.imread(image_name_full, 0)
@@ -165,7 +152,7 @@ class Calibration:
             self.points_3d.append(object_points)
 
             # If the Save Chessboard Image checkbox is checked
-            if self.config['CameraCalibration']['Chessboard']:
+            if settings['Chessboard']:
                 # Create a 'corners' folder in the current image's root directory if it doesn't exist
                 folder = '%s/corners' % os.path.dirname(image_name_full)
                 if not os.path.isdir(folder):
@@ -208,18 +195,18 @@ class Calibration:
         self.status.emit('Saving %s...' % image_name)
         cv2.imwrite('%s/%s_undistorted.png' % (folder, image_name), image)
 
-    def find_homography(self, camera_matrix, distortion_coefficients):
+    def find_homography(self, camera_matrix, distortion_coefficients, settings, results):
         """Use the homography image and the found camera matrix to calculate the homography matrix"""
 
         self.status.emit('Determining homography matrix...')
 
         # Grab certain values to be used in Calibration functions
-        width = self.config['CameraCalibration']['WidthHI']
-        height = self.config['CameraCalibration']['HeightHI']
-        ratio = self.config['CameraCalibration']['DownscalingRatio']
+        width = settings['WidthHI']
+        height = settings['HeightHI']
+        ratio = settings['DownscalingRatio']
 
         # Load the homography image into memory in grayscale
-        image = cv2.imread(self.config['CameraCalibration']['HomographyImage'], 0)
+        image = cv2.imread(settings['HomographyImage'], 0)
 
         # Determine the resolution of the image after downscaling and downscale it
         image_scaled = cv2.resize(image, (image.shape[1] // ratio, image.shape[0] // ratio),
@@ -260,14 +247,14 @@ class Calibration:
                                       [0, 1, -points_transform[:, 0][:, 1].min()], [0, 0, 1]])
 
             # Modify the homography matrix with the translation matrix using dot product
-            self.results['ImageCorrection']['HomographyMatrix'] = np.dot(points_offset, homography_matrix).tolist()
+            results['HomographyMatrix'] = np.dot(points_offset, homography_matrix).tolist()
 
             # Figure out the final resolution to crop the image to
             width_output = int(points_transform[:, 0][:, 0].max() - points_transform[:, 0][:, 0].min())
             height_output = int(points_transform[:, 0][:, 1].max() - points_transform[:, 0][:, 1].min())
-            self.results['ImageCorrection']['HomographyResolution'] = (width_output, height_output)
+            results['HomographyResolution'] = (width_output, height_output)
 
             self.status.emit('Homography matrix found.')
-            return True
+            return results
         else:
             return False

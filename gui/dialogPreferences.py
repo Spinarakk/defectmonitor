@@ -36,6 +36,7 @@ class Ui_dialogPreferences(object):
         self.spinCentrelineT.setObjectName("spinCentrelineT")
         self.gridLayout_4.addWidget(self.spinCentrelineT, 1, 2, 1, 1)
         self.labelROIOffset = QtWidgets.QLabel(self.groupSliceConverter)
+        self.labelROIOffset.setToolTip("")
         self.labelROIOffset.setObjectName("labelROIOffset")
         self.gridLayout_4.addWidget(self.labelROIOffset, 2, 1, 1, 1)
         self.spinROIOffset = QtWidgets.QSpinBox(self.groupSliceConverter)

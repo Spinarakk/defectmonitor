@@ -940,7 +940,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         self.image_name = image_name.replace('R_', 'F_').replace('raw', 'fixed')
         self.update_status('Applying image fixes...')
-        worker = qt_multithreading.Worker(image_processing.ImageFix().fix_image, image_name)
+
+        worker = qt_multithreading.Worker(image_processing.ImageFix().fix_image, image_name,
+                                          self.config['ImageCorrection'])
         worker.signals.finished.connect(self.fix_image_finished)
         self.threadpool.start(worker)
 

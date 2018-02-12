@@ -1,12 +1,12 @@
 {
     "BuildFolder": "C:/Users/Spinarakk/Documents/MCAM/Builds",
     "CameraCalibration": {
-        "Apply": false,
+        "Apply": true,
         "Chessboard": false,
-        "DownscalingRatio": 1,
+        "DownscalingRatio": 2,
         "Height": 10,
         "HeightHI": 10,
-        "HomographyImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/snapshotR_0005.png",
+        "HomographyImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/image_homography.png",
         "TestImage": "C:/Users/Spinarakk/Documents/MCAM/Calibration/snapshotR_0018.png",
         "Undistort": false,
         "Width": 15,
@@ -36,13 +36,13 @@
     "ImageCorrection": {
         "CameraMatrix": [
             [
-                2509.6556773586117,
+                2509.8716723546017,
                 0.0,
                 1920.0
             ],
             [
                 0.0,
-                2506.062571448144,
+                2506.348098156287,
                 1374.0
             ],
             [
@@ -57,39 +57,39 @@
         ],
         "DistortionCoefficients": [
             [
-                -0.26287808642481,
-                0.1535977514617118,
+                -0.26368092308558944,
+                0.1549030683791739,
                 0.0,
                 0.0,
-                -0.05535696778315622
+                -0.05606134722774547
             ]
         ],
         "HomographyMatrix": [
             [
-                -1.4907545008330436,
-                -0.08877979005931705,
-                5968.464221858041
+                -1.4897619706667176,
+                -0.0886593763996045,
+                5964.321893990104
             ],
             [
-                1.0064286628754895,
-                -1.9328639303135025,
-                5311.510195594893
+                1.0060752273864297,
+                -1.932372180834233,
+                5310.158643680399
             ],
             [
-                0.00030953224606955,
-                -1.698638687101476e-05,
+                0.0003094657656482928,
+                -1.7048624811942466e-05,
                 1.0
             ]
         ],
         "HomographyResolution": [
-            6004,
-            5311
+            6001,
+            5310
         ],
         "ImageResolution": [
             2436,
             3816
         ],
-        "RMS": 1.683951497950847,
+        "RMS": 1.6887141855755434,
         "ScaleFactor": 6
     },
     "Notifications": {
