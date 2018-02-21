@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_dialogStressTest(object):
     def setupUi(self, dialogStressTest):
         dialogStressTest.setObjectName("dialogStressTest")
-        dialogStressTest.resize(167, 153)
+        dialogStressTest.resize(156, 153)
         self.gridLayout = QtWidgets.QGridLayout(dialogStressTest)
         self.gridLayout.setObjectName("gridLayout")
         self.labelNumber = QtWidgets.QLabel(dialogStressTest)
@@ -50,6 +50,8 @@ class Ui_dialogStressTest(object):
         self.retranslateUi(dialogStressTest)
         self.pushDone.clicked.connect(dialogStressTest.close)
         QtCore.QMetaObject.connectSlotsByName(dialogStressTest)
+        dialogStressTest.setTabOrder(self.pushStart, self.spinInterval)
+        dialogStressTest.setTabOrder(self.spinInterval, self.pushDone)
 
     def retranslateUi(self, dialogStressTest):
         _translate = QtCore.QCoreApplication.translate
@@ -59,7 +61,8 @@ class Ui_dialogStressTest(object):
         self.labelElapsedTime.setText(_translate("dialogStressTest", "00:00:00"))
         self.pushDone.setText(_translate("dialogStressTest", "Done"))
         self.pushStart.setText(_translate("dialogStressTest", "Start"))
-        self.labelInterval.setText(_translate("dialogStressTest", "Capture Interval (s)"))
+        self.labelInterval.setToolTip(_translate("dialogStressTest", "How long to wait between image captures (in seconds)."))
+        self.labelInterval.setText(_translate("dialogStressTest", "Capture Interval"))
         self.labelElapsed.setText(_translate("dialogStressTest", "Elapsed Time"))
         self.labelStatus.setText(_translate("dialogStressTest", "Waiting"))
 

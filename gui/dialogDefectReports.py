@@ -172,7 +172,9 @@ class Ui_dialogDefectReports(object):
         dialogDefectReports.setTabOrder(self.pushSet, self.widgetReports)
         dialogDefectReports.setTabOrder(self.widgetReports, self.tableCoat)
         dialogDefectReports.setTabOrder(self.tableCoat, self.pushExportAll)
-        dialogDefectReports.setTabOrder(self.pushExportAll, self.pushDone)
+        dialogDefectReports.setTabOrder(self.pushExportAll, self.pushExportVisible)
+        dialogDefectReports.setTabOrder(self.pushExportVisible, self.pushHideSelected)
+        dialogDefectReports.setTabOrder(self.pushHideSelected, self.pushDone)
         dialogDefectReports.setTabOrder(self.pushDone, self.tableScan)
 
     def retranslateUi(self, dialogDefectReports):

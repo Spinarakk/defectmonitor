@@ -26,9 +26,6 @@
       <string>Status</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_4">
-      <property name="spacing">
-       <number>6</number>
-      </property>
       <property name="topMargin">
        <number>6</number>
       </property>
@@ -429,13 +426,10 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <property name="topMargin">
-       <number>3</number>
+       <number>6</number>
       </property>
       <property name="bottomMargin">
        <number>6</number>
-      </property>
-      <property name="verticalSpacing">
-       <number>5</number>
       </property>
       <item row="1" column="3">
        <widget class="QLabel" name="labelUnits">
@@ -523,13 +517,10 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
       <property name="topMargin">
-       <number>3</number>
+       <number>6</number>
       </property>
       <property name="bottomMargin">
        <number>6</number>
-      </property>
-      <property name="verticalSpacing">
-       <number>5</number>
       </property>
       <item row="1" column="2">
        <widget class="QLabel" name="labelDegree">
@@ -852,6 +843,7 @@
  </customwidgets>
  <tabstops>
   <tabstop>listSliceFiles</tabstop>
+  <tabstop>graphicsDisplay</tabstop>
   <tabstop>pushAddSF</tabstop>
   <tabstop>pushRemoveSF</tabstop>
   <tabstop>pushDrawContours</tabstop>
@@ -866,6 +858,13 @@
   <tabstop>pushGo</tabstop>
   <tabstop>spinRangeLow</tabstop>
   <tabstop>spinRangeHigh</tabstop>
+  <tabstop>pushSelect</tabstop>
+  <tabstop>pushRemove</tabstop>
+  <tabstop>spinTLX</tabstop>
+  <tabstop>spinTLY</tabstop>
+  <tabstop>spinResolutionX</tabstop>
+  <tabstop>spinResolutionY</tabstop>
+  <tabstop>pushSet</tabstop>
   <tabstop>spinAngle</tabstop>
   <tabstop>pushRotate</tabstop>
   <tabstop>pushResetR</tabstop>
@@ -877,7 +876,6 @@
   <tabstop>pushPause</tabstop>
   <tabstop>pushBrowseOF</tabstop>
   <tabstop>pushDone</tabstop>
-  <tabstop>graphicsDisplay</tabstop>
  </tabstops>
  <resources/>
  <connections>

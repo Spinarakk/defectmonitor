@@ -108,6 +108,9 @@ class ImageCapture:
 
         status_camera.emit('Capturing')
 
+        # Convert the layer number into a padded string
+        layer = str(layer).zfill(4)
+
         # Setup the camera while checking for any errors
         self.setup_camera(layer, settings, status_camera)
 
@@ -140,6 +143,9 @@ class ImageCapture:
 
         status_camera.emit('Capturing...')
         status_trigger.emit('Detected')
+
+        # Convert the layer number into a padded string
+        layer = str(int(layer)).zfill(4)
 
         # Setup the camera while checking for any errors
         self.setup_camera(layer, settings, status_camera)

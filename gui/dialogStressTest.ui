@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>167</width>
+    <width>156</width>
     <height>153</height>
    </rect>
   </property>
@@ -67,8 +67,11 @@
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="labelInterval">
+     <property name="toolTip">
+      <string>How long to wait between image captures (in seconds).</string>
+     </property>
      <property name="text">
-      <string>Capture Interval (s)</string>
+      <string>Capture Interval</string>
      </property>
     </widget>
    </item>
@@ -91,6 +94,11 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>pushStart</tabstop>
+  <tabstop>spinInterval</tabstop>
+  <tabstop>pushDone</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

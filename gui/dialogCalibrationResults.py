@@ -82,6 +82,9 @@ class Ui_dialogCalibrationResults(object):
         self.retranslateUi(dialogCalibrationResults)
         self.pushDone.clicked.connect(dialogCalibrationResults.close)
         QtCore.QMetaObject.connectSlotsByName(dialogCalibrationResults)
+        dialogCalibrationResults.setTabOrder(self.tableCM, self.tableDC)
+        dialogCalibrationResults.setTabOrder(self.tableDC, self.tableHM)
+        dialogCalibrationResults.setTabOrder(self.tableHM, self.pushDone)
 
     def retranslateUi(self, dialogCalibrationResults):
         _translate = QtCore.QCoreApplication.translate

@@ -51,7 +51,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.setWindowIcon(QIcon('gui/logo.ico'))
 
         # Set the version number here
-        self.version = '0.9.5'
+        self.version = '1.1.2'
 
         # Load default build settings from the hidden non-user accessible build_default.json file
         self.build = self.load('build_default.json')
@@ -144,14 +144,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Display Widget
         self.widgetDisplay.currentChanged.connect(self.tab_change)
-        self.graphicsCE.zoom_done.connect(self.zoom_in_finished)
-        self.graphicsSE.zoom_done.connect(self.zoom_in_finished)
-        self.graphicsPC.zoom_done.connect(self.zoom_in_finished)
-        self.graphicsIS.zoom_done.connect(self.zoom_in_finished)
-        self.graphicsCE.customContextMenuRequested.connect(self.context_menu_display)
-        self.graphicsSE.customContextMenuRequested.connect(self.context_menu_display)
-        self.graphicsPC.customContextMenuRequested.connect(self.context_menu_display)
-        self.graphicsIS.customContextMenuRequested.connect(self.context_menu_display)
+        for graphics in self.findChildren(QGraphicsView):
+            graphics.zoom_done.connect(self.zoom_done)
+            graphics.customContextMenuRequested.connect(self.context_menu_display)
 
         # Sliders
         self.sliderDisplay.valueChanged.connect(self.slider_change)
@@ -285,7 +280,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.display['ImageFolder'] = ['%s/fixed/coat' % self.build['BuildInfo']['Folder'],
                                            '%s/fixed/scan' % self.build['BuildInfo']['Folder'],
                                            '%s/contours' % self.build['BuildInfo']['Folder'],
-                                           '%s/raw/snapshot' % self.build['BuildInfo']['Folder']]
+                                           '%s/fixed/snapshot' % self.build['BuildInfo']['Folder']]
 
             # Set the display flag to true to allow tab changes to update images
             self.display_flag = True
@@ -377,6 +372,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def save_as_build(self):
         """Allows the user to save the current build's build file to whatever location the user specifies"""
 
+        # Filename defaults to the current build's name inside the specified build folder
         filename = QFileDialog.getSaveFileName(self, 'Save As', '%s/%s' % (self.config['BuildFolder'],
                                                                            self.build['BuildInfo']['Name']),
                                                'JSON File (*.json)')[0]
@@ -418,8 +414,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Sets the currently displayed Graphics Viewer's zoom function on"""
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = self.actionZoomIn.isChecked()
 
-    def zoom_in_finished(self):
-        """Disables the checked status of the Zoom In action after successfully performing a zoom action"""
+    def zoom_done(self):
+        """Disables the zoom function and the checked status of the Zoom In action after performing a zoom action"""
         self.actionZoomIn.setChecked(False)
         self.display['GraphicsNames'][self.widgetDisplay.currentIndex()].zoom_flag = False
 
@@ -430,15 +426,13 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     def calibration_results(self):
         """Opens the Calibration Results dialog window"""
 
-        # Load from the config.json file (that contains the calibration results)
-        results = self.load('config.json')
-
         try:
             self.CR_dialog.close()
         except (AttributeError, RuntimeError):
             pass
 
-        self.CR_dialog = dialog_windows.CalibrationResults(self, results['ImageCorrection'])
+        # Load from the config.json file (that contains the calibration results)
+        self.CR_dialog = dialog_windows.CalibrationResults(self, self.load('config.json')['ImageCorrection'])
         self.CR_dialog.show()
 
     def defect_reports(self):
@@ -628,7 +622,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.actionRun.setEnabled(False)
 
     def preferences(self):
-        """Opens the Preferences dialog window and reloads the config.json file if preferences were changed"""
+        """Opens the Preferences dialog window and reloads the config.json file if any preferences were changed"""
         if dialog_windows.Preferences(self).exec_():
             self.config = self.load('config.json')
 
@@ -664,12 +658,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         # Disable certain UI elements to prevent concurrent processes
         self.toggle_snapshot_buttons(False)
 
-        # Construct the snapshot folder's image name
-        folder = '%s/raw/snapshot' % self.build['BuildInfo']['Folder']
-
         # Capture a single image using a thread by passing the function to the worker
         worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot,
-                                          self.build['ImageCapture']['Snapshot'], folder, self.config['CameraSettings'])
+                                          self.build['ImageCapture']['Snapshot'],
+                                          '%s/raw/snapshot' % self.build['BuildInfo']['Folder'],
+                                          self.config['CameraSettings'])
         worker.signals.status_camera.connect(self.update_status_camera)
         worker.signals.name.connect(self.fix_image)
         worker.signals.result.connect(self.snapshot_finished)
@@ -733,8 +726,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushRun.setText('PAUSE')
             self.actionRun.setText('Pause')
 
-            # Construct the snapshot folder's image name
-            self.folder = '%s/raw' % self.build['BuildInfo']['Folder']
 
             # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
             # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
@@ -805,13 +796,14 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 # Disable all the image capture buttons
                 self.toggle_capture_buttons(False)
 
-                # Determine the layer number and the name of the current phase (coat or scan) as strings
-                layer = str(int(self.build['ImageCapture']['Layer'])).zfill(4)
+                # Determine the name of the current phase (coat or scan) and the raw folder to save images to
                 phase = self.display['FolderNames'][self.build['ImageCapture']['Phase']][:-1].lower()
+                folder = '%s/raw' % self.build['BuildInfo']['Folder']
 
                 # Capture an image
-                worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_run, layer, phase,
-                                                  self.config['CameraSettings'], self.folder)
+                worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_run,
+                                                  self.build['ImageCapture']['Layer'], phase,
+                                                  self.config['CameraSettings'], folder)
                 worker.signals.status_camera.connect(self.update_status_camera)
                 worker.signals.status_trigger.connect(self.update_status_trigger)
                 worker.signals.name.connect(self.fix_image)
@@ -936,18 +928,19 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     # IMAGE PROCESSING
 
     def fix_image(self, image_name):
-        """Use the received image name to load the image in order to fix it, then defect process it"""
+        """Use the received image name to load the image in order to fix it"""
 
+        # Fixed image name is stored for the exit function and for the Idle Notification message
         self.image_name = image_name.replace('R_', 'F_').replace('raw', 'fixed')
         self.update_status('Applying image fixes...')
 
         worker = qt_multithreading.Worker(image_processing.ImageFix().fix_image, image_name,
                                           self.config['ImageCorrection'])
-        worker.signals.finished.connect(self.fix_image_finished)
+        worker.signals.result.connect(self.fix_image_finished)
         self.threadpool.start(worker)
 
-    def fix_image_finished(self):
-        """Cleanup method after the image has been fixed and changes the display"""
+    def fix_image_finished(self, image_name):
+        """Cleanup method after the image has been fixed and sends the image to the defect processor if eligible"""
 
         self.update_status('Image fix successfully applied.', 2000)
 
@@ -966,6 +959,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Set the tab to focus on the current phase and layer number
         self.tab_focus(index, layer)
+
+        # Delete the raw image if the setting (within Preferences) is unchecked
+        if not self.config['KeepRaw']:
+            os.remove(image_name)
 
         # Process only the coat or scan image for defects, the image being the one the above method set focus to
         if index < 2:
@@ -988,6 +985,9 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         value = self.sliderDisplay.value()
         layer = str(value).zfill(4)
         phase = self.display['FolderNames'][index][:-1].lower()
+
+        # Set a default disabled state for the Defect Processor buttons
+        self.toggle_processing_buttons(0)
 
         # Check if the image folder has an actual image to display
         if list(filter(bool, image_list)):

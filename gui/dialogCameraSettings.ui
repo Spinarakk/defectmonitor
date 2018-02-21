@@ -283,6 +283,8 @@
  </widget>
  <tabstops>
   <tabstop>comboPixelFormat</tabstop>
+  <tabstop>spinGain</tabstop>
+  <tabstop>spinBlackLevel</tabstop>
   <tabstop>spinExposureTime</tabstop>
   <tabstop>spinPacketSize</tabstop>
   <tabstop>spinInterPacketDelay</tabstop>

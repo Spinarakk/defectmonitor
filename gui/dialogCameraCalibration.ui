@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>395</width>
-    <height>406</height>
+    <height>401</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -233,7 +233,7 @@
        <number>6</number>
       </property>
       <property name="verticalSpacing">
-       <number>4</number>
+       <number>3</number>
       </property>
       <item row="1" column="0">
        <widget class="QLabel" name="labelWidth">
@@ -433,7 +433,7 @@
        <number>6</number>
       </property>
       <property name="verticalSpacing">
-       <number>4</number>
+       <number>3</number>
       </property>
       <item row="0" column="1">
        <widget class="QLabel" name="labelXCrop">
@@ -552,6 +552,24 @@
   <tabstop>listImages</tabstop>
   <tabstop>pushAdd</tabstop>
   <tabstop>pushRemove</tabstop>
+  <tabstop>pushBrowseHI</tabstop>
+  <tabstop>pushBrowseTI</tabstop>
+  <tabstop>spinWidth</tabstop>
+  <tabstop>spinWidthHI</tabstop>
+  <tabstop>spinHeight</tabstop>
+  <tabstop>spinHeightHI</tabstop>
+  <tabstop>spinRatio</tabstop>
+  <tabstop>checkSaveC</tabstop>
+  <tabstop>checkSaveU</tabstop>
+  <tabstop>checkApply</tabstop>
+  <tabstop>spinTLX</tabstop>
+  <tabstop>spinTLY</tabstop>
+  <tabstop>spinResolutionX</tabstop>
+  <tabstop>spinResolutionY</tabstop>
+  <tabstop>pushCropImage</tabstop>
+  <tabstop>pushViewResults</tabstop>
+  <tabstop>pushSaveResults</tabstop>
+  <tabstop>pushStart</tabstop>
   <tabstop>pushDone</tabstop>
  </tabstops>
  <resources/>

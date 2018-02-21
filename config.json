@@ -92,6 +92,7 @@
         "RMS": 1.6887141855755434,
         "ScaleFactor": 6
     },
+    "KeepRaw": true,
     "Notifications": {
         "Password": "Amaero2017",
         "Sender": "donotreply.amaero@gmail.com"

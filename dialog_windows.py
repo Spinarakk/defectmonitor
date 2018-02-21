@@ -27,7 +27,7 @@ from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogC
 
 
 class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
-    """Module used to initiate the New Build/Open Build/Settings dialog window
+    """Module used to initiate the modal New Build/Open Build/Settings dialog window
     Allows the user to either setup a new build or open an existing build and change settings
     """
 
@@ -102,7 +102,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.threadpool = QThreadPool()
 
     def browse_folder(self):
-        """Opens a File Dialog, allowing the user to select a folder to store the current build's image folder"""
+        """Prompts the user to select a folder to store the current build's image folder"""
 
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
@@ -113,7 +113,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
     def change_folder(self):
         """Changes the prospective image folder name depending on the entered Build Name
-        Uses the placeholder text in the Build Name if the Name field is empty"""
+        Otherwise the placeholder text in the Build Name is used if the Name field is empty"""
 
         if self.lineBuildName.text():
             self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.text()))
@@ -248,12 +248,13 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             json.dump(self.build, build, indent=4, sort_keys=True)
 
         # Close the dialog window and return True
-        self.done(1)
+        self.done(True)
 
 
 class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
-    """Opens a Modeless Dialog Window when Settings -> Preferences... is clicked
-    Allows the user to change any settings in regard to the main interface"""
+    """Module used to initiate the modal Preferences dialog window
+    Allows the user to change a bunch of settings in regards to the main interface and a few of the dialog windows
+    """
 
     def __init__(self, parent=None):
 
@@ -267,6 +268,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
+        # Restoring the window state needs to go into a try loop as the first time the program is run on a new system
+        # There won't be any stored settings and the function throws a TypeError
         try:
             self.restoreGeometry(self.window_settings.value('Preferences Geometry', ''))
         except TypeError:
@@ -286,7 +289,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.spinContourT.setValue(self.config['SliceConverter']['ContourT'])
         self.spinCentrelineT.setValue(self.config['SliceConverter']['CentrelineT'])
         self.spinROIOffset.setValue(self.config['SliceConverter']['ROIOffset'])
-        self.spinIdleTimeout.setValue(self.config['IdleTimeout'])
+        self.checkKeepRaw.setChecked(self.config['KeepRaw'])
+        self.spinIdleTimeout.setValue(self.config['IdleTimeout'] / 60)
         self.lineSenderAddress.setText(self.config['Notifications']['Sender'])
         self.linePassword.setText(self.config['Notifications']['Password'])
         self.lineBuildName.setText(self.config['Defaults']['BuildName'])
@@ -302,16 +306,20 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
             element.valueChanged.connect(self.apply_enable)
         for element in self.findChildren(QLineEdit):
             element.textChanged.connect(self.apply_enable)
+        self.checkKeepRaw.toggled.connect(self.apply_enable)
+
+        # Flag used to indicate whether to reload the config.json file within the Main Window
+        self.reload_flag = False
 
     def browse_folder(self):
-        """Opens a File Dialog, allowing the user to select a folder to store all the builds"""
+        """Prompts the user to select the folder containing all the build images"""
 
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
         if folder:
             self.lineBuildFolder.setText(folder)
 
-    def modify_gridlines(self, size, thickness):
+    def redraw_gridlines(self, size, thickness):
         """Redraws the gridlines .png image with a new gridlines image using the updated settings"""
 
         # Grab the image resolution to be used for the gridlines
@@ -335,7 +343,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
             cv2.line(image, (width // 2 - index * size, 0), (width // 2 - index * size, height),
                      (255, 255, 255), thickness)
 
-        # Save the newly drawn image
+        # Save the newly drawn gridlines image
         cv2.imwrite('gridlines.png', image)
 
     def apply_enable(self):
@@ -351,9 +359,9 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         size = self.spinSize.value()
         thickness = self.spinThickness.value()
 
-        # If the either the gridlines size or thickness has changed, draw a new gridlines image
+        # If the either the gridlines size or thickness has changed, redraw the gridlines image
         if size != self.config['Gridlines']['Size'] or thickness != self.config['Gridlines']['Thickness']:
-            self.modify_gridlines(size, thickness)
+            self.redraw_gridlines(size, thickness)
             self.config['Gridlines']['Size'] = size
             self.config['Gridlines']['Thickness'] = thickness
 
@@ -362,6 +370,7 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.config['SliceConverter']['ContourT'] = self.spinContourT.value()
         self.config['SliceConverter']['CentrelineT'] = self.spinCentrelineT.value()
         self.config['SliceConverter']['ROIOffset'] = self.spinROIOffset.value()
+        self.config['KeepRaw'] = self.checkKeepRaw.isChecked()
         self.config['IdleTimeout'] = self.spinIdleTimeout.value() * 60
         self.config['Notifications']['Sender'] = self.lineSenderAddress.text()
         self.config['Notifications']['Password'] = self.linePassword.text()
@@ -372,28 +381,29 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
 
+        # Allow the Main Window to reload the config.json file
+        self.reload_flag = True
+
         # Disable the Apply button until another setting is changed
         self.pushApply.setEnabled(False)
 
     def accept(self):
-        """Executes when the OK button is pressed
-        If the settings have changed, the apply function is executed before closing the window"""
+        """If the settings have changed, the apply function is executed before closing the window"""
 
         if self.pushApply.isEnabled():
             self.apply()
 
-        # Close the dialog window and return True
-        self.done(1)
+        # Close the dialog window and return the state of the reload flag
+        self.done(self.reload_flag)
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        """Saves the current window position and size to the registry"""
         self.window_settings.setValue('Preferences Geometry', self.saveGeometry())
 
 
 class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
-    """Opens a Modal Dialog Window when Tools -> Camera -> Settings is clicked
-    Or when the Camera Settings button in the Image Capture Dialog Window is clicked
-    Allows the user to change camera settings which will be sent to the camera before images are taken
+    """Module used to initiate the modal Camera Settings dialog window
+    Allows the user to change camera settings which will be applied to the camera before images are captured
     """
 
     def __init__(self, parent=None):
@@ -403,9 +413,7 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
-
-        # Disallow the user from resizing the dialog window
-        self.setFixedSize(self.size())
+        #self.setFixedSize(self.size())
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
         try:
@@ -463,25 +471,22 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
         self.pushApply.setEnabled(False)
 
     def accept(self):
-        """Executes when the OK button is pressed
-        If the settings have changed, the apply function is executed before closing the window"""
+        """If the settings have changed, the apply function is executed before closing the window"""
 
         if self.pushApply.isEnabled():
             self.apply()
 
-        self.closeEvent(self.close())
+        self.done(True)
 
     def closeEvent(self, event):
-        """Executes when the window is closed or the Cancel button is clicked
-        Doesn't save any changed settings at all"""
-
+        """Saves the current window position and size to the registry"""
         self.window_settings.setValue('Camera Settings Geometry', self.saveGeometry())
 
 
 class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibration):
-    """Opens a Modal Dialog Window when the Camera Calibration button is clicked
-    Or when Tools -> Camera -> Calibration is clicked
-    Allows the user to select a folder of chessboard images to calculate the camera's intrinsic values for calibration
+    """Module used to initiate the modal Camera Calibration dialog window
+    Allows the user to select a bunch of chessboard images to calculate the camera's intrinsic values
+    These values are to be used to fix the distortion and perspective in the raw captured images
     """
 
     def __init__(self, parent=None):
@@ -493,8 +498,6 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
         self.window_settings = QSettings('MCAM', 'Defect Monitor')
 
-        # Restoring the window state needs to go into a try loop as the first time the program is run on a new system
-        # There won't be any stored settings and the function throws a TypeError
         try:
             self.restoreGeometry(self.window_settings.value('Camera Calibration Geometry', ''))
         except TypeError:
@@ -531,13 +534,13 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.lineTestImage.setText(os.path.basename(self.config['CameraCalibration']['TestImage']))
             self.checkApply.setEnabled(True)
 
-        # Initiate a couple of values
+        # Initiate the image list
         self.image_list = list()
 
         self.threadpool = QThreadPool()
 
     def add_images(self):
-        """Adds additional selected images to the image list"""
+        """Add additional selected images to the image list"""
 
         filenames = QFileDialog.getOpenFileNames(self, 'Add Images...', '', 'Image Files (*.png)')[0]
 
@@ -545,14 +548,15 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             # Check if any of the selected files are already in the image list and only add the ones which aren't
             for file in filenames:
                 if file not in self.image_list:
-                    # Add the new images to the image list and the QListWidget
+                    # Append the new images to the image list and the QListWidget
                     self.image_list.append(file)
                     self.listImages.addItem(os.path.basename(file).replace('.png', ''))
 
+            # Enable the start button (if the other conditions are met)
             self.enable_start()
 
     def remove_images(self):
-        """Removes selected images from the image list"""
+        """Remove selected images from the image list"""
 
         # Grab the list of selected images in the QListWidget
         for item in self.listImages.selectedItems():
@@ -564,7 +568,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.enable_start()
 
     def browse_homography(self):
-        """Opens a File Dialog, allowing the user to select an homography image to calculate the homography matrix"""
+        """Prompts the user to select an homography image used to calculate the homography matrix"""
 
         filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')[0]
 
@@ -575,7 +579,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.enable_start()
 
     def browse_test(self):
-        """Opens a File Dialog, allowing the user to select a test image used to test calibration results"""
+        """Prompts the user to select a test image used to test calibration results"""
 
         filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image File (*.png)')[0]
 
@@ -596,15 +600,15 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.save_settings()
 
         # Reset the colours of the items in the QListWidget
-        # Try exception causes this function to be skipped the first time
-        try:
-            for index in range(self.listImages.count()):
+        # Try exception causes this function to be skipped if the background of a line is already white
+        for index in range(self.listImages.count()):
+            try:
                 self.listImages.item(index).setBackground(QColor('white'))
-        except AttributeError:
-            pass
+            except AttributeError:
+                continue
 
         worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate, self.image_list,
-                                          self.config['CameraCalibration'], self.config['ImageCorrection'], )
+                                          self.config['CameraCalibration'], self.config['ImageCorrection'])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.colour.connect(self.change_colour)
@@ -707,7 +711,7 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             self.update_status('Add calibration images.')
 
     def save_settings(self):
-        """Grab the spinxBox and checkBox values and save them to the working config and default config file"""
+        """Saves the entered settings so that they persist across instances of the application"""
 
         self.config['CameraCalibration']['Width'] = self.spinWidth.value()
         self.config['CameraCalibration']['Height'] = self.spinHeight.value()
@@ -728,23 +732,14 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
         self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        """Executes when the Done button is clicked or when the window is closed"""
-
-        # Save settings so that settings persist across instances
+        """Saves the settings and current window position and size to the registry"""
         self.save_settings()
-
-        # Remove the calibration_results.json file if it exists
-        if os.path.isfile('calibration_results.json'):
-            os.remove('calibration_results.json')
-
-        # Save the current position of the Dialog Window before the window is closed
         self.window_settings.setValue('Camera Calibration Geometry', self.saveGeometry())
 
 
 class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationResults):
-    """Opens a Modeless Dialog Window when the CameraCalibration instance has finished
-    Or when the View Results button within the Camera Calibration Dialog Window is clicked
-    Allows user to look at the pertinent calibration parameters and results
+    """Module used to initiate the modeless Calibration Results dialog window
+    Displays the calibration parameters and results in an easy to read window
     """
 
     def __init__(self, parent=None, parameters=None):
@@ -797,13 +792,14 @@ class CalibrationResults(QDialog, dialogCalibrationResults.Ui_dialogCalibrationR
         self.labelRMS.setText('Re-Projection Error: ' + format(parameters['RMS'], '.10g'))
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        """Saves the current window position and size to the registry"""
         self.window_settings.setValue('Calibration Results Geometry', self.saveGeometry())
 
 
 class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
-    """Opens a Modal Dialog Window when Tools -> Camera -> Stress Test is clicked
-    Allows the user to stress test the attached camera by repeatedly capturing images indefinitely"""
+    """Module used to iniaite teh modal Stress Test dialog window
+    Allows the user to stress test the attached camera by indefinitely capturing images repeatedly
+    """
 
     def __init__(self, parent=None):
 
@@ -852,7 +848,8 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
             self.pushStart.setEnabled(False)
 
     def test_loop(self):
-        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder, self.config['CameraSettings'])
+        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder,
+                                          self.config['CameraSettings'])
         worker.signals.status_camera.connect(self.update_status)
         worker.signals.finished.connect(self.test_done)
         self.threadpool.start(worker)
@@ -911,15 +908,15 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
             self.threadpool.start(worker)
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
-
+        """Saves the current window position and size to the registry"""
         self.window_settings.setValue('Stress Test Geometry', self.saveGeometry())
 
 
 class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
-    """Opens a Modal Dialog Window when the Slice Converter button is clicked
-    Or when Tools -> Slice Converter is clicked
-    Allows the user to convert .cli files into ASCII encoded scaled contours and draws them using OpenCV"""
+    """Module used to initiate the modal Slice Converter dialog window
+    Allows the user to convert .cli files into ASCII encoded scaled contours and draws them using OpenCV
+    Also contains a real-time preview and modification of said contours before drawing
+    """
 
     def __init__(self, parent=None):
 
@@ -971,7 +968,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # Display
         self.listSliceFiles.itemSelectionChanged.connect(self.select_parts)
         self.graphicsDisplay.mouse_pos.connect(self.update_position)
-        self.graphicsDisplay.zoom_done.connect(self.zoom_in_finished)
+        self.graphicsDisplay.zoom_done.connect(self.zoom_done)
         self.graphicsDisplay.roi_done.connect(self.set_roi)
 
         # Initiate a bunch of values
@@ -1011,7 +1008,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.check_files()
 
     def add_files(self):
-        """Adds additional selected slice files to the slice file list"""
+        """Add additional selected slice files to the slice file list"""
 
         filenames = QFileDialog.getOpenFileNames(self, 'Add Slice Files...', '', 'Slice Files (*.cli)')[0]
 
@@ -1072,7 +1069,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.preview_contours()
 
     def remove_files(self):
-        """Removes selected slice files from the slice file list"""
+        """Remove selected slice files from the slice file list"""
 
         # Stop the selecting of files in the list from doing anything
         self.listSliceFiles.blockSignals(True)
@@ -1243,7 +1240,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.preview_contours()
 
     def browse_background(self):
-        """Opens a File Dialog, allowing the user to select an image to be used as the background"""
+        """Prompts the user to select an image to be used as the background"""
 
         filename = QFileDialog.getOpenFileName(self, 'Browse...', '', 'Image Files (*.png)')[0]
 
@@ -1259,8 +1256,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         """Sets the display Graphics Viewer's zoom function on"""
         self.graphicsDisplay.zoom_flag = self.pushZoomIn.isChecked()
 
-    def zoom_in_finished(self):
-        """Disables the checked status of the Zoom In action after successfully performing a zoom action"""
+    def zoom_done(self):
+        """Disables the zoom function and the checked status of the Zoom In action after performing a zoom action"""
         self.pushZoomIn.setChecked(False)
         self.graphicsDisplay.zoom_flag = False
 
@@ -1376,7 +1373,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.draw_contours(self.contour_counter)
 
     def browse_output(self):
-        """Opens a File Dialog, allowing the user to select a folder to save the drawn contours to"""
+        """Prompts the user to select a folder to save the drawn contours to"""
 
         folder = QFileDialog.getExistingDirectory(self, 'Browse...', '')
 
@@ -1531,7 +1528,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.progressBar.setValue(percentage)
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        """Saves the current window position and size to the registry"""
 
         # Check if a conversion or drawing is in progress, and block the user from closing the window until paused
         if self.convert_run_flag or self.draw_run_flag:
@@ -1547,8 +1544,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
 
 class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
-    """Opens a Modal Dialog Window when Tools -> Image Converter or the Image Converter button is clicked
-    Allows the user to batch convert a bunch of images to their fixed state"""
+    """Module used to initiate the modal Image Converter dialog window
+    Allows the user to batch convert a bunch of images to any of their fixed states
+    """
 
     def __init__(self, parent=None):
 
@@ -1583,7 +1581,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         self.threadpool = QThreadPool()
 
     def browse(self):
-        """Opens a File Dialog, allowing the user to select one or multiple image files"""
+        """Prompts the user to select images to be converted"""
 
         filenames = QFileDialog.getOpenFileNames(self, 'Browse...', '', 'Image Files (*.png)')[0]
 
@@ -1776,7 +1774,7 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
         self.progressBar.setValue(int(percentage))
 
     def closeEvent(self, event):
-        """Executes when the window is closed"""
+        """Saves the current window position and size to the registry"""
 
         # Check if a conversion is in progress, and block the user from closing the window until stopped
         if self.run_flag:
@@ -1792,8 +1790,9 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
 
 
 class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
-    """Opens a Modeless Dialog Window when the Defect Reports button is clicked
-    Allows user to look at the defect reports in a nice visual way
+    """Module used to intiate the modeless Defect Reports dialog window
+    Displays the coat and scan defect report data in a nice visual way
+    Also allows the user to sort, remove, set thresholds and export the data to a .csv file for further analysis
     """
 
     tab_focus = pyqtSignal(int, int, bool, int)
@@ -2213,5 +2212,5 @@ class DefectReports(QDialog, dialogDefectReports.Ui_dialogDefectReports):
                 self.tableScan.removeRow(index)
 
     def closeEvent(self, event):
-        """Executes when the Done button is clicked or when the window is closed"""
+        """Saves the current window position and size to the registry"""
         self.window_settings.setValue('Defect Reports Geometry', self.saveGeometry())

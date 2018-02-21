@@ -88,8 +88,15 @@ class Ui_dialogNewBuild(object):
         self.pushCancel.clicked.connect(dialogNewBuild.reject)
         QtCore.QMetaObject.connectSlotsByName(dialogNewBuild)
         dialogNewBuild.setTabOrder(self.lineBuildName, self.comboMachine)
-        dialogNewBuild.setTabOrder(self.comboMachine, self.lineUsername)
+        dialogNewBuild.setTabOrder(self.comboMachine, self.comboCamera)
+        dialogNewBuild.setTabOrder(self.comboCamera, self.lineImageFolder)
+        dialogNewBuild.setTabOrder(self.lineImageFolder, self.pushBrowseIF)
+        dialogNewBuild.setTabOrder(self.pushBrowseIF, self.lineUsername)
         dialogNewBuild.setTabOrder(self.lineUsername, self.lineEmailAddress)
+        dialogNewBuild.setTabOrder(self.lineEmailAddress, self.pushSendTestEmail)
+        dialogNewBuild.setTabOrder(self.pushSendTestEmail, self.checkAddAttachment)
+        dialogNewBuild.setTabOrder(self.checkAddAttachment, self.pushCreate)
+        dialogNewBuild.setTabOrder(self.pushCreate, self.pushCancel)
 
     def retranslateUi(self, dialogNewBuild):
         _translate = QtCore.QCoreApplication.translate

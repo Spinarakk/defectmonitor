@@ -196,8 +196,15 @@
  <tabstops>
   <tabstop>lineBuildName</tabstop>
   <tabstop>comboMachine</tabstop>
+  <tabstop>comboCamera</tabstop>
+  <tabstop>lineImageFolder</tabstop>
+  <tabstop>pushBrowseIF</tabstop>
   <tabstop>lineUsername</tabstop>
   <tabstop>lineEmailAddress</tabstop>
+  <tabstop>pushSendTestEmail</tabstop>
+  <tabstop>checkAddAttachment</tabstop>
+  <tabstop>pushCreate</tabstop>
+  <tabstop>pushCancel</tabstop>
  </tabstops>
  <resources/>
  <connections>

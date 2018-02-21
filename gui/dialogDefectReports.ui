@@ -410,6 +410,8 @@
   <tabstop>widgetReports</tabstop>
   <tabstop>tableCoat</tabstop>
   <tabstop>pushExportAll</tabstop>
+  <tabstop>pushExportVisible</tabstop>
+  <tabstop>pushHideSelected</tabstop>
   <tabstop>pushDone</tabstop>
   <tabstop>tableScan</tabstop>
  </tabstops>

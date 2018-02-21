@@ -31,6 +31,8 @@ class ImageFix:
         # Save the image using a modified image name
         cv2.imwrite(image_name.replace('R_', 'F_').replace('raw', 'fixed'), image)
 
+        return image_name
+
     def convert_image(self, image_name, parameters, checkboxes, status, progress, naming_error):
         """Applies the distortion, perspective, crop and CLAHE processes to the received image
         Also subsequently saves each image after every process if the corresponding checkbox is checked"""
@@ -113,14 +115,14 @@ class ImageFix:
         status.emit('Image conversion successful.')
 
     @staticmethod
-    def distortion_fix(image, cmatrix, distco):
+    def distortion_fix(image, camera_matrix, distortion_coefficients):
         """Fixes the barrel/pincushion distortion commonly found in pinhole cameras"""
-        return cv2.undistort(image, np.array(cmatrix), np.array(distco))
+        return cv2.undistort(image, np.array(camera_matrix), np.array(distortion_coefficients))
 
     @staticmethod
-    def perspective_fix(image, hmatrix, hres):
+    def perspective_fix(image, homography_matrix, homography_resolution):
         """Fixes the perspective warp due to the off-centre position of the camera"""
-        return cv2.warpPerspective(image, np.array(hmatrix), tuple(hres))
+        return cv2.warpPerspective(image, np.array(homography_matrix), tuple(homography_resolution))
 
     @staticmethod
     def crop(image, offset, resolution):
@@ -131,7 +133,6 @@ class ImageFix:
     def clahe(image, gray_flag=False, cliplimit=8.0, tilegridsize=(64, 64)):
         """Applies a Contrast Limited Adaptive Histogram Equalization to the image
         Used to improve the contrast of the image to make it clearer/visible
-        The gray flag is used to indicate if the image is to be converted back to BGR or not
         """
 
         # Equalization algorithm requires the image to be in grayscale colour space to function
@@ -144,6 +145,7 @@ class ImageFix:
         image = clahe_filter.apply(image)
 
         # Convert the image back to BGR as when converting to a QPixmap, grayscale images don't work
+        # Also depends on if the caller function specified to return a grayscale image or not
         if not gray_flag:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 

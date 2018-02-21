@@ -196,6 +196,12 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>tableCM</tabstop>
+  <tabstop>tableDC</tabstop>
+  <tabstop>tableHM</tabstop>
+  <tabstop>pushDone</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

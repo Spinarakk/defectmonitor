@@ -10,56 +10,49 @@ class WorkerSignals(QObject):
     finished = pyqtSignal()
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
-
     status = pyqtSignal(str)
+    progress = pyqtSignal(int)
     status_camera = pyqtSignal(str)
     status_trigger = pyqtSignal(str)
-
     naming_error = pyqtSignal()
-
     name = pyqtSignal(str)
-    progress = pyqtSignal(int)
-    colour = pyqtSignal(int, bool)
-    notification = pyqtSignal(str)
 
+    colour = pyqtSignal(int, bool)
     roi = pyqtSignal(list, bool)
 
 
 class Worker(QRunnable):
     """Worker thread that inherits from QRunnable to handle worker thread setup, signals and wrap-up"""
 
-    def __init__(self, fn, *args, **kwargs):
+    def __init__(self, function, *args, **kwargs):
+
         super(Worker, self).__init__()
 
-        # Store constructor arguments as instance variables that will be re-used for processing
-        self.function = fn
+        # Store constructor arguments as instance variables that will be used when executing the function
+        self.function = function
         self.args = args
         self.kwargs = kwargs
         self.signals = WorkerSignals()
 
-        # Add any signal keywords to the kwargs here depending on the sent function
-        # acquire_image_snapshot / aquire_image_run
-        if 'capture' in str(self.function):
-            kwargs['name'] = self.signals.name
-            kwargs['status_camera'] = self.signals.status_camera
-            if 'run' in str(self.function):
-                kwargs['status_trigger'] = self.signals.status_trigger
-
-        # convert_cli / convert_image / run_processor / calibrate
-        if 'convert_' in str(self.function) or 'processor' in str(self.function) or 'calibrate' in str(self.function):
+        # Add any signal keywords to the kwargs here depending on the received function
+        if 'run_processor' in str(function) or 'calibrate' in str(function) or 'convert_' in str(function):
             kwargs['status'] = self.signals.status
             kwargs['progress'] = self.signals.progress
 
-        # convert_image_function
-        if 'convert_image' in str(self.function):
-            kwargs['naming_error'] = self.signals.naming_error
-
-        # calibrate
-        if 'calibrate' in str(self.function):
+        if 'calibrate' in str(function):
             kwargs['colour'] = self.signals.colour
 
-        # draw_contours
-        if 'draw' in str(self.function):
+        if 'convert_image' in str(function):
+            kwargs['naming_error'] = self.signals.naming_error
+
+        if 'capture_' in str(function):
+            kwargs['status_camera'] = self.signals.status_camera
+            kwargs['name'] = self.signals.name
+
+        if 'capture_run' in str(function):
+            kwargs['status_trigger'] = self.signals.status_trigger
+
+        if 'draw_contours' in str(function):
             kwargs['roi'] = self.signals.roi
 
     @pyqtSlot()
