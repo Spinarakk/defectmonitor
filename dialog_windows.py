@@ -31,7 +31,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
     Allows the user to either setup a new build or open an existing build and change settings
     """
 
-    def __init__(self, parent=None, build_name='', settings_flag=False):
+    def __init__(self, parent=None, build_file='', settings_flag=False):
 
         # Setup Dialog UI with MainWindow as parent
         super(NewBuild, self).__init__(parent)
@@ -42,23 +42,26 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.setWindowFlags(self.windowFlags() ^ Qt.WindowContextHelpButtonHint)
 
         # Flag to prevent additional image folders from being created
-        self.open_flag = bool(build_name)
+        self.open_flag = bool(build_file)
         self.settings_flag = settings_flag
 
-        # Load from the default build.json file unless window was opened by Open Build or Settings
-        if not build_name:
-            build_name = 'build_default.json'
+        # Load from the build_default.json file unless window was opened by Open Build or Settings
+        if not build_file:
+            build_file = 'build_default.json'
 
-        with open(build_name) as build:
+        with open(build_file) as build:
             self.build = json.load(build)
 
         # Load from the config.json file
         with open('config.json') as config:
             config = json.load(config)
+            defaults = config['Defaults']
+            self.folder = config['BuildFolder']
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Buttons
         self.pushBrowseIF.clicked.connect(self.browse_folder)
+        self.pushSaveAsBF.clicked.connect(self.save_file)
         self.pushSendTestEmail.clicked.connect(self.send_test_email)
         self.pushCreate.clicked.connect(self.create)
 
@@ -67,9 +70,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.lineEmailAddress.textChanged.connect(self.enable_test)
 
         # Set default placeholder text in some of the fields
-        self.lineBuildName.setPlaceholderText(config['Defaults']['BuildName'])
-        self.lineUsername.setPlaceholderText(config['Defaults']['Username'])
-        self.lineEmailAddress.setPlaceholderText(config['Defaults']['EmailAddress'])
+        self.lineBuildName.setPlaceholderText(defaults['BuildName'])
+        self.lineUsername.setPlaceholderText(defaults['Username'])
+        self.lineEmailAddress.setPlaceholderText(defaults['EmailAddress'])
 
         # If this dialog window was opened as a result of the Open... action, then the following is executed
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
@@ -78,19 +81,22 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.pushCreate.setText('Load')
             self.lineBuildName.setText(self.build['BuildInfo']['Name'])
             self.lineImageFolder.setText(self.build['BuildInfo']['Folder'])
+            self.lineBuildFile.setText(build_file)
             self.lineUsername.setText(self.build['BuildInfo']['Username'])
             self.lineEmailAddress.setText(self.build['BuildInfo']['EmailAddress'])
         else:
             # Otherwise do a few setup procedures for the New Build
-            self.lineBuildName.textChanged.connect(self.change_folder)
+            self.lineBuildName.textChanged.connect(self.folder_change)
+            self.lineBuildName.textChanged.connect(self.file_change)
 
             # Set and display a default image folder name to save images for the current build
             # Generate a timestamp for folder labelling purposes
             time = datetime.now()
             self.image_folder = """%s/%s-%s-%s [%s''%s'%s]""" % \
-                                (config['BuildFolder'], time.year, str(time.month).zfill(2), str(time.day).zfill(2),
+                                (self.folder, time.year, str(time.month).zfill(2), str(time.day).zfill(2),
                                  str(time.hour).zfill(2), str(time.minute).zfill(2), str(time.second).zfill(2))
-            self.change_folder()
+            self.folder_change()
+            self.file_change()
 
         # If this dialog window was opened as a result of the Build Settings... action, then the following is executed
         # Disable a few of the buttons to disallow changing of the slice files and build folder
@@ -109,16 +115,43 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         if folder:
             # Display just the folder name on the line box and disable the Build Name from changing the folder name
             self.lineImageFolder.setText(folder)
-            self.lineBuildName.blockSignals(True)
+            self.lineBuildName.textChanged.disconnect(self.folder_change)
 
-    def change_folder(self):
+    def save_file(self):
+        """Prompts the user to enter a file name to use to store the build's settings file"""
+
+        # Use the placeholder text if the text box is empty
+        if self.lineBuildName.text():
+            build_name = self.lineBuildName.text()
+        else:
+            build_name = self.lineBuildName.placeholderText()
+
+        filename = QFileDialog.getSaveFileName(self, 'Save As...', '%s/%s' % (self.config['BuildFolder'], build_name),
+                                               'JSON File (*.json)')[0]
+
+        if filename:
+            self.lineBuildFile.setText(filename)
+            self.lineBuildName.textChanged.disconnect(self.file_change)
+
+    def folder_change(self):
         """Changes the prospective image folder name depending on the entered Build Name
-        Otherwise the placeholder text in the Build Name is used if the Name field is empty"""
+        Otherwise the placeholder text in the Build Name is used if the Name field is empty
+        """
 
         if self.lineBuildName.text():
             self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.text()))
         else:
             self.lineImageFolder.setText('%s %s' % (self.image_folder, self.lineBuildName.placeholderText()))
+
+    def file_change(self):
+        """Same as the folder change method except for the build file name
+        Methods had to be separated so the individual connections with the build name can be disconnected
+        """
+
+        if self.lineBuildName.text():
+            self.lineBuildFile.setText('%s/%s.json' % (self.folder, self.lineBuildName.text()))
+        else:
+            self.lineBuildFile.setText('%s/%s.json' % (self.folder, self.lineBuildName.placeholderText()))
 
     def enable_test(self):
         """(Re-)Enables the Send Test Email button if the username and email address boxes have changed and not empty"""
@@ -174,9 +207,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_test_confirmation.exec_()
 
     def create(self):
-        """Saves important selection options to the build.json file and closes the window"""
+        """Saves important selection options to the build's settings file and closes the window"""
 
-        # Save all the entered information to the config.json file
+        # Save all the entered information to the settings file
         # If the user didn't enter anything into the following fields, save the placeholder text instead
         if self.lineBuildName.text():
             self.build['BuildInfo']['Name'] = self.lineBuildName.text()
@@ -194,6 +227,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             self.build['BuildInfo']['EmailAddress'] = self.lineEmailAddress.placeholderText()
 
         self.build['BuildInfo']['Folder'] = self.lineImageFolder.text()
+        self.build['Filename'] = self.lineBuildFile.text()
 
         # Check if the entered email address is valid by using the external validation module
         if not validate_email(self.build['BuildInfo']['EmailAddress']):
@@ -243,8 +277,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 self.browse_folder()
                 return
 
-        # Save the newly created (or loaded) build
+        # Save the newly created (or loaded) build to both the local build.json file and the set build file
         with open('build.json', 'w+') as build:
+            json.dump(self.build, build, indent=4, sort_keys=True)
+        with open(self.lineBuildFile.text(), 'w+') as build:
             json.dump(self.build, build, indent=4, sort_keys=True)
 
         # Close the dialog window and return True
@@ -353,9 +389,6 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
     def apply(self):
         """Executes when the Apply or OK button is clicked and saves the entered values to the config.json file"""
 
-        with open('config.json') as config:
-            self.config = json.load(config)
-
         size = self.spinSize.value()
         thickness = self.spinThickness.value()
 
@@ -450,9 +483,6 @@ class CameraSettings(QDialog, dialogCameraSettings.Ui_dialogCameraSettings):
 
     def apply(self):
         """Executes when the Apply or OK button is clicked and saves the entered values to the config.json file"""
-
-        with open('config.json') as config:
-            self.config = json.load(config)
 
         # Save the new values from the changed settings to the config dictionary
         self.config['CameraSettings']['PixelFormat'] = self.comboPixelFormat.currentIndex()

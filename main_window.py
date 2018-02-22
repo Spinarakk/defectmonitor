@@ -77,7 +77,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.actionOpen.triggered.connect(self.open_build)
         self.actionClearBuilds.triggered.connect(self.clear_recent_builds)
         self.actionSave.triggered.connect(self.save_build)
-        self.actionSaveAs.triggered.connect(self.save_as_build)
         self.actionExportImage.triggered.connect(self.export_image)
         self.actionExit.triggered.connect(self.exit_program)
 
@@ -160,8 +159,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.processing_flag = False
         self.all_flag = False
 
-        # Initiate an empty config file name to be used for saving purposes
-        self.build_name = None
         self.trigger_port = False
 
         # Initialize the counter for the defect processing method
@@ -211,7 +208,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
     def open_build(self):
         """Opens the Open Build dialog window, which is essentially the New Build window but with changed elements
-        Only opens the window if the opened file exists
+        Only opens the window if the opened file exists, otherwise an error is displayed
         """
 
         filename = ''
@@ -244,18 +241,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # Check if a file has been selected as QFileDialog returns an empty string if cancel was pressed
         if filename:
-            self.build_name = filename
-
             # Send and load the selected build's settings within the Open Build dialog window
-            if dialog_windows.NewBuild(self, build_name=filename).exec_():
+            if dialog_windows.NewBuild(self, build_file=filename).exec_():
                 # Add the opened build name to the Recent Builds drop-down menu
-                self.add_recent_build(self.build_name)
+                self.add_recent_build(filename)
                 self.setup_build(False, True)
 
     def setup_build(self, settings_flag=False, load_flag=False):
         """Sets up the display window and any background processes for the current build"""
 
-        # Reload any modified build settings that the New Build dialog has changed
+        # Reload any modified build settings that the New Build dialog window has changed
         self.build = self.load('build.json')
 
         # Update the window title with the build name
@@ -266,7 +261,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         if not settings_flag:
             # Enable certain UI elements
             self.actionSave.setEnabled(True)
-            self.actionSaveAs.setEnabled(True)
             self.actionBuildSettings.setEnabled(True)
             self.actionAcquireCamera.setEnabled(True)
             self.actionAcquireTrigger.setEnabled(True)
@@ -292,11 +286,11 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Update the display to start displaying images
             self.update_folders(True)
 
-            self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 5000)
-
             if not load_flag:
-                # Open the Slice Converter dialog window to let the user
+                # Open the Slice Converter dialog window to let the user add slice files to the build
                 self.slice_converter()
+
+            self.update_status('Build %s setup complete.' % self.build['BuildInfo']['Name'], 5000)
         else:
             self.update_status('Build %s settings changed' % self.build['BuildInfo']['Name'], 5000)
 
@@ -357,33 +351,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.save(self.config, 'config.json')
 
     def save_build(self):
-        """Saves the current build to the set build file's name
-        Executes the Save As Build method instead if this is the first time the build is being saved
-        """
+        """Saves the current build to the set build setting's filename"""
 
-        if self.build_name:
-            # Save the current build as the given filename in the given location after reloading it for any changes
-            self.build = self.load('build.json')
-            self.save(self.build, self.build_name)
-            self.update_status('Build saved to %s.' % os.path.basename(self.build_name), 5000)
-        else:
-            self.save_as_build()
-
-    def save_as_build(self):
-        """Allows the user to save the current build's build file to whatever location the user specifies"""
-
-        # Filename defaults to the current build's name inside the specified build folder
-        filename = QFileDialog.getSaveFileName(self, 'Save As', '%s/%s' % (self.config['BuildFolder'],
-                                                                           self.build['BuildInfo']['Name']),
-                                               'JSON File (*.json)')[0]
-
-        # Checking if user has chosen to save the build or clicked cancel
-        if filename:
-            self.build_name = filename
-            self.save_build()
-
-            # Add the saved build name to the Recent Builds drop-down menu
-            self.add_recent_build(self.build_name)
+        # Reload the build settings in case of any changes
+        self.build = self.load('build.json')
+        self.save(self.build, self.build['Filename'])
+        self.update_status('Build saved to %s.' % self.build['Filename'], 5000)
 
     def export_image(self):
         """Saves the currently displayed image to whatever location the user specifies as a .png"""
@@ -583,7 +556,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """Opens the Build Settings dialog window, which is essentially the New Build window but with changed elements
         Reloads the current build with any updated settings if updated
         """
-        if dialog_windows.NewBuild(self, build_name='build.json', settings_flag=True).exec_():
+        if dialog_windows.NewBuild(self, build_file='build.json', settings_flag=True).exec_():
             self.setup_build(True, False)
 
     def acquire_camera(self):
@@ -698,23 +671,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         """
 
         if 'RUN' in self.pushRun.text():
-            # Check whether the build has been saved before running anything
-            if self.build_name is None:
-                # Open a message box with a save confirmation message so that the user can save the build before running
-                save_confirmation = QMessageBox(self)
-                save_confirmation.setWindowTitle('Run')
-                save_confirmation.setIcon(QMessageBox.Information)
-                save_confirmation.setText('The current build needs to be saved before it can be run.\n\n'
-                                          'Save the current build?')
-                save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                retval = save_confirmation.exec_()
-
-                # Save the build if prompted, otherwise exit the method
-                if retval == 2048:
-                    self.save_as_build()
-                else:
-                    return
-
             self.build = self.load('build.json')
 
             # Enable / disable certain UI elements to prevent concurrent processes
@@ -726,13 +682,15 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.pushRun.setText('PAUSE')
             self.actionRun.setText('Pause')
 
-
             # Check if the Resume From checkbox is checked and if so, set the current layer to the entered number
             # 0.5 is subtracted as it is assumed that the first image captured will be the previous layer's scan
             if self.checkResume.isChecked():
                 self.spinStartingLayer.setEnabled(False)
                 self.build['ImageCapture']['Layer'] = self.spinStartingLayer.value() - 0.5
                 self.build['ImageCapture']['Phase'] = 1
+
+                # Save the build to retain capture numbering
+                self.save(self.build, 'build.json')
 
             # Open the COM port associated with the attached trigger device
             self.serial_trigger = serial.Serial(self.trigger_port, 9600, timeout=1)
@@ -985,6 +943,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         value = self.sliderDisplay.value()
         layer = str(value).zfill(4)
         phase = self.display['FolderNames'][index][:-1].lower()
+        roi = self.build['ROI']
 
         # Set a default disabled state for the Defect Processor buttons
         self.toggle_processing_buttons(0)
@@ -1035,7 +994,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkContours.setChecked(False)
 
             # Part Names only toggleable on the Coat, Scan and Part Contour tabs
-            if os.path.isfile('%s/part_names.png' % self.build['BuildInfo']['Folder']) and index < 3:
+            if os.path.isfile('%s/part_names.png' % image_folder) and index < 3:
                 self.checkNames.setEnabled(True)
             else:
                 self.checkNames.setEnabled(False)
@@ -1047,7 +1006,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 self.checkGridlines.setEnabled(False)
                 self.checkGridlines.setChecked(False)
 
-            if self.build['ROI'][0]:
+            # Region of Interest toggleable anywhere
+            if roi[0]:
                 self.checkROI.setEnabled(True)
             else:
                 self.checkROI.setEnabled(False)
@@ -1132,7 +1092,6 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
             # Overlay the ROI box
             if self.checkROI.isChecked():
-                roi = self.build['ROI']
                 cv2.rectangle(image, (roi[1], roi[2]), (roi[3], roi[4]), (255, 255, 255), 5)
 
             # Applies CLAHE to the display image
@@ -1600,28 +1559,12 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
     # CLEANUP
 
     def closeEvent(self, event):
-        """Opens a Save Confirmation message box if a build has been opened and the application is closed"""
+        """If a process is in progress, display an error message and prevent the user from exiting the program
+        Otherwise save the current build settings before closing the application if a build has been created/opened
+        """
 
-        # Only ask to save if the user has actually started/opened a build, AKA if the display flag is set
         if self.display_flag:
-            # Open a message box with a save confirmation message so that the user can save the build before closing
-            save_confirmation = QMessageBox(self)
-            save_confirmation.setWindowTitle('Defect Monitor')
-            save_confirmation.setIcon(QMessageBox.Warning)
-            save_confirmation.setText('Do you want to save the changes to this build before closing?\n\n'
-                                      'If you don\'t save, changes to your build such as any image capture layer '
-                                      'numbering will be lost.')
-            save_confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            retval = save_confirmation.exec_()
-
-            # Save the build if the Save button was pressed
-            if retval == 2048:
-                self.save_build()
-            # Ignore the closing of the Main Window if the Cancel button was pressed
-            elif retval == 4194304:
-                event.ignore()
-                # Otherwise just close the Main Window without saving
-
+            self.save_build()
         self.window_settings.setValue('Defect Monitor Geometry', self.saveGeometry())
 
 
