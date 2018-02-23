@@ -19,7 +19,13 @@
         0
     ],
     "SliceConverter": {
-        "Colours": {},
+        "Colours": {
+            "combined": [
+                 0,
+                 0,
+                 0
+            ]
+        },
         "Files": [],
 	"MaxLayers": 0,
         "Transform": {}

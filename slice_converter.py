@@ -6,8 +6,8 @@ import numpy as np
 
 class SliceConverter:
     """Module used to convert any slice files from .cli format into ASCII format
-    By parsing the .cli file, converting binary to decimal, and outputs it as a .txt file of contours
-    These contours can then be subsequently drawn using OpenCV
+    The .cli file is parsed, converting from binary to decimal, and outputted as a .txt file of contours
+    These contours can then be subsequently drawn using OpenCV while taking scaling and the ROI into account
     """
 
     @staticmethod
@@ -20,12 +20,12 @@ class SliceConverter:
         status.emit('%s | Converting CLI file...' % part_name)
         progress.emit(0)
 
-        # Set up values
-        layer_flag = False
+        # Initialize a few values and flags
         polyline_count = 0
         vector_count = 0
         header_length = 0
-        start_flag = True
+        layer_flag = False
+        beginning_flag = True
 
         # File needs to be opened and read as binary as it is encoded in binary
         with open(filename, 'rb') as cli_file:
@@ -36,11 +36,11 @@ class SliceConverter:
                 elif b'LAYERS' in line:
                     layers = int(line[9:-1])
                 elif b'HEADEREND' in line:
-                    # Break out of the header loop and add the $$HEADEREND length
+                    # Break out of the header loop and add the $$HEADEREND length of 11 characters
                     header_length += 11
                     break
 
-                # Measure the length of the header (in bytes) to calculate the increment for the rest of the file
+                # Accumulate the length of the header (in bytes) to calculate the increment for the rest of the file
                 header_length += len(line)
 
             # Return to the end of the header
@@ -53,12 +53,14 @@ class SliceConverter:
             # Read the rest of the data
             data = cli_file.read()
 
+        # Create and open the corresponding contours .txt file for the current .cli file
         with open(filename.replace('.cli', '_contours.txt'), 'w+') as contours_file:
             # Iterate through every character in the file two at a time
             for one, two in zip(data[0::2], data[1::2]):
-                # Convert into binary and join two elements, then convert to decimal
+                # Convert (from hexadecimal) into binary and join two elements, then convert to decimal
                 decimal = int(bin(two)[2:].zfill(8) + bin(one)[2:].zfill(8), 2)
 
+                # Figure out what to do with the decimal number depending on what the current (or previous) number is
                 if layer_flag:
                     # The number directly after a 128 represents the layer height, which is written as the first value
                     contours_file.write('%s' % round((decimal * units), 3))
@@ -73,10 +75,10 @@ class SliceConverter:
                     vector_count -= 1
                 elif decimal == 128:
                     # 128 indicates a new layer
-                    if start_flag:
-                        # Write the number of layers as the very first line
+                    if beginning_flag:
+                        # Write the number of layers at the beginning of the file
                         contours_file.write('%s\n' % layers)
-                        start_flag = False
+                        beginning_flag = False
                     else:
                         contours_file.write('\n')
                     layer_flag = True
@@ -105,8 +107,7 @@ class SliceConverter:
 
         # Initialize values in order to calculate the ROI of all the part contours
         min_x, min_y = image.shape[1], image.shape[0]
-        max_x = 0
-        max_y = 0
+        max_x = max_y = 0
 
         # Iterate through all the parts
         for part_name, contour_list in contour_dict.items():

@@ -6,11 +6,10 @@ from PyQt5.QtWidgets import *
 
 class ImageViewer(QGraphicsView):
     """Image Viewer widget for a QPixmap in a QGraphicsView scene that displays a converted QPixmap image
-    Allows the user to zoom and pan an image with the mouse
+    Allows the user to zoom in, zoom out and pan an image with the mouse
     """
 
-    # Signal that will be emitted after the zoom in action has been completed
-    # Just used to toggle the Zoom In action unchecked
+    # Signals to be emitted by the Image Viewer after certain actions have been performed
     zoom_done = pyqtSignal()
     roi_done = pyqtSignal(list, bool)
     mouse_pos = pyqtSignal(int, int)
@@ -53,8 +52,9 @@ class ImageViewer(QGraphicsView):
 
     def reset_image(self):
         """Reset the image back to its original state (no zoom or pan)"""
+
         self.zoom_list = list()
-        self.update_viewer()
+        self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
         self.setDragMode(QGraphicsView.NoDrag)
 
     def remove_image(self):
@@ -70,16 +70,16 @@ class ImageViewer(QGraphicsView):
         if self._pixmap_handle and len(self.zoom_list) and self.sceneRect().contains(self.zoom_list[-1]):
             self.fitInView(self.zoom_list[-1], Qt.IgnoreAspectRatio)
         else:
-            # Clear the list of zoom boxes
+            # Clear the list of zoom boxes and reset the image back to its original state
             self.zoom_list = list()
             self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
     def resizeEvent(self, event):
-        """Maintain current zoom and aspect ratio on resize of the window"""
+        """Maintain current zoom and aspect ratio on resize of the window by modifying a built-in method"""
         self.update_viewer()
 
     def mousePressEvent(self, event):
-        """When the Left Mouse button is held down, allow the user to set a zoom box"""
+        """When the Left Mouse button is held down on the image, the user will be able to define a zoom box"""
 
         if event.button() == Qt.LeftButton:
             if self.zoom_flag:

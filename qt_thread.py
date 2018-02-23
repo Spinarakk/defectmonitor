@@ -16,7 +16,6 @@ class WorkerSignals(QObject):
     status_trigger = pyqtSignal(str)
     naming_error = pyqtSignal()
     name = pyqtSignal(str)
-
     colour = pyqtSignal(int, bool)
     roi = pyqtSignal(list, bool)
 

@@ -25,8 +25,8 @@ from gui import mainWindow
 import dialog_windows
 import image_capture
 import image_processing
-import extra_functions
-import qt_multithreading
+import notifications
+import qt_thread
 
 
 class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
@@ -158,7 +158,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.display_flag = False
         self.processing_flag = False
         self.all_flag = False
-
+        self.run_flag = False
         self.trigger_port = False
 
         # Initialize the counter for the defect processing method
@@ -509,10 +509,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             self.update_status('Running displayed %s image through the Defect Detector...' % phase)
 
         # Send the image name and any other required values to the defect processor
-        worker = qt_multithreading.Worker(image_processing.DefectProcessor().run_processor,
-                                          self.display['ImageList'][self.tab_index][layer - 1], layer, phase,
-                                          self.build['BuildInfo']['Folder'], self.build['SliceConverter']['Colours'],
-                                          self.build['ROI'])
+        worker = qt_thread.Worker(image_processing.DefectProcessor().run_processor,
+                                  self.display['ImageList'][self.tab_index][layer - 1], layer, phase,
+                                  self.build['BuildInfo']['Folder'], self.build['SliceConverter']['Colours'],
+                                  self.build['ROI'])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.finished.connect(self.process_finished)
@@ -632,10 +632,10 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.toggle_snapshot_buttons(False)
 
         # Capture a single image using a thread by passing the function to the worker
-        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot,
-                                          self.build['ImageCapture']['Snapshot'],
+        worker = qt_thread.Worker(image_capture.ImageCapture().capture_snapshot,
+                                  self.build['ImageCapture']['Snapshot'],
                                           '%s/raw/snapshot' % self.build['BuildInfo']['Folder'],
-                                          self.config['CameraSettings'])
+                                  self.config['CameraSettings'])
         worker.signals.status_camera.connect(self.update_status_camera)
         worker.signals.name.connect(self.fix_image)
         worker.signals.result.connect(self.snapshot_finished)
@@ -759,9 +759,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
                 folder = '%s/raw' % self.build['BuildInfo']['Folder']
 
                 # Capture an image
-                worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_run,
-                                                  self.build['ImageCapture']['Layer'], phase,
-                                                  self.config['CameraSettings'], folder)
+                worker = qt_thread.Worker(image_capture.ImageCapture().capture_run, self.build['ImageCapture']['Layer'],
+                                          phase, folder, self.config['CameraSettings'])
                 worker.signals.status_camera.connect(self.update_status_camera)
                 worker.signals.status_trigger.connect(self.update_status_trigger)
                 worker.signals.name.connect(self.fix_image)
@@ -770,7 +769,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             else:
                 self.update_status_camera('Waiting...')
                 self.update_status_trigger('Waiting...')
-                worker = qt_multithreading.Worker(self.poll_trigger)
+                worker = qt_thread.Worker(self.poll_trigger)
                 worker.signals.result.connect(self.run_loop)
                 self.threadpool.start(worker)
 
@@ -810,9 +809,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             # Check if the current layer number exceeds the maximum number of layers
             if self.build['ImageCapture']['Layer'] > self.build['SliceConverter']['MaxLayers']:
                 # Send a 'finished' notification to the stored email address
-                worker = qt_multithreading.Worker(extra_functions.Notifications().finish_notification,
-                                                  self.build['BuildInfo']['Name'],
-                                                  self.build['BuildInfo']['EmailAddress'])
+                worker = qt_thread.Worker(notifications.Notifications().send, self.build['BuildInfo']['EmailAddress'],
+                                          'finish', info=self.build['BuildInfo']['Name'])
                 self.threadpool.start(worker)
 
                 # Display a finish popup as well
@@ -892,8 +890,8 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.image_name = image_name.replace('R_', 'F_').replace('raw', 'fixed')
         self.update_status('Applying image fixes...')
 
-        worker = qt_multithreading.Worker(image_processing.ImageFix().fix_image, image_name,
-                                          self.config['ImageCorrection'])
+        worker = qt_thread.Worker(image_processing.ImageFix().fix_image, image_name,
+                                  self.config['ImageCorrection'])
         worker.signals.result.connect(self.fix_image_finished)
         self.threadpool.start(worker)
 
@@ -1496,12 +1494,16 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
 
         # If the idle time exceeds the stored idle timeout, display an error popup and send a notification
         if self.stopwatch_idle > self.config['IdleTimeout'] and self.timeout_flag:
-            worker = qt_multithreading.Worker(extra_functions.Notifications().idle_notification,
-                                              self.build['BuildInfo']['Name'], self.build['ImageCapture']['Phase'],
-                                              self.build['ImageCapture']['Layer'],
-                                              self.build['BuildInfo']['EmailAddress'], self.image_name)
+            # Create an information list to be used to construct the notification email message
+            info = [self.build['BuildInfo']['Name'], self.config['IdleTimeout'],
+                    self.build['ImageCapture']['Phase'], self.build['ImageCapture']['Layer']]
+
+            # Send the notification email
+            worker = qt_thread.Worker(notifications.Notifications().send, self.build['BuildInfo']['EmailAddress'],
+                                      'idle', self.image_name, info)
             self.threadpool.start(worker)
 
+            # Stop this conditional from being accessed after being accessed once
             self.timeout_flag = False
 
             idle_error = QMessageBox(self)
@@ -1509,7 +1511,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
             idle_error.setIcon(QMessageBox.Critical)
             idle_error.setText('An image has not been taken in the last %s minutes.\nThe machine might have '
                                'malfunctioned, and error might have occured or the user has forgotten to stop the '
-                               'image taking process. An email notification has been sent to %s at %s.\nThe image '
+                               'image taking process. A notification email has been sent to %s at %s.\nThe image '
                                'capturing process will continue indefinitely regardless.' %
                                (self.config['IdleTimeout'], self.build['BuildInfo']['Username'],
                                 self.build['BuildInfo']['EmailAddress']))
@@ -1563,9 +1565,18 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         Otherwise save the current build settings before closing the application if a build has been created/opened
         """
 
-        if self.display_flag:
-            self.save_build()
-        self.window_settings.setValue('Defect Monitor Geometry', self.saveGeometry())
+        if self.run_flag or self.processing_flag:
+            run_error = QMessageBox(self)
+            run_error.setWindowTitle('Error')
+            run_error.setIcon(QMessageBox.Critical)
+            run_error.setText('Build or Defect Processor in progress.\n'
+                              'Please stop or wait for the active process to finish before exiting.')
+            run_error.exec_()
+            event.ignore()
+        else:
+            if self.display_flag:
+                self.save_build()
+            self.window_settings.setValue('Defect Monitor Geometry', self.saveGeometry())
 
 
 if __name__ == '__main__':

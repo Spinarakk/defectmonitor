@@ -1,7 +1,7 @@
 {
     "BuildFolder": "C:/Users/Spinarakk/Documents/MCAM/Builds",
     "CameraCalibration": {
-        "Apply": true,
+        "Apply": false,
         "Chessboard": false,
         "DownscalingRatio": 2,
         "Height": 10,
@@ -90,7 +90,7 @@
             3816
         ],
         "RMS": 1.6887141855755434,
-        "ScaleFactor": 6
+        "ScaleFactor": 6.0
     },
     "KeepRaw": true,
     "Notifications": {
@@ -100,12 +100,14 @@
     "RecentBuilds": [
         "C:/Users/Spinarakk/Documents/MCAM/Builds/Demo Build.json",
         "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json",
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/AGSDSGD.json",
         "C:/Users/Spinarakk/Documents/MCAM/Builds/Test.json"
     ],
     "SliceConverter": {
         "CentrelineT": 3,
         "ContourT": 3,
-        "ROIOffset": 50
+        "ROIOffset": 50,
+        "Units": "px"
     },
     "Threshold": {
         "HistogramCoat": 5000,

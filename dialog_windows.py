@@ -17,9 +17,9 @@ from PyQt5.QtWidgets import *
 import slice_converter
 import image_capture
 import image_processing
-import extra_functions
+import notifications
 import camera_calibration
-import qt_multithreading
+import qt_thread
 
 # Import PyQt GUIs
 from gui import dialogNewBuild, dialogPreferences, dialogCameraSettings, dialogCameraCalibration, \
@@ -54,9 +54,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         # Load from the config.json file
         with open('config.json') as config:
-            config = json.load(config)
-            defaults = config['Defaults']
-            self.folder = config['BuildFolder']
+            self.config = json.load(config)
 
         # Setup event listeners for all the relevant UI components, and connect them to specific functions
         # Buttons
@@ -70,9 +68,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         self.lineEmailAddress.textChanged.connect(self.enable_test)
 
         # Set default placeholder text in some of the fields
-        self.lineBuildName.setPlaceholderText(defaults['BuildName'])
-        self.lineUsername.setPlaceholderText(defaults['Username'])
-        self.lineEmailAddress.setPlaceholderText(defaults['EmailAddress'])
+        self.lineBuildName.setPlaceholderText(self.config['Defaults']['BuildName'])
+        self.lineUsername.setPlaceholderText(self.config['Defaults']['Username'])
+        self.lineEmailAddress.setPlaceholderText(self.config['Defaults']['EmailAddress'])
 
         # If this dialog window was opened as a result of the Open... action, then the following is executed
         # Set and display the relevant names/values of the following text boxes as outlined in the opened config file
@@ -93,7 +91,7 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             # Generate a timestamp for folder labelling purposes
             time = datetime.now()
             self.image_folder = """%s/%s-%s-%s [%s''%s'%s]""" % \
-                                (self.folder, time.year, str(time.month).zfill(2), str(time.day).zfill(2),
+                                (self.config['BuildFolder'], time.year, str(time.month).zfill(2), str(time.day).zfill(2),
                                  str(time.hour).zfill(2), str(time.minute).zfill(2), str(time.second).zfill(2))
             self.folder_change()
             self.file_change()
@@ -115,7 +113,12 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         if folder:
             # Display just the folder name on the line box and disable the Build Name from changing the folder name
             self.lineImageFolder.setText(folder)
-            self.lineBuildName.textChanged.disconnect(self.folder_change)
+
+            # Disconnecting the signal connection needs to be in a try loop as this method can be called again
+            try:
+                self.lineBuildName.textChanged.disconnect(self.folder_change)
+            except TypeError:
+                pass
 
     def save_file(self):
         """Prompts the user to enter a file name to use to store the build's settings file"""
@@ -131,7 +134,10 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
 
         if filename:
             self.lineBuildFile.setText(filename)
-            self.lineBuildName.textChanged.disconnect(self.file_change)
+            try:
+                self.lineBuildName.textChanged.disconnect(self.file_change)
+            except TypeError:
+                pass
 
     def folder_change(self):
         """Changes the prospective image folder name depending on the entered Build Name
@@ -149,9 +155,9 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         """
 
         if self.lineBuildName.text():
-            self.lineBuildFile.setText('%s/%s.json' % (self.folder, self.lineBuildName.text()))
+            self.lineBuildFile.setText('%s/%s.json' % (self.config['BuildFolder'], self.lineBuildName.text()))
         else:
-            self.lineBuildFile.setText('%s/%s.json' % (self.folder, self.lineBuildName.placeholderText()))
+            self.lineBuildFile.setText('%s/%s.json' % (self.config['BuildFolder'], self.lineBuildName.placeholderText()))
 
     def enable_test(self):
         """(Re-)Enables the Send Test Email button if the username and email address boxes have changed and not empty"""
@@ -169,7 +175,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_confirmation = QMessageBox(self)
         send_confirmation.setWindowTitle('Send Test Email')
         send_confirmation.setIcon(QMessageBox.Question)
-        send_confirmation.setText('Are you sure you want to send a test email notification to %s at %s?' %
+        send_confirmation.setText('Are you sure you want to send a test notification email to %s at %s?\n\nNote that '
+                                  'sending the notification email will take a while.' %
                                   (self.lineUsername.text(), self.lineEmailAddress.text()))
         send_confirmation.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         retval = send_confirmation.exec_()
@@ -188,8 +195,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
             else:
                 attachment = ''
 
-            worker = qt_multithreading.Worker(extra_functions.Notifications().test_notification,
-                                              self.lineUsername.text(), self.lineEmailAddress.text(), attachment)
+            worker = qt_thread.Worker(notifications.Notifications().send, self.lineEmailAddress.text(), 'test',
+                                      attachment, self.lineUsername.text())
             worker.signals.finished.connect(self.send_test_email_finished)
             self.threadpool.start(worker)
 
@@ -202,12 +209,27 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
         send_test_confirmation = QMessageBox(self)
         send_test_confirmation.setWindowTitle('Send Test Email')
         send_test_confirmation.setIcon(QMessageBox.Information)
-        send_test_confirmation.setText('An email notification has been sent to %s at %s.' %
+        send_test_confirmation.setText('A test notification email has been sent to %s at %s.' %
                                        (self.lineUsername.text(), self.lineEmailAddress.text()))
         send_test_confirmation.exec_()
 
     def create(self):
         """Saves important selection options to the build's settings file and closes the window"""
+
+        # First check if the set build settings file already exists and open a message box if it does
+        if os.path.isfile(self.lineBuildFile.text()) and not self.open_flag and not self.settings_flag:
+            # Open an error message box and wait for user input
+            exist_error = QMessageBox(self)
+            exist_error.setWindowTitle('Confirm Save As')
+            exist_error.setIcon(QMessageBox.Warning)
+            exist_error.setText('%s already exists.\nDo you want to replace it?' % 
+                                         os.path.basename(self.lineBuildFile.text()))
+            exist_error.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            retval = exist_error.exec_()
+
+            # If the user clicked No, open the Save As dialog to allow the user to change the name
+            if retval != 16384:
+                self.save_file()
 
         # Save all the entered information to the settings file
         # If the user didn't enter anything into the following fields, save the placeholder text instead
@@ -269,8 +291,8 @@ class NewBuild(QDialog, dialogNewBuild.Ui_dialogNewBuild):
                 missing_folder_error = QMessageBox(self)
                 missing_folder_error.setWindowTitle('Error')
                 missing_folder_error.setIcon(QMessageBox.Critical)
-                missing_folder_error.setText('Image folder not found.\n\nPlease reselect the correct image folder.\n\n'
-                                             'Note that selecting the wrong folder will result in incorrect behavior.')
+                missing_folder_error.setText('Image Folder not found.\nPlease reselect the correct image folder.\n\n'
+                                             'Note: Selecting the wrong folder will result in incorrect behavior.')
                 missing_folder_error.exec_()
 
                 # Call the browse_folder method, allowing the user to reselect the correct image folder
@@ -322,11 +344,14 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
         self.lineBuildFolder.setText(self.config['BuildFolder'])
         self.spinSize.setValue(self.config['Gridlines']['Size'])
         self.spinThickness.setValue(self.config['Gridlines']['Thickness'])
+        self.spinIdleTimeout.setValue(self.config['IdleTimeout'] / 60)
         self.spinContourT.setValue(self.config['SliceConverter']['ContourT'])
         self.spinCentrelineT.setValue(self.config['SliceConverter']['CentrelineT'])
         self.spinROIOffset.setValue(self.config['SliceConverter']['ROIOffset'])
+        self.radioPixel.setChecked(self.config['SliceConverter']['Units'] == 'px')
+        self.radioMillimetre.setChecked(self.config['SliceConverter']['Units'] == 'mm')
         self.checkKeepRaw.setChecked(self.config['KeepRaw'])
-        self.spinIdleTimeout.setValue(self.config['IdleTimeout'] / 60)
+        self.doubleScaleFactor.setValue(self.config['ImageCorrection']['ScaleFactor'])
         self.lineSenderAddress.setText(self.config['Notifications']['Sender'])
         self.linePassword.setText(self.config['Notifications']['Password'])
         self.lineBuildName.setText(self.config['Defaults']['BuildName'])
@@ -342,6 +367,8 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
             element.valueChanged.connect(self.apply_enable)
         for element in self.findChildren(QLineEdit):
             element.textChanged.connect(self.apply_enable)
+        self.radioPixel.toggled.connect(self.apply_enable)
+        self.doubleScaleFactor.valueChanged.connect(self.apply_enable)
         self.checkKeepRaw.toggled.connect(self.apply_enable)
 
         # Flag used to indicate whether to reload the config.json file within the Main Window
@@ -400,16 +427,23 @@ class Preferences(QDialog, dialogPreferences.Ui_dialogPreferences):
 
         # Save the new values from the changed settings to the config dictionary
         self.config['BuildFolder'] = self.lineBuildFolder.text()
+        self.config['IdleTimeout'] = self.spinIdleTimeout.value() * 60
         self.config['SliceConverter']['ContourT'] = self.spinContourT.value()
         self.config['SliceConverter']['CentrelineT'] = self.spinCentrelineT.value()
         self.config['SliceConverter']['ROIOffset'] = self.spinROIOffset.value()
         self.config['KeepRaw'] = self.checkKeepRaw.isChecked()
-        self.config['IdleTimeout'] = self.spinIdleTimeout.value() * 60
+        self.config['ImageCorrection']['ScaleFactor'] = self.doubleScaleFactor.value()
         self.config['Notifications']['Sender'] = self.lineSenderAddress.text()
         self.config['Notifications']['Password'] = self.linePassword.text()
         self.config['Defaults']['BuildName'] = self.lineBuildName.text()
         self.config['Defaults']['Username'] = self.lineUsername.text()
         self.config['Defaults']['EmailAddress'] = self.lineEmailAddress.text()
+
+        # Save the units depending on the checked radio box
+        if self.radioPixel.isChecked():
+            self.config['SliceConverter']['Units'] = 'px'
+        else:
+            self.config['SliceConverter']['Units'] = 'mm'
 
         with open('config.json', 'w+') as config:
             json.dump(self.config, config, indent=4, sort_keys=True)
@@ -637,8 +671,8 @@ class CameraCalibration(QDialog, dialogCameraCalibration.Ui_dialogCameraCalibrat
             except AttributeError:
                 continue
 
-        worker = qt_multithreading.Worker(camera_calibration.Calibration().calibrate, self.image_list,
-                                          self.config['CameraCalibration'], self.config['ImageCorrection'])
+        worker = qt_thread.Worker(camera_calibration.Calibration().calibrate, self.image_list,
+                                  self.config['CameraCalibration'], self.config['ImageCorrection'])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.colour.connect(self.change_colour)
@@ -878,8 +912,8 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
             self.pushStart.setEnabled(False)
 
     def test_loop(self):
-        worker = qt_multithreading.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder,
-                                          self.config['CameraSettings'])
+        worker = qt_thread.Worker(image_capture.ImageCapture().capture_snapshot, self.layer, self.folder,
+                                  self.config['CameraSettings'])
         worker.signals.status_camera.connect(self.update_status)
         worker.signals.finished.connect(self.test_done)
         self.threadpool.start(worker)
@@ -933,8 +967,7 @@ class StressTest(QDialog, dialogStressTest.Ui_dialogStressTest):
             self.start_test()
 
             # Send a camera notification to the developer
-            worker = qt_multithreading.Worker(extra_functions.Notifications().camera_notification,
-                                              'nicholascklee@gmail.com')
+            worker = qt_thread.Worker(notifications.Notifications().send, 'nicholascklee@gmail.com', 'camera')
             self.threadpool.start(worker)
 
     def closeEvent(self, event):
@@ -1029,6 +1062,17 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.part_colours[os.path.basename(file).replace('.cli', '')] = (255, 0, 0)
         else:
             self.output_folder = os.path.dirname(os.getcwd().replace('\\', '/')) + '/Contours'
+
+        # Change the displayed units on the dialog window from pixel <-> millimetres depending on the config setting
+        self.labelXUnits.setText(self.config['SliceConverter']['Units'])
+        self.labelYUnits.setText(self.config['SliceConverter']['Units'])
+        self.labelTLUnits.setText(self.config['SliceConverter']['Units'])
+        self.labelResUnits.setText(self.config['SliceConverter']['Units'])
+        self.labelUnits.setText(self.config['SliceConverter']['Units'])
+
+        if 'mm' in self.config['SliceConverter']['Units']:
+            self.labelXPosition.setText('X  000.00')
+            self.labelYPosition.setText('Y  000.00')
 
         self.lineOutputFolder.setText(self.output_folder)
 
@@ -1128,8 +1172,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         self.active_process = 1
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().convert_cli, slice_file,
-                                          self.config['ImageCorrection']['ScaleFactor'])
+        worker = qt_thread.Worker(slice_converter.SliceConverter().convert_cli, slice_file,
+                                  self.config['ImageCorrection']['ScaleFactor'])
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.finished.connect(self.convert_slice_finished)
@@ -1208,8 +1252,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
                     json.dump(dict(), report)
 
-        # Create a 'combined' and 'background' part colour and set them to black
-        part_colours['combined'] = (0, 0, 0)
+        # Create a 'background' part colour and set them to black
         part_colours['background'] = (0, 0, 0)
 
         # Set the starting layer to draw as the entered lower layer range (default is all the contours)
@@ -1237,10 +1280,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         # Create a blank black RGB image to draw the contours on
         image = np.zeros(tuple(self.config['ImageCorrection']['ImageResolution'] + [3]), np.uint8)
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
-                                          layer, self.build['SliceConverter']['Colours'],
-                                          self.build['SliceConverter']['Transform'], self.output_folder, -1, 0,
-                                          names_flag, True)
+        worker = qt_thread.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
+                                  layer, self.build['SliceConverter']['Colours'],
+                                  self.build['SliceConverter']['Transform'], self.output_folder, -1, 0,
+                                  names_flag, True)
         worker.signals.finished.connect(self.draw_contours_finished)
         self.threadpool.start(worker)
 
@@ -1467,9 +1510,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         else:
             thickness = self.config['SliceConverter']['CentrelineT']
 
-        worker = qt_multithreading.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
-                                          self.current_layer, self.part_colours, self.part_transform,
-                                          self.output_folder, thickness, roi_offset, False, False)
+        worker = qt_thread.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
+                                  self.current_layer, self.part_colours, self.part_transform,
+                                  self.output_folder, thickness, roi_offset, False, False)
         worker.signals.roi.connect(self.set_roi)
         worker.signals.result.connect(self.update_display)
 
@@ -1546,8 +1589,18 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
     def update_position(self, x, y):
         """Displays the relative position of the mouse cursor over the Layer Preview graphics view"""
-        self.labelXPosition.setText('X     ' + str(x).zfill(4) + ' px')
-        self.labelYPosition.setText('Y     ' + str(y).zfill(4) + ' px')
+
+        # Limit the mouse position to within the image window/resolution
+        x = np.clip(x, 0, self.config['ImageCorrection']['ImageResolution'][1])
+        y = np.clip(y, 0, self.config['ImageCorrection']['ImageResolution'][0])
+
+        # If the units are set to millimetres, the pixels need to be converted
+        if 'mm' in self.config['SliceConverter']['Units']:
+            self.labelXPosition.setText('X  {:06.2f}'.format(round(x / self.config['ImageCorrection']['ScaleFactor'], 2)))
+            self.labelYPosition.setText('Y  {:06.2f}'.format(round(y / self.config['ImageCorrection']['ScaleFactor'], 2)))
+        else:
+            self.labelXPosition.setText('X     ' + str(x).zfill(4))
+            self.labelYPosition.setText('Y     ' + str(y).zfill(4))
 
     def update_status(self, string):
         string = string.split(' | ')
@@ -1558,7 +1611,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.progressBar.setValue(percentage)
 
     def closeEvent(self, event):
-        """Saves the current window position and size to the registry"""
+        """If a process is in progress, display an error message and prevent the user from exiting the dialog window
+        Otherwise it saves the current window position and size to the registry"""
 
         # Check if a conversion or drawing is in progress, and block the user from closing the window until paused
         if self.convert_run_flag or self.draw_run_flag:
@@ -1758,8 +1812,8 @@ class ImageConverter(QDialog, dialogImageConverter.Ui_dialogImageConverter):
             parameters = json.load(config)['ImageCorrection']
         self.naming_flag = True
 
-        worker = qt_multithreading.Worker(image_processing.ImageFix().convert_image, image_name, parameters,
-                                          self.checked)
+        worker = qt_thread.Worker(image_processing.ImageFix().convert_image, image_name, parameters,
+                                  self.checked)
         worker.signals.status.connect(self.update_status)
         worker.signals.progress.connect(self.update_progress)
         worker.signals.naming_error.connect(self.naming_error)
