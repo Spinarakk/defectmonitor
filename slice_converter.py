@@ -130,8 +130,10 @@ class SliceConverter:
                 # Convert the above list of vectors into a numpy array of vectors and append it to the contours list
                 contours.append(np.array(vectors).reshape(1, len(vectors) // 2, 2).astype(np.int32))
 
-            # Offset the offset by the transform parameters for the current part
-            offset = tuple(transform[part_name][:2])
+            # Offset each contour by the transform parameters for the current part
+            translation_matrix = np.float32([[1,0,transform[part_name][0]],[0,1,transform[part_name][1]]])
+            for index, item in enumerate(contours):
+                contours[index] = cv2.transform(item, translation_matrix)
 
             # Block of code responsible for rotation of the current part if an angle has been specified
             if transform[part_name][2]:
@@ -150,18 +152,21 @@ class SliceConverter:
             if roi_offset:
                 for item in contours:
                     x, y, w, h = cv2.boundingRect(item)
-                    min_x, max_x = min(x, min_x), max(x + w, max_x)
-                    min_y, max_y = min(y, min_y), max(y + h, max_y)
+                    # These values need to be clipped in case they exceed the draw boundaries
+                    min_x = np.clip(min(x, min_x), 0, image.shape[1])
+                    max_x = np.clip(max(x + w, max_x), 0, image.shape[1])
+                    min_y = np.clip(min(y, min_y), 0, image.shape[0])
+                    max_y = np.clip(max(y + h, max_y), 0, image.shape[0])
 
             # Draw all the contours on the received image
-            cv2.drawContours(image, contours, -1, colours[part_name], offset=offset, thickness=thickness)
+            cv2.drawContours(image, contours, -1, colours[part_name], thickness=thickness)
 
             # If set, find the centre of the largest contours and put the part names on a blank image
             if names_flag:
                 moments = cv2.moments(max(contours, key=cv2.contourArea))
                 # The Y value is subtracted from the height to 'flip' the coordinates without flipping the text itself
-                centre = (int(moments['m10'] // moments['m00']) + offset[0],
-                          abs(image.shape[0] - (int(moments['m01'] // moments['m00'] + offset[1]))))
+                centre = (int(moments['m10'] // moments['m00']),
+                          abs(image.shape[0] - (int(moments['m01'] // moments['m00']))))
                 cv2.putText(image_names, part_name, centre, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
         # Flip the whole image vertically to account for the fact that OpenCV's origin is the top left corner
@@ -169,10 +174,16 @@ class SliceConverter:
 
         # Apply the offset to the region of interest
         if roi_offset:
-            min_x -= roi_offset
-            max_x += roi_offset
-            min_y = abs(min_y - roi_offset - image.shape[0])
-            max_y = abs(max_y + roi_offset - image.shape[0])
+            # Similar to before, clip the values again after taking the roi offset into account
+            min_x = np.clip(min_x - roi_offset, 0, image.shape[1])
+            max_x = np.clip(max_x + roi_offset, 0, image.shape[1])
+            min_y = np.clip(min_y - roi_offset, 0, image.shape[0])
+            max_y = np.clip(max_y + roi_offset, 0, image.shape[0])
+
+            # The Y values need to be flipped
+            min_y = abs(min_y - image.shape[0])
+            max_y = abs(max_y - image.shape[0])
+
             roi.emit([min_x, max_y, max_x - min_x, min_y - max_y], False)
 
         if names_flag:

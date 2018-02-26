@@ -90,7 +90,7 @@
             3816
         ],
         "RMS": 1.6887141855755434,
-        "ScaleFactor": 6.0
+        "ScaleFactor": 5.800000000000001
     },
     "KeepRaw": true,
     "Notifications": {
@@ -107,7 +107,7 @@
         "CentrelineT": 3,
         "ContourT": 3,
         "ROIOffset": 50,
-        "Units": "px"
+        "Units": "mm"
     },
     "Threshold": {
         "HistogramCoat": 5000,

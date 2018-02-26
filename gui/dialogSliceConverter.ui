@@ -140,6 +140,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushRemoveSF">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>Remove Slice Files</string>
         </property>
@@ -468,26 +471,23 @@
       <item row="1" column="2">
        <widget class="QSpinBox" name="spinY">
         <property name="toolTip">
-         <string>-2410 - 2410</string>
+         <string/>
         </property>
         <property name="minimum">
-         <number>-2410</number>
+         <number>-9999</number>
         </property>
         <property name="maximum">
-         <number>2410</number>
+         <number>9999</number>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
        <widget class="QSpinBox" name="spinX">
-        <property name="toolTip">
-         <string>-3470 - 3470</string>
-        </property>
         <property name="minimum">
-         <number>-3470</number>
+         <number>-9999</number>
         </property>
         <property name="maximum">
-         <number>3470</number>
+         <number>9999</number>
         </property>
        </widget>
       </item>
@@ -551,9 +551,6 @@
       </item>
       <item row="1" column="1">
        <widget class="QSpinBox" name="spinAngle">
-        <property name="toolTip">
-         <string>-360 - 360</string>
-        </property>
         <property name="minimum">
          <number>-360</number>
         </property>
@@ -700,53 +697,80 @@
       <property name="verticalSpacing">
        <number>3</number>
       </property>
-      <item row="0" column="0" colspan="2">
-       <widget class="QPushButton" name="pushSelect">
+      <item row="6" column="0">
+       <widget class="QCheckBox" name="checkAutoSet">
         <property name="text">
-         <string>Select</string>
+         <string>Auto-Set</string>
         </property>
-        <property name="checkable">
+        <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="labelTopLeft">
         <property name="text">
          <string>Top Left</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="labelResolution">
         <property name="text">
          <string>Resolution</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="0" colspan="3">
+      <item row="6" column="1" colspan="4">
        <widget class="QPushButton" name="pushSet">
         <property name="text">
          <string>Set</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="pushRemove">
-        <property name="text">
-         <string>Remove</string>
+      <item row="1" column="0" colspan="5">
+       <widget class="QFrame" name="frameButtons">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="pushSelect">
+           <property name="text">
+            <string>Select</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushRemove">
+           <property name="text">
+            <string>Remove</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="labelSpacer">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1" rowspan="3" colspan="2">
-       <widget class="QFrame" name="frame">
+      <item row="3" column="1" rowspan="3" colspan="4">
+       <widget class="QFrame" name="frameInput">
         <property name="minimumSize">
          <size>
           <width>100</width>
@@ -785,37 +809,6 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="labelXROI">
-           <property name="text">
-            <string>X</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QSpinBox" name="spinResolutionX">
-           <property name="maximum">
-            <number>9999</number>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QSpinBox" name="spinTLX">
-           <property name="maximum">
-            <number>9999</number>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QSpinBox" name="spinResolutionY">
-           <property name="maximum">
-            <number>9999</number>
-           </property>
-          </widget>
-         </item>
          <item row="1" column="1">
           <widget class="QSpinBox" name="spinTLY">
            <property name="maximum">
@@ -834,6 +827,37 @@
           <widget class="QLabel" name="labelResUnits">
            <property name="text">
             <string>px</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QSpinBox" name="spinTLX">
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="labelXROI">
+           <property name="text">
+            <string>X</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QSpinBox" name="spinResolutionY">
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QSpinBox" name="spinResolutionX">
+           <property name="maximum">
+            <number>9999</number>
            </property>
           </widget>
          </item>
@@ -869,13 +893,10 @@
   <tabstop>pushGo</tabstop>
   <tabstop>spinRangeLow</tabstop>
   <tabstop>spinRangeHigh</tabstop>
-  <tabstop>pushSelect</tabstop>
-  <tabstop>pushRemove</tabstop>
   <tabstop>spinTLX</tabstop>
   <tabstop>spinTLY</tabstop>
   <tabstop>spinResolutionX</tabstop>
   <tabstop>spinResolutionY</tabstop>
-  <tabstop>pushSet</tabstop>
   <tabstop>spinAngle</tabstop>
   <tabstop>pushRotate</tabstop>
   <tabstop>pushResetR</tabstop>

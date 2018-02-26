@@ -1356,10 +1356,12 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         """Allows the user to select a region to crop the images for the defect processor"""
         self.graphicsDisplay.zoom_flag = self.pushSelect.isChecked()
         self.graphicsDisplay.roi_flag = self.pushSelect.isChecked()
+        self.checkAutoSet.setChecked(False)
 
     def remove_roi(self):
         """Resets the selected region and removes the drawn rectangle from the preview screen"""
         self.roi[0] = 0
+        self.checkAutoSet.setChecked(False)
         self.pushRemove.setEnabled(False)
         self.preview_contours()
 
@@ -1367,13 +1369,26 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         """Saves the received region to the build.json file and displays the ROI and region coordinates and size
         Also disables checked status of the Select button after successfully selecting a region"""
 
+        scale_factor = self.config['ImageCorrection']['ScaleFactor']
+
         if not bool(region):
-            region = [self.spinTLX.value(), self.spinTLY.value(), self.spinResolutionX.value(), self.spinResolutionY.value()]
+            self.checkAutoSet.setChecked(False)
+            region = [self.spinTLX.value(), self.spinTLY.value(),
+                      self.spinResolutionX.value(), self.spinResolutionY.value()]
+
+            # If units is set to millimetres, convert the entered millimetres to pixels
+            if 'mm' in self.config['SliceConverter']['Units']:
+                region = [round(item * scale_factor) for item in region]
         else:
-            self.spinTLX.setValue(region[0])
-            self.spinTLY.setValue(region[1])
-            self.spinResolutionX.setValue(region[2])
-            self.spinResolutionY.setValue(region[3])
+            # If units is set to millimetres, convert the received pixels to millimetres only for the dialog display
+            if 'mm' in self.config['SliceConverter']['Units']:
+                region_display = [round(item / scale_factor) for item in region]
+
+            # Display the selected region of interest values on the dialog window
+            self.spinTLX.setValue(region_display[0])
+            self.spinTLY.setValue(region_display[1])
+            self.spinResolutionX.setValue(region_display[2])
+            self.spinResolutionY.setValue(region_display[3])
 
         self.pushRemove.setEnabled(True)
         self.pushSelect.setChecked(False)
@@ -1392,7 +1407,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             # Change the rotation parameter of the selected items to the entered ones
             self.part_transform[item.text()][2] += self.spinAngle.value() % 360
 
-        self.preview_contours()
+        self.preview_contours(self.config['SliceConverter']['ROIOffset'])
 
     def rotate_reset(self):
         """Resets the rotation parameters back to 0 for the selected parts"""
@@ -1401,17 +1416,23 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             # Reset the rotation parameter of the selected items
             self.part_transform[item.text()][2] = 0
 
-        self.preview_contours()
+        self.preview_contours(self.config['SliceConverter']['ROIOffset'])
 
     def translate(self):
         """Applies translation parameters to the part_transform dictionary for the selected parts"""
 
         for item in self.listSliceFiles.selectedItems():
-            # Change the translation parameters of the selected items to the entered ones
-            self.part_transform[item.text()][0] += self.spinX.value()
-            self.part_transform[item.text()][1] += self.spinY.value()
+            # If the units are set to millimetres, convert the entered 'millimetre' values to pixels
+            if 'mm' in self.config['SliceConverter']['Units']:
+                scale_factor = self.config['ImageCorrection']['ScaleFactor']
+                self.part_transform[item.text()][0] += (round(self.spinX.value() * scale_factor))
+                self.part_transform[item.text()][1] += (round(self.spinY.value() * scale_factor))
+            else:
+                # Change the translation parameters of the selected items to the entered ones
+                self.part_transform[item.text()][0] += self.spinX.value()
+                self.part_transform[item.text()][1] += self.spinY.value()
 
-        self.preview_contours()
+        self.preview_contours(self.config['SliceConverter']['ROIOffset'])
 
     def translate_reset(self):
         """Resets the translation parameters back to 0 for the selected parts"""
@@ -1421,7 +1442,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.part_transform[item.text()][0] = 0
             self.part_transform[item.text()][1] = 0
 
-        self.preview_contours()
+        self.preview_contours(self.config['SliceConverter']['ROIOffset'])
 
     def pause(self):
         """Executes when the Paused/Resume button is pressed
@@ -1510,6 +1531,10 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         else:
             thickness = self.config['SliceConverter']['CentrelineT']
 
+        # Disable determining the ROI if the Auto-Set checkbox is unchecked
+        if not self.checkAutoSet.isChecked():
+            roi_offset = 0
+
         worker = qt_thread.Worker(slice_converter.SliceConverter().draw_contours, self.contour_dict, image,
                                   self.current_layer, self.part_colours, self.part_transform,
                                   self.output_folder, thickness, roi_offset, False, False)
@@ -1529,7 +1554,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Draw a rectangle of the user selected region of interest
         if self.roi[0]:
-            cv2.rectangle(image, (self.roi[1], self.roi[2]), (self.roi[3], self.roi[4]), (0, 0, 0), 4)
+            cv2.rectangle(image, (self.roi[1], self.roi[2]), (self.roi[3], self.roi[4]), (0, 0, 255), 4)
 
         self.graphicsDisplay.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         self.update_table()
@@ -1571,6 +1596,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         # Populate the table with the part transform data
         for name, value in sorted(self.part_transform.items()):
+            # Set the first row of items being the part names
             self.tableTransform.setItem(0, column, QTableWidgetItem(name))
 
             # Highlight the items if the corresponding part is selected
@@ -1578,7 +1604,14 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 self.tableTransform.item(0, column).setBackground(QColor('yellow'))
 
             for index in range(3):
-                self.tableTransform.setItem(index + 1, column, QTableWidgetItem(str(value[index])))
+
+                # Set the translation or rotation values, converting back from pixels to millimetres if set
+                if 'mm' in self.config['SliceConverter']['Units']:
+                    item = str(round(value[index] / self.config['ImageCorrection']['ScaleFactor']))
+                else:
+                    item = str(value[index])
+
+                self.tableTransform.setItem(index + 1, column, QTableWidgetItem(item))
                 if name in self.selected_items:
                     self.tableTransform.item(index + 1, column).setBackground(QColor('yellow'))
 
