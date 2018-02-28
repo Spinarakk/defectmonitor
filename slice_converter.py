@@ -175,10 +175,10 @@ class SliceConverter:
         # Apply the offset to the region of interest
         if roi_offset:
             # Similar to before, clip the values again after taking the roi offset into account
-            min_x = np.clip(min_x - roi_offset, 0, image.shape[1])
-            max_x = np.clip(max_x + roi_offset, 0, image.shape[1])
-            min_y = np.clip(min_y - roi_offset, 0, image.shape[0])
-            max_y = np.clip(max_y + roi_offset, 0, image.shape[0])
+            min_x = int(np.clip(min_x - roi_offset, 0, image.shape[1]))
+            max_x = int(np.clip(max_x + roi_offset, 0, image.shape[1]))
+            min_y = int(np.clip(min_y - roi_offset, 0, image.shape[0]))
+            max_y = int(np.clip(max_y + roi_offset, 0, image.shape[0]))
 
             # The Y values need to be flipped
             min_y = abs(min_y - image.shape[0])

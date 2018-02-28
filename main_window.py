@@ -901,7 +901,7 @@ class MainWindow(QMainWindow, mainWindow.Ui_mainWindow):
         self.update_status('Image fix successfully applied.', 2000)
 
         # Update the image dictionaries and layer ranges
-        self.update_folders(False)
+        self.update_folders()
 
         # Acquire the layer and phase (tab index) from the image name
         layer = int(os.path.splitext(os.path.basename(self.image_name))[0][-4:])

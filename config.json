@@ -90,7 +90,7 @@
             3816
         ],
         "RMS": 1.6887141855755434,
-        "ScaleFactor": 5.800000000000001
+        "ScaleFactor": 6.0
     },
     "KeepRaw": true,
     "Notifications": {
@@ -101,13 +101,14 @@
         "C:/Users/Spinarakk/Documents/MCAM/Builds/Demo Build.json",
         "C:/Users/Spinarakk/Documents/MCAM/Builds/Default.json",
         "C:/Users/Spinarakk/Documents/MCAM/Builds/AGSDSGD.json",
-        "C:/Users/Spinarakk/Documents/MCAM/Builds/Test.json"
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/Test.json",
+        "C:/Users/Spinarakk/Documents/MCAM/Builds/asdf.json"
     ],
     "SliceConverter": {
         "CentrelineT": 3,
         "ContourT": 3,
         "ROIOffset": 50,
-        "Units": "mm"
+        "Units": "px"
     },
     "Threshold": {
         "HistogramCoat": 5000,

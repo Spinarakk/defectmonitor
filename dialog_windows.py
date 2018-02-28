@@ -1043,6 +1043,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.current_layer = 1
         self.convert_run_flag = False
         self.draw_run_flag = False
+        self.millimetre_flag = 'mm' in self.config['SliceConverter']['Units']
         self.roi = self.build['ROI']
 
         # This value is used to indicate which process is active, used for the pause button and for exiting the window
@@ -1057,6 +1058,13 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             self.output_folder = self.build['BuildInfo']['Folder'] + '/contours'
             self.slice_list = self.build['SliceConverter']['Files'][:]
             self.part_transform = self.build['SliceConverter']['Transform'].copy()
+
+            # Check if there are parts in the current build (if reopening a saved build)
+            # Done by checking anything exists in the slice list, and disable the auto-set and display the stored ROI
+            if self.slice_list:
+                self.checkAutoSet.setChecked(False)
+                self.set_roi_display(self.build['ROI'][1::])
+
             # Initialize the colour dictionary for the pre-selected parts
             for file in self.slice_list:
                 self.part_colours[os.path.basename(file).replace('.cli', '')] = (255, 0, 0)
@@ -1070,7 +1078,8 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         self.labelResUnits.setText(self.config['SliceConverter']['Units'])
         self.labelUnits.setText(self.config['SliceConverter']['Units'])
 
-        if 'mm' in self.config['SliceConverter']['Units']:
+        # Preset the Mouse Position numbers to millimetre format
+        if self.millimetre_flag:
             self.labelXPosition.setText('X  000.00')
             self.labelYPosition.setText('Y  000.00')
 
@@ -1252,8 +1261,9 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
                 with open('%s/reports/%s_report.json' % (self.build['BuildInfo']['Folder'], part_name), 'w+') as report:
                     json.dump(dict(), report)
 
-        # Create a 'background' part colour and set them to black
+        # Create a 'background' and 'combined' part colour and set them to black
         part_colours['background'] = (0, 0, 0)
+        part_colours['combined'] = (0, 0, 0)
 
         # Set the starting layer to draw as the entered lower layer range (default is all the contours)
         self.contour_counter = self.spinRangeLow.value()
@@ -1369,26 +1379,16 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         """Saves the received region to the build.json file and displays the ROI and region coordinates and size
         Also disables checked status of the Select button after successfully selecting a region"""
 
-        scale_factor = self.config['ImageCorrection']['ScaleFactor']
-
         if not bool(region):
             self.checkAutoSet.setChecked(False)
             region = [self.spinTLX.value(), self.spinTLY.value(),
                       self.spinResolutionX.value(), self.spinResolutionY.value()]
 
             # If units is set to millimetres, convert the entered millimetres to pixels
-            if 'mm' in self.config['SliceConverter']['Units']:
-                region = [round(item * scale_factor) for item in region]
+            if self.millimetre_flag:
+                region = [round(item * self.config['ImageCorrection']['ScaleFactor']) for item in region]
         else:
-            # If units is set to millimetres, convert the received pixels to millimetres only for the dialog display
-            if 'mm' in self.config['SliceConverter']['Units']:
-                region_display = [round(item / scale_factor) for item in region]
-
-            # Display the selected region of interest values on the dialog window
-            self.spinTLX.setValue(region_display[0])
-            self.spinTLY.setValue(region_display[1])
-            self.spinResolutionX.setValue(region_display[2])
-            self.spinResolutionY.setValue(region_display[3])
+            self.set_roi_display(region)
 
         self.pushRemove.setEnabled(True)
         self.pushSelect.setChecked(False)
@@ -1399,6 +1399,19 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         if preview_flag:
             self.preview_contours()
+
+    def set_roi_display(self, region):
+        """Display the selected region of interest values on the Dialog Window"""
+
+        # If units is set to millimetres, convert the received pixels to millimetres only for the dialog display
+        if self.millimetre_flag:
+            region.extend([int(round(item / self.config['ImageCorrection']['ScaleFactor'])) for item in region])
+
+        # If units is set to millimetres, use the above set indexes of converted values instead
+        self.spinTLX.setValue(region[0 + 4 * int(self.millimetre_flag)])
+        self.spinTLY.setValue(region[1 + 4 * int(self.millimetre_flag)])
+        self.spinResolutionX.setValue(region[2 + 4 * int(self.millimetre_flag)])
+        self.spinResolutionY.setValue(region[3 + 4 * int(self.millimetre_flag)])
 
     def rotate(self):
         """Applies rotation parameters to the part_transform dictionary for the selected parts"""
@@ -1423,7 +1436,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
 
         for item in self.listSliceFiles.selectedItems():
             # If the units are set to millimetres, convert the entered 'millimetre' values to pixels
-            if 'mm' in self.config['SliceConverter']['Units']:
+            if self.millimetre_flag:
                 scale_factor = self.config['ImageCorrection']['ScaleFactor']
                 self.part_transform[item.text()][0] += (round(self.spinX.value() * scale_factor))
                 self.part_transform[item.text()][1] += (round(self.spinY.value() * scale_factor))
@@ -1606,7 +1619,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
             for index in range(3):
 
                 # Set the translation or rotation values, converting back from pixels to millimetres if set
-                if 'mm' in self.config['SliceConverter']['Units']:
+                if self.millimetre_flag:
                     item = str(round(value[index] / self.config['ImageCorrection']['ScaleFactor']))
                 else:
                     item = str(value[index])
@@ -1628,7 +1641,7 @@ class SliceConverter(QDialog, dialogSliceConverter.Ui_dialogSliceConverter):
         y = np.clip(y, 0, self.config['ImageCorrection']['ImageResolution'][0])
 
         # If the units are set to millimetres, the pixels need to be converted
-        if 'mm' in self.config['SliceConverter']['Units']:
+        if self.millimetre_flag:
             self.labelXPosition.setText('X  {:06.2f}'.format(round(x / self.config['ImageCorrection']['ScaleFactor'], 2)))
             self.labelYPosition.setText('Y  {:06.2f}'.format(round(y / self.config['ImageCorrection']['ScaleFactor'], 2)))
         else:

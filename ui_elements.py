@@ -100,8 +100,8 @@ class ImageViewer(QGraphicsView):
             self.scene.setSelectionArea(QPainterPath())
             if selection_box.isValid() and (selection_box != view_box):
                 if self.roi_flag:
-                    roi = [round(selection_box.x()), round(selection_box.y()), round(selection_box.width()),
-                           round(selection_box.height())]
+                    roi = [int(round(selection_box.x())), int(round(selection_box.y())),
+                           int(round(selection_box.width())), int(round(selection_box.height()))]
                     self.roi_done.emit(roi, True)
                 else:
                     self.zoom_list.append(selection_box)
